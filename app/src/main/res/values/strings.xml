@@ -1,3 +1,67 @@
 <resources>
     <string name="app_name">Monicet</string>
+
+    <string name="sperm_whale">Sperm whale</string>
+    <string name="common_dolphin">Common dolphin</string>
+    <string name="common_bottlenose_dolphin">Common bottlenose dolphin</string>
+    <string name="atlantic_spotted_dolphin">Atlantic spotted dolphin</string>
+    <string name="fin_whale">Fin whale</string>
+    <string name="risso_dolphin">Risso\'s dolphin</string>
+    <string name="short_finned_pilot_whale">Short-finned pilot whale</string>
+    <string name="striped_dolphin">Striped dolphin</string>
+    <string name="sei_whale">Sei whale</string>
+    <string name="loggerhead_turtle">Loggerhead turtle</string>
+    <string name="blue_whale">Blue whale</string>
+    <string name="false_killer_whale">False killer whale</string>
+    <string name="humpback_whale">Humpback whale</string>
+    <string name="beaked_whale">Beaked whale</string>
+    <string name="sowerby_beaked_whale">Sowerby\'s beaked whale</string>
+    <string name="northern_minke_whale">Northern minke whale</string>
+    <string name="killer_whale">Killer whale</string>
+    <string name="northern_bottlenose_whale">Northern bottlenose whale</string>
+    <string name="bryde_whale">Bryde\'s whale</string>
+    <string name="leatherback_turtle">Leatherback turtle</string>
+    <string name="harbour_porpoise">Harbour porpoise</string>
+    <string name="cuvier_beaked_whale">Cuvier\'s beaked whale</string>
+    <string name="blainville_beaked_whale">Blainville\'s beaked whale</string>
+    <string name="true_beaked_whale">True\'s beaked whale</string>
+    <string name="green_turtle">Green turtle</string>
+    <string name="long_finned_pilot_whale">Long-finned pilot whale</string>
+    <string name="rough_toothed_dolphin">Rough-toothed dolphin</string>
+    <string name="pygmy_sperm_whale">Pygmy sperm whale</string>
+    <string name="hawksbill_turtle">Hawksbill turtle</string>
+    <string name="kemp_ridley_turtle">Kemp\'s ridley turtle</string>
+    <string-array name="speciesArray">
+        <item>@string/sperm_whale</item>
+        <item>@string/common_dolphin</item>
+        <item>@string/common_bottlenose_dolphin</item>
+        <item>@string/atlantic_spotted_dolphin</item>
+        <item>@string/fin_whale</item>
+        <item>@string/risso_dolphin</item>
+        <item>@string/short_finned_pilot_whale</item>
+        <item>@string/striped_dolphin</item>
+        <item>@string/sei_whale</item>
+        <item>@string/loggerhead_turtle</item>
+        <item>@string/blue_whale</item>
+        <item>@string/false_killer_whale</item>
+        <item>@string/humpback_whale</item>
+        <item>@string/beaked_whale</item>
+        <item>@string/sowerby_beaked_whale</item>
+        <item>@string/northern_minke_whale</item>
+        <item>@string/killer_whale</item>
+        <item>@string/northern_bottlenose_whale</item>
+        <item>@string/bryde_whale</item>
+        <item>@string/leatherback_turtle</item>
+        <item>@string/harbour_porpoise</item>
+        <item>@string/cuvier_beaked_whale</item>
+        <item>@string/blainville_beaked_whale</item>
+        <item>@string/true_beaked_whale</item>
+        <item>@string/green_turtle</item>
+        <item>@string/long_finned_pilot_whale</item>
+        <item>@string/rough_toothed_dolphin</item>
+        <item>@string/pygmy_sperm_whale</item>
+        <item>@string/hawksbill_turtle</item>
+        <item>@string/kemp_ridley_turtle</item>
+    </string-array>
+
 </resources>

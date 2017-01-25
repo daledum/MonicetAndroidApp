@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Monicet</string>
+    <string name="atlantic_spotted_dolphin">Golfinho pintado</string>
+    <string name="beaked_whale">Baleia de bico</string>
+    <string name="blainville_beaked_whale">Baleia de bico de Blainville</string>
+    <string name="blue_whale">Baleia azul</string>
+    <string name="bryde_whale">Baleia de Bryde</string>
+    <string name="common_bottlenose_dolphin">Roaz</string>
+    <string name="common_dolphin">Golfinho comum</string>
+    <string name="cuvier_beaked_whale">Zifio</string>
+    <string name="false_killer_whale">Falsa orca</string>
+    <string name="fin_whale">Baleia comum/Baleia fin/Rorqual comum</string>
+    <string name="green_turtle">Tartaruga verde</string>
+    <string name="harbour_porpoise">Toninha comum</string>
+    <string name="hawksbill_turtle">Tartaruga de escamas</string>
+    <string name="humpback_whale">Baleia de bossa</string>
+    <string name="kemp_ridley_turtle">Tartaruga de Kemp</string>
+    <string name="killer_whale">Orca</string>
+    <string name="leatherback_turtle">Tartaruga de couro</string>
+    <string name="loggerhead_turtle">Tartaruga careta</string>
+    <string name="long_finned_pilot_whale">Baleia piloto de barbatana comprida</string>
+    <string name="northern_bottlenose_whale">Botinhoso</string>
+    <string name="northern_minke_whale">Baleia anã</string>
+    <string name="pygmy_sperm_whale">Cachalote pigmeu</string>
+    <string name="rough_toothed_dolphin">Caldeirão/Dente rugoso</string>
+    <string name="risso_dolphin">Golfinho de risso</string>
+    <string name="sei_whale">Baleia sardinheira</string>
+    <string name="short_finned_pilot_whale">Baleia piloto de barbatana curta</string>
+    <string name="sowerby_beaked_whale">Baleia de bico de Sowerby</string>
+    <string name="sperm_whale">Cachalote</string>
+    <string name="striped_dolphin">Golfinho riscado</string>
+    <string name="true_beaked_whale">Baleia de bico de True</string>
+</resources>
