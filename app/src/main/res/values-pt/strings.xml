@@ -31,4 +31,6 @@
     <string name="sperm_whale">Cachalote</string>
     <string name="striped_dolphin">Golfinho riscado</string>
     <string name="true_beaked_whale">Baleia de bico de True</string>
+    <string name="tracking_dialog_message">Você está atualmente no modo de amostragem GPS normal. \\nAtivar o modo de amostragem GPS contínuo, que usa muita bateria?</string>
+    <string name="no_animals_toast_message">Não há nada para salvar. \\nPor favor, modifique o número de animais que você já viu.</string>
 </resources>

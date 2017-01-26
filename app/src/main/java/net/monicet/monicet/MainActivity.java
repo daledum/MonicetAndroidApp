@@ -2,15 +2,18 @@ package net.monicet.monicet;
 
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static android.R.id.list;
+import static android.R.string.no;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,10 +49,10 @@ public class MainActivity extends AppCompatActivity {
         //this will create a trip with one location
         final Trip trip = new Trip(location);
 
-        //next time, do this after the addLocation():
-        // sightingAdapter.clear(); sightingAdapter.add(trip.getLastLocation().getSightings());
+        //next time, do this after the addLocation(), if in the same activity (with access to the adapter)
+        // sightingAdapter.clear(); sightingAdapter.add(trip.getCurrentLocation().getSightings());
 
-        SightingAdapter sightingAdapter = new SightingAdapter(this, trip.getLastLocation().getSightings());
+        SightingAdapter sightingAdapter = new SightingAdapter(this, trip.getCurrentLocation().getSightings());
 
         ListView listView = (ListView) findViewById(R.id.list_view);
         listView.setAdapter(sightingAdapter);
@@ -60,15 +63,14 @@ public class MainActivity extends AppCompatActivity {
         // if 'yes', set the trip variable accordingly
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
         alertDialogBuilder.setTitle("GPS Tracking");
-        alertDialogBuilder.setMessage("You are currently in the normal GPS sampling mode." +
-                "\nActivate the continuous GPS sampling mode, which uses a lot of battery?");
+        alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
         alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 trip.setContinuousGpsTrackingOn(true);
             }
         });
-        alertDialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+        alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 // do nothing
@@ -79,5 +81,45 @@ public class MainActivity extends AppCompatActivity {
         alertDialogBuilder.show();
         // Step 2 ends here
 
+        // Step 3 starts here:
+        // SAVE floating action button
+        // Check first if this Location has at least one non-empty Sighting (quantity different to 0)
+        // If it is non-empty, open Comments dialogFragment
+        // Else (all quantities are 0): put a LONG Toast on the screen (and do nothing), with the message:
+        //"your trip has no sightings. There is nothing to send. Please add the quantity of individuals that you've seen.
+        // Or no species were seen/No animals were seen at this location. There is nothing to save."
+        FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
+        fabSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean noAnimalsWereSeen = true;
+                ArrayList<Sighting> sightings = trip.getCurrentLocation().getSightings();
+
+                for (Sighting sighting: sightings) {
+                    if (sighting.getQuantity() != 0) {
+                        noAnimalsWereSeen = false;
+                        break;
+                    }
+                }
+
+                if (noAnimalsWereSeen) {
+                    Toast.makeText(getApplicationContext(),
+                            R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
+                }
+                else {
+                    showUserCommentsDialog();
+                }
+            }
+        });
+        // Step 3 ends here
+
+        // Extra steps:
+        // change label to Monicet - Stop 1
+        // get username
+
+    }
+
+    public void showUserCommentsDialog() {
+        // show the dialogue here
     }
 }

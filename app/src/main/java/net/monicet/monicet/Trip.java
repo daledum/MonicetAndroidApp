@@ -68,7 +68,7 @@ public class Trip implements Serializable {
 
     public int getNumberOfLocations() { return mLocationsArray.size(); }
     public Location getLocationAtIndex(int vIndex) { return mLocationsArray.get(vIndex); }
-    public Location getLastLocation() { return mLocationsArray.get(mLocationsArray.size() - 1); }
+    public Location getCurrentLocation() { return mLocationsArray.get(mLocationsArray.size() - 1); }
 
     // the trip will always have at least one location (at index 0)
     // add a new, barebone(or blank) location (only containing species, photos and descriptions)

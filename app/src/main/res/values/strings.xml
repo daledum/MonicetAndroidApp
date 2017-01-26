@@ -1,6 +1,13 @@
 <resources>
     <string name="app_name">Monicet</string>
 
+    <string name="tracking_dialog_message">
+        You are currently in the normal GPS sampling mode. \nActivate the continuous GPS sampling mode, which uses a lot of battery?
+    </string>
+    <string name="no_animals_toast_message">
+        There is nothing to save. \nPlease, modify the number of animals that you\'ve seen.
+    </string>
+
     <string name="sperm_whale">Sperm whale</string>
     <string name="common_dolphin">Common dolphin</string>
     <string name="common_bottlenose_dolphin">Common bottlenose dolphin</string>
