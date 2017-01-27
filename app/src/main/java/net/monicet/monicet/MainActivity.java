@@ -17,6 +17,11 @@ import static android.R.string.no;
 
 public class MainActivity extends AppCompatActivity {
 
+    // TODO: make trip 'global'
+    //private Trip trip; // or public
+    // I will eventually have to make trip a class variable in order for onPause etc methods to access it
+    // I will then have to create separate listeners for my buttons (because trip will not be able to be final)
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
         // create the first Location, then instantiate a Trip (which will contain one location)
         // and feed its array of sightings to the custom ListView ArrayAdapter
         String[] species = getResources().getStringArray(R.array.speciesArray);
-        // TODO: implement later
+        // TODO: implement getting the photo ids and description data later
         String[] photos = new String[30];
         String[] descriptions = new String[30];
         Arrays.fill(photos, "photo");
@@ -46,13 +51,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Location location = new Location(sightings);
-        //this will create a trip with one location
+        //this will create a trip with one location, Alex: trip was declared and initialized here
+        //final Trip trip = new Trip(location);
         final Trip trip = new Trip(location);
 
         //next time, do this after the addLocation(), if in the same activity (with access to the adapter)
         // sightingAdapter.clear(); sightingAdapter.add(trip.getCurrentLocation().getSightings());
 
-        SightingAdapter sightingAdapter = new SightingAdapter(this, trip.getCurrentLocation().getSightings());
+//        SightingAdapter sightingAdapter =
+//                new SightingAdapter(this, trip.getCurrentLocation().getSightings());
+        SightingAdapter sightingAdapter = new SightingAdapter(this, trip);
 
         ListView listView = (ListView) findViewById(R.id.list_view);
         listView.setAdapter(sightingAdapter);
@@ -113,13 +121,23 @@ public class MainActivity extends AppCompatActivity {
         });
         // Step 3 ends here
 
+        // Step 4 starts here:
+        trip.getCurrentLocation().getSightings().get(0).setQuantity(89); //- too slow, works only when scrolling
+        trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
+        //sightingAdapter.notifyDataSetChanged();//works without this
+
+        // Step 4 ends here
+
+
         // Extra steps:
-        // change label to Monicet - Stop 1
-        // get username
+        // TODO: change label to Monicet - Stop 1
+        // TODO: get username
+        // TODO: change orientation...do nothing - see runtime changes and state changes
+        // --- orientation, screenSize, keyboard (just keep things as they are for this one)
 
     }
 
     public void showUserCommentsDialog() {
-        // show the dialogue here
+        // show the comments dialog fragment here
     }
 }
