@@ -31,29 +31,11 @@ public class MainActivity extends AppCompatActivity {
         // using the data from resources (containing specie names, photos and description),
         // create the first Location, then instantiate a Trip (which will contain one location)
         // and feed its array of sightings to the custom ListView ArrayAdapter
-        String[] species = getResources().getStringArray(R.array.speciesArray);
-        // TODO: implement getting the photo ids and description data later
-        String[] photos = new String[30];
-        String[] descriptions = new String[30];
-        Arrays.fill(photos, "photo");
-        Arrays.fill(descriptions, "description");
-        // here (if the 3 arrays have the same size, at least check) add each sighting to the list, one by one
-        int sizeOfArrays = species.length;
-        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
-            Log.d("MainActivity", "the sizes of the specie, photo and description arrays are not the same");
-        }
+        // Create the custom ArrayAdapter and populate it
 
-        ArrayList<Sighting> sightings = new ArrayList<Sighting>(sizeOfArrays);
-
-        for (int i = 0; i < sizeOfArrays; i++ ) {
-            Animal animal = new Animal(species[i], photos[i], descriptions[i]);
-            sightings.add(new Sighting(animal));
-        }
-
-        Location location = new Location(sightings);
         //this will create a trip with one location, Alex: trip was declared and initialized here
         //final Trip trip = new Trip(location);
-        final Trip trip = new Trip(location);
+        final Trip trip = new Trip(buildLocationFromResources());//was Trip(location)//can move outside 'global'
 
         //next time, do this after the addLocation(), if in the same activity (with access to the adapter)
         // sightingAdapter.clear(); sightingAdapter.add(trip.getCurrentLocation().getSightings());
@@ -67,26 +49,43 @@ public class MainActivity extends AppCompatActivity {
         // Step 1 ends here
 
         // Step 2 starts here:
-        // open a dialog and ask the user if they want the Continuous GPS Tracking Mode
+        // open a dialog (if the dialog wasn't shown before)
+        // and ask the user if they want the Continuous GPS Tracking Mode
         // if 'yes', set the trip variable accordingly
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        alertDialogBuilder.setTitle("GPS Tracking");
-        alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
-        alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                trip.setContinuousGpsTrackingOn(true);
-            }
-        });
-        alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // do nothing
-                // dialog.dismiss();
-            }
-        });
-        alertDialogBuilder.create();
-        alertDialogBuilder.show();
+        if (trip.isGpsModeUserInputActive() == true) {
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+            alertDialogBuilder.setTitle("GPS Tracking");
+            alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
+            alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    trip.setGpsMode(GpsMode.CONTINUOUS);
+                    // TODO: GPS this should trigger continuous gps
+                }
+            });
+            alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    // do nothing
+                    // dialog.dismiss();
+                }
+            });
+            alertDialogBuilder.create();
+            alertDialogBuilder.show();
+            // TODO: if the user presses No or presses outside, I should go into slow or fast gps mode
+            // TODO: this should trigger slow or fast gps, too
+            // to check, verify that it's not in continuous mode, and if not set it to slow or fast
+            // Now, set the user input state to false, registering the fact that the user was asked the question
+            trip.setGpsModeUserInputActive(false);
+        } else {
+            //here we arrive in the case the user was already asked about the gps mode,
+            // therefore the trip already has the gps mode set
+            // TODO: this should trigger the trip.getGpsMode mode
+        }
+
+        //
+        // b) after the dialog was exited, then we do nothing
+
         // Step 2 ends here
 
         // Step 3 starts here:
@@ -113,15 +112,17 @@ public class MainActivity extends AppCompatActivity {
                 if (noAnimalsWereSeen) {
                     Toast.makeText(getApplicationContext(),
                             R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
-                }
-                else {
-                    showUserCommentsDialog();
+                } else {
+                    if (trip.getCurrentLocation().isCommentsUserInputActive() == true) {// add user lat and long state
+                        showUserCommentsDialog();
+                    }
+
                 }
             }
         });
         // Step 3 ends here
 
-        // Step 4 starts here:
+        // Step 4 starts here: // Alex: remove this when finished
         trip.getCurrentLocation().getSightings().get(0).setQuantity(89); //- too slow, works only when scrolling
         trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
         //sightingAdapter.notifyDataSetChanged();//works without this
@@ -130,14 +131,41 @@ public class MainActivity extends AppCompatActivity {
 
 
         // Extra steps:
-        // TODO: change label to Monicet - Stop 1
-        // TODO: get username
-        // TODO: change orientation...do nothing - see runtime changes and state changes
-        // --- orientation, screenSize, keyboard (just keep things as they are for this one)
+        // Change label to Monicet - Stop 1
+        setTitle(getText(R.string.app_name) + " - " +
+                getText(R.string.location) + " " + trip.getNumberOfLocations());
+        // TODO: get username - do this when dealing with GPS
 
     }
 
     public void showUserCommentsDialog() {
         // show the comments dialog fragment here
+        // in case the user checks to stop the future comments
+        // trip.getCurrentLocation().setCommentsUserInputActive(false);// plus user lat and long
+
+    }
+
+    public Location buildLocationFromResources() {
+
+        String[] species = getResources().getStringArray(R.array.speciesArray);
+        // TODO: implement getting the photo ids and description data later
+        String[] photos = new String[30];
+        String[] descriptions = new String[30];
+        Arrays.fill(photos, "photo");
+        Arrays.fill(descriptions, "description");
+        // here (if the 3 arrays have the same size, at least check) add each sighting to the list, one by one
+        int sizeOfArrays = species.length;
+        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
+            Log.d("MainActivity", "the sizes of the specie, photo and description arrays are not the same");
+        }
+
+        ArrayList<Sighting> sightings = new ArrayList<Sighting>(sizeOfArrays);
+
+        for (int i = 0; i < sizeOfArrays; i++ ) {
+            Animal animal = new Animal(species[i], photos[i], descriptions[i]);
+            sightings.add(new Sighting(animal));
+        }
+
+        return new Location(sightings);//Location location =
     }
 }

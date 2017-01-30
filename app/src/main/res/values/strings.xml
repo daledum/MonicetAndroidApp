@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">Monicet</string>
 
+    <string name="location">Location</string>
+
     <string name="tracking_dialog_message">
         You are currently in the normal GPS sampling mode. \nActivate the continuous GPS sampling mode, which uses a lot of battery?
     </string>

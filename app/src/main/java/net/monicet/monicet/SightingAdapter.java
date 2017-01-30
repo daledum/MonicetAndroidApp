@@ -68,49 +68,39 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
         });
 
         final NumberPicker quantity = (NumberPicker) convertView.findViewById(R.id.quantity_number_picker);
-        quantity.setValue(currentSighting.getQuantity()); // Alex: is this positioned well here
+        quantity.setValue(currentSighting.getQuantity());
         quantity.setMinValue(0);
         quantity.setMaxValue(99);
         quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
             @Override
             public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                // TODO: successful SAVE - if after a successful SAVE (see SAVE button): do nothing
-                // this will disable(grey out?) the buttons (make sure they are not clickable)
-                // so, when coming here after a save, they could be disabled, if they are disabled, do nothing
-                //quantity.setEnabled(false); // no use here
-                //quantity.setBackgroundColor(Color.GRAY);
 
-                currentSighting.setQuantity(quantity.getValue());
+                // set the variable etc only if quantity state is active
+                if (currentSighting.isQuantityUserInputActive() == true) {
+                    currentSighting.setQuantity(quantity.getValue());
 
-                // TODO: implement this (GPS, date, time)
-                // GPS, date and time values from the phone should be saved to their Sighting
-                // instance variables.
-                // If several clicks, save each time, overwriting,
-                // or immediately afterwards, in case it needs a few seconds for calibrating
-                //currentSighting.setTimeInMilliseconds();
-                //currentSighting.setLatitude();
-                //currentSighting.setLongitude();
+                    // TODO: sample and save GPS
+                    // GPS, date and time values from the phone should be saved to their Sighting
+                    // instance variables.
+                    // If several clicks, save each time, overwriting,
+                    // or immediately afterwards, in case it needs a few seconds for calibrating
+                    //currentSighting.setLatitude();
+                    //currentSighting.setLongitude();
+                    currentSighting.setTimeInMilliseconds(System.currentTimeMillis());
 
-                // TODO: implement this only in the default (no GPS tracking, infrequent mode)
-                // first click/press on the NumberPicker of a
-                // Sighting instance for every Location instance: start sampling GPS data more often (quickly).
-                // Location's firstNumberPickerClick is true by default/in constructor,
-                // (this variable is used when NumberPicker or SAVE is pressed).
-                // The variable is true at the start of each Location instance (when a new object is created).
-                // When I press on the NumberPicker it checks to see if the boolean is true,
-                // if so, it sets it to false (so that the subsequent clicks/presses do nothing)
-                // and it starts the quick sampling (look at the class definition, logic was reversed)
-                if (trip.isContinuousGpsTrackingOn() == false) {
-                    if (trip.getCurrentLocation().isQuantityChangedAtLeastOnce() == false) {
-                        trip.getCurrentLocation().setQuantityChangedAtLeastOnce(true);
-                        // TODO: implement this (start GPS quick sampling - inside the infrequent mode)
-                        // TODO: also, work with GPS via trip and create 'GPS mode' variables for it ?
+
+                    // while in the default (no GPS tracking, infrequent mode)
+                    // first click/press on the NumberPicker of a sighting for every location:
+                    // start sampling GPS data more often (fast/quickly)
+                    if (trip.getGpsMode() != GpsMode.CONTINUOUS) {
+                        if (trip.getGpsMode() != GpsMode.FAST) {
+                            trip.setGpsMode(GpsMode.FAST);
+                            Toast.makeText(getContext(), "" + trip.isGpsModeUserInputActive(),
+                                    Toast.LENGTH_SHORT).show();// get rid of this
+                            // TODO: GPS this should actually change the sampling rate (via a View listener?)
+                        }
                     }
-                    // Alex: remove this after implementing the above
-                    Toast.makeText(getContext(), "" +
-                            trip.getCurrentLocation().isQuantityChangedAtLeastOnce(), Toast.LENGTH_SHORT).show();
                 }
-
 
             }
         });
