@@ -19,33 +19,10 @@ public class Location implements Serializable {
     private double mLatitude;
     private double mLongitude;
 
-    //these are the user provided GPS coordinates (from their own, separate device)
-    private class LatitudeUserInput extends AbstractUserInput {
-        private double mLatitude;
-        private LatitudeUserInput(double vLatitude, boolean vActive) {
-            mLatitude = vLatitude;
-            setActive(vActive);
-        }
-    }
-    private LatitudeUserInput mLatitudeUserInput;
-
-    private class LongitudeUserInput extends AbstractUserInput {
-        private double mLongitude;
-        private LongitudeUserInput(double vLongitude, boolean vActive) {
-            mLongitude = vLongitude;
-            setActive(vActive);
-        }
-    }
-    private LongitudeUserInput mLongitudeUserInput;
-
-    private class CommentsUserInput extends AbstractUserInput {
-        private String mComments;
-        private CommentsUserInput(String vComments, boolean vActive) {
-            mComments = vComments;
-            setActive(vActive);
-        }
-    }
-    private CommentsUserInput mCommentsUserInput;
+    //these are the user provided GPS coordinates (from their own, additional, separate device)
+    private UserInput<Double> gLatitudeUserInput;
+    private UserInput<Double> gLongitudeUserInput;
+    private UserInput<String> gCommentsUserInput;
 
     public Location(ArrayList<Sighting> vSightingsArray) {
         mSightingsArray = vSightingsArray;
@@ -54,25 +31,26 @@ public class Location implements Serializable {
         mLongitude = 0;
 
         // when constructing from an array of sightings, we don't copy any state
-        mLatitudeUserInput = new LatitudeUserInput(0, true);
-        mLongitudeUserInput = new LongitudeUserInput(0, true);
-        mCommentsUserInput = new CommentsUserInput("", true);
+        gLatitudeUserInput = new UserInput<Double>(0.0, true);
+        gLongitudeUserInput = new UserInput<Double>(0.0, true);
+        gCommentsUserInput = new UserInput<String>("", true);
+
     }
 
-    // Copy the state of the user changeable variables across locations, so we know if we should
+    // Copy the visibility of the user changeable variables across locations, so we know if we should
     // display the comments dialog or not
     public Location(ArrayList<Sighting> vSightingsArray,
-                    boolean vLatActive, boolean vLongActive, boolean vComActive) {
+                    boolean vLatVisible, boolean vLongVisible, boolean vComVisible) {
         this(vSightingsArray);
-        mLatitudeUserInput.setActive(vLatActive);
-        mLatitudeUserInput.setActive(vLongActive);
-        mCommentsUserInput.setActive(vComActive);
+        gLatitudeUserInput.setVisible(vLatVisible);
+        gLongitudeUserInput.setVisible(vLongVisible);
+        gCommentsUserInput.setVisible(vComVisible);
     }
 
     // This passes the state of each user changeable variable into the constructor
     public Location(Location vLocation) {
-        this(vLocation.getBlankSightings(), vLocation.isLatitudeUserInputActive(),
-                vLocation.isLongitudeUserInputActive(), vLocation.isCommentsUserInputActive());
+        this(vLocation.getBlankSightings(), vLocation.getLatitudeUserInput().isVisible(),
+                vLocation.getLongitudeUserInput().isVisible(), vLocation.getCommentsUserInput().isVisible());
     }
 
     public ArrayList<Sighting> getSightings() {
@@ -115,37 +93,25 @@ public class Location implements Serializable {
         mLongitude = vLongitude;
     }
 
-    public double getUserLatitude() { return mLatitudeUserInput.mLatitude; }
-    public void setUserLatitude(double vUserLatitude) {
-        mLatitudeUserInput.mLatitude = vUserLatitude;
+    public UserInput<Double> getLatitudeUserInput() { return gLatitudeUserInput; }
+    public Double getAdditionalLatitude() { return gLatitudeUserInput.getContent(); }
+    public void setAdditionalLatitude(Double vAdditionalLatitude) {
+        gLatitudeUserInput.setContent(vAdditionalLatitude);
     }
 
-    public boolean isLatitudeUserInputActive() { return mLatitudeUserInput.isActive(); }
-    public void setLatitudeUserInputActive(boolean vActive) {
-        mLatitudeUserInput.setActive(vActive);
+    public UserInput<Double> getLongitudeUserInput() { return gLongitudeUserInput; }
+    public Double getAdditionalLongitude() {
+        return gLongitudeUserInput.getContent();
+    }
+    public void setAdditionalLongitude(Double vAdditionalLongitude) {
+        gLongitudeUserInput.setContent(vAdditionalLongitude);
     }
 
-    public double getUserLongitude() {
-        return mLongitudeUserInput.mLongitude;
-    }
-    public void setUserLongitude(double vUserLongitude) {
-        mLongitudeUserInput.mLongitude = vUserLongitude;
-    }
-
-    public boolean isLongitudeUserInputActive() { return mLongitudeUserInput.isActive(); }
-    public void setLongitudeUserInputActive(boolean vActive) {
-        mLongitudeUserInput.setActive(vActive);
-    }
-
-    public String getUserComments() { return mCommentsUserInput.mComments; }
+    public UserInput<String> getCommentsUserInput() { return gCommentsUserInput; }
+    public String getComments() { return gCommentsUserInput.getContent(); }
     // use tostring on charsequence coming from edittext, getText
-    public void setUserComments(String vUserComments) {
-        mCommentsUserInput.mComments = vUserComments; //garbage collector will keep the reference alive
-    }
-
-    public boolean isCommentsUserInputActive() { return mCommentsUserInput.isActive(); }
-    public void setCommentsUserInputActive(boolean vActive) {
-        mCommentsUserInput.setActive(vActive);
+    public void setComments(String vComments) {
+        gCommentsUserInput.setContent(vComments); //garbage collector will keep the reference alive
     }
 
 //    @Override

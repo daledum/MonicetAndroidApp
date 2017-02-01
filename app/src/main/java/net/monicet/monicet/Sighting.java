@@ -8,14 +8,7 @@ import java.io.Serializable;
 
 public class Sighting implements Serializable {
 
-    private class QuantityUserInput extends AbstractUserInput {
-        private int mQuantity;
-        private QuantityUserInput(int vQuantity, boolean vActive) {
-            mQuantity = vQuantity;
-            setActive(vActive);
-        }
-    }
-    private QuantityUserInput mQuantityUserInput;
+    private UserInput<Integer> mQuantityUserInput;
 
     private final Animal mAnimal;
     private long mTimeInMilliseconds;
@@ -27,7 +20,7 @@ public class Sighting implements Serializable {
         mTimeInMilliseconds = 0;
         mLatitude = 0;
         mLongitude = 0;
-        mQuantityUserInput = new QuantityUserInput(0, true);
+        mQuantityUserInput = new UserInput<Integer>(0, true);
     }
 
     public Sighting(Sighting vSighting) {
@@ -38,16 +31,19 @@ public class Sighting implements Serializable {
         return mAnimal;
     }
 
-    public int getQuantity() {
-        return mQuantityUserInput.mQuantity;
+    public UserInput<Integer> getQuantityUserInput() { return mQuantityUserInput; }
+
+    // shorter form of getQuantityUserInput().getContent()
+    public Integer getQuantity() {
+        return mQuantityUserInput.getContent();
     }
-    public void setQuantity(int vQuantity) {
-        mQuantityUserInput.mQuantity = vQuantity;
+    // shorter form of getQuantityUserInput().setContent()
+    public void setQuantity(Integer vQuantity) {
+        mQuantityUserInput.setContent(vQuantity);
     }
 
-    public boolean isQuantityUserInputActive() { return mQuantityUserInput.isActive(); }
-    public void setQuantityUserInputActive(boolean vActive) {
-        mQuantityUserInput.setActive(vActive);
+    public boolean isEmpty() {
+        return 0 == (int) mQuantityUserInput.getContent();
     }
 
     public long getTimeInMilliseconds() {

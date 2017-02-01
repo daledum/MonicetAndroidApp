@@ -1,9 +1,6 @@
 package net.monicet.monicet;
 
 import android.app.Activity;
-import android.app.Application;
-import android.content.Context;
-import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,12 +10,6 @@ import android.widget.ImageButton;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import static android.R.attr.resource;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
 
 /**
  * Created by ubuntu on 24-01-2017.
@@ -68,16 +59,16 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
         });
 
         final NumberPicker quantity = (NumberPicker) convertView.findViewById(R.id.quantity_number_picker);
-        quantity.setValue(currentSighting.getQuantity());
+        quantity.setValue(currentSighting.getQuantity()); // autoboxing happening here
         quantity.setMinValue(0);
         quantity.setMaxValue(99);
         quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
             @Override
             public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
 
-                // set the variable etc only if quantity state is active
-                if (currentSighting.isQuantityUserInputActive() == true) {
-                    currentSighting.setQuantity(quantity.getValue());
+                // set the variable etc only if quantity userInput is visible
+                if (currentSighting.getQuantityUserInput().isVisible() == true) {
+                    currentSighting.setQuantity(quantity.getValue()); // autoboxing happening here
 
                     // TODO: sample and save GPS
                     // GPS, date and time values from the phone should be saved to their Sighting
@@ -95,10 +86,10 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     if (trip.getGpsMode() != GpsMode.CONTINUOUS) {
                         if (trip.getGpsMode() != GpsMode.FAST) {
                             trip.setGpsMode(GpsMode.FAST);
-                            Toast.makeText(getContext(), "" + trip.isGpsModeUserInputActive(),
-                                    Toast.LENGTH_SHORT).show();// get rid of this
                             // TODO: GPS this should actually change the sampling rate (via a View listener?)
                         }
+                        Toast.makeText(getContext(), "" + currentSighting.getQuantityUserInput().getContent(),
+                                Toast.LENGTH_SHORT).show();// get rid of this
                     }
                 }
 

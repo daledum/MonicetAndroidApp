@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
         // open a dialog (if the dialog wasn't shown before)
         // and ask the user if they want the Continuous GPS Tracking Mode
         // if 'yes', set the trip variable accordingly
-        if (trip.isGpsModeUserInputActive() == true) {
+        if (trip.getGpsModeUserInput().isVisible() == true) {
             AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
             alertDialogBuilder.setTitle("GPS Tracking");
             alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
             // TODO: this should trigger slow or fast gps, too
             // to check, verify that it's not in continuous mode, and if not set it to slow or fast
             // Now, set the user input state to false, registering the fact that the user was asked the question
-            trip.setGpsModeUserInputActive(false);
+            trip.getGpsModeUserInput().setVisible(false);
         } else {
             //here we arrive in the case the user was already asked about the gps mode,
             // therefore the trip already has the gps mode set
@@ -103,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
                 ArrayList<Sighting> sightings = trip.getCurrentLocation().getSightings();
 
                 for (Sighting sighting: sightings) {
-                    if (sighting.getQuantity() != 0) {
+                    if (!sighting.isEmpty()) {
                         noAnimalsWereSeen = false;
                         break;
                     }
@@ -112,10 +112,10 @@ public class MainActivity extends AppCompatActivity {
                 if (noAnimalsWereSeen) {
                     Toast.makeText(getApplicationContext(),
                             R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
-                } else {
-                    if (trip.getCurrentLocation().isCommentsUserInputActive() == true) {// add user lat and long state
-                        showUserCommentsDialog();
-                    }
+                } else {// add additionalLat and long visibility ?
+                    if (trip.getCurrentLocation().getCommentsUserInput().isVisible() == true) {
+                        showUserCommentsDialog(); // this should just deal with lat, long and comments
+                    }// here we should have the actual saving, hide/show, toast etc
 
                 }
             }

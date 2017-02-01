@@ -1,22 +1,10 @@
 package net.monicet.monicet;
 
-import android.util.Log;
-import android.widget.NumberPicker;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
 
-import static android.R.attr.mode;
-import static android.R.attr.start;
-import static android.R.id.empty;
-import static android.R.string.no;
-import static android.content.ContentValues.TAG;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
-import static android.icu.text.Normalizer.YES;
 import static android.media.CamcorderProfile.get;
-import static net.monicet.monicet.GpsMode.OFF;
 
 /**
  * Created by ubuntu on 23-01-2017.
@@ -24,15 +12,7 @@ import static net.monicet.monicet.GpsMode.OFF;
 
 public class Trip implements Serializable {
 
-    private class GpsModeUserInput extends AbstractUserInput {
-        private GpsMode mGpsMode;
-        private GpsModeUserInput(GpsMode vGpsMode, boolean vActive) {
-            mGpsMode = vGpsMode;
-            setActive(vActive);
-        }
-    }
-    GpsModeUserInput mGpsModeUserInput;
-
+    private UserInput<GpsMode> mGpsModeUserInput;
     private ArrayList<Location> mLocationsArray;
     private String mUserName;
     private long mStartTimeInMilliseconds;
@@ -58,10 +38,7 @@ public class Trip implements Serializable {
         mStartLongitude = 0;
         mEndLatitude = 0;
         mEndLongitude = 0;
-
-        // at the beginning of a trip: gps is off, tracking dialog (active state) is on (and comments are on)
-        mGpsModeUserInput = new GpsModeUserInput(GpsMode.OFF, true);
-
+        mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
         mRouteFileName = "";
         mContinuousData = new HashMap<Long,double[]>();
         mLocationsArray = new ArrayList<Location>();
@@ -100,20 +77,12 @@ public class Trip implements Serializable {
 //        return blankLocation;
 //    }
 
+    public UserInput<GpsMode> getGpsModeUserInput() { return mGpsModeUserInput; }
 
-    public GpsMode getGpsMode() { return mGpsModeUserInput.mGpsMode; }
+    public GpsMode getGpsMode() { return mGpsModeUserInput.getContent(); }
     public void setGpsMode(GpsMode vGpsMode) {
-        mGpsModeUserInput.mGpsMode = vGpsMode;
+        mGpsModeUserInput.setContent(vGpsMode);
     }
-
-    public boolean isGpsModeUserInputActive() {
-        return mGpsModeUserInput.isActive();
-    }
-
-    public void setGpsModeUserInputActive(boolean vActive) {
-        mGpsModeUserInput.setActive(vActive);
-    }
-
 
     public String getRouteFileName() { return mRouteFileName; }
     public void setRouteFileName(String vRouteFileName) {
