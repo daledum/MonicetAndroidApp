@@ -14,13 +14,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import static android.R.string.no;
+import static net.monicet.monicet.R.string.location;
 
 public class MainActivity extends AppCompatActivity {
 
-    // TODO: make trip 'global'
-    //private Trip trip; // or public
-    // I will eventually have to make trip a class variable in order for onPause etc methods to access it
-    // I will then have to create separate listeners for my buttons (because trip will not be able to be final)
+    // declaring trip as a class field made the app not start.. why?
+    //final Trip trip = new Trip(buildLocationFromResources());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,59 +33,52 @@ public class MainActivity extends AppCompatActivity {
         // Create the custom ArrayAdapter and populate it
 
         //this will create a trip with one location, Alex: trip was declared and initialized here
-        //final Trip trip = new Trip(location);
-        final Trip trip = new Trip(buildLocationFromResources());//was Trip(location)//can move outside 'global'
+        //can move outside 'global', also, if I'm not using anonymous inners, can drop the final
+        final Trip trip = new Trip(buildLocationFromResources());
 
         //next time, do this after the addLocation(), if in the same activity (with access to the adapter)
         // sightingAdapter.clear(); sightingAdapter.add(trip.getCurrentLocation().getSightings());
 
-//        SightingAdapter sightingAdapter =
-//                new SightingAdapter(this, trip.getCurrentLocation().getSightings());
-        SightingAdapter sightingAdapter = new SightingAdapter(this, trip);
+        final SightingAdapter sightingAdapter = new SightingAdapter(this, trip);
 
         ListView listView = (ListView) findViewById(R.id.list_view);
         listView.setAdapter(sightingAdapter);
         // Step 1 ends here
+
+        // Testing quantity setting and displaying // Alex: remove this when finished
+        trip.getCurrentLocation().getSightings().get(0).setQuantity(89); //- too slow, works only when scrolling
+        trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
+        sightingAdapter.notifyDataSetChanged();
+
+        // Extra steps:
+        // Change label to Monicet - Stop 1
+        setTitle(getText(R.string.app_name) + " - " +
+                getText(location) + " " + trip.getNumberOfLocations());
+        // TODO: get username - do this when dealing with GPS
 
         // Step 2 starts here:
         // open a dialog (if the dialog wasn't shown before)
         // and ask the user if they want the Continuous GPS Tracking Mode
         // if 'yes', set the trip variable accordingly
         if (trip.getGpsModeUserInput().isVisible() == true) {
-            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-            alertDialogBuilder.setTitle("GPS Tracking");
-            alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
-            alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    trip.setGpsMode(GpsMode.CONTINUOUS);
-                    // TODO: GPS this should trigger continuous gps
-                }
-            });
-            alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    // do nothing
-                    // dialog.dismiss();
-                }
-            });
-            alertDialogBuilder.create();
-            alertDialogBuilder.show();
-            // TODO: if the user presses No or presses outside, I should go into slow or fast gps mode
-            // TODO: this should trigger slow or fast gps, too
-            // to check, verify that it's not in continuous mode, and if not set it to slow or fast
-            // Now, set the user input state to false, registering the fact that the user was asked the question
-            trip.getGpsModeUserInput().setVisible(false);
+            showGpsModeDialog(trip.getGpsModeUserInput());
         } else {
             //here we arrive in the case the user was already asked about the gps mode,
             // therefore the trip already has the gps mode set
             // TODO: this should trigger the trip.getGpsMode mode
         }
-
         //
         // b) after the dialog was exited, then we do nothing
-
         // Step 2 ends here
+
+        // if coming back from a config change - I should first check if they are visible
+        FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
+        FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
+        FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
+
+        // should these be set in the xml initially
+        fabAdd.setVisibility(View.INVISIBLE);
+        fabSend.setVisibility(View.INVISIBLE);
 
         // Step 3 starts here:
         // SAVE floating action button
@@ -95,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         // Else (all quantities are 0): put a LONG Toast on the screen (and do nothing), with the message:
         //"your trip has no sightings. There is nothing to send. Please add the quantity of individuals that you've seen.
         // Or no species were seen/No animals were seen at this location. There is nothing to save."
-        FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
         fabSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -113,36 +104,83 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(),
                             R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
                 } else {// add additionalLat and long visibility ?
+                    // in the case the user hasn't turned off the comments (or it's the first show)
                     if (trip.getCurrentLocation().getCommentsUserInput().isVisible() == true) {
-                        showUserCommentsDialog(); // this should just deal with lat, long and comments
-                    }// here we should have the actual saving, hide/show, toast etc
+                        // show the comments dialog fragment here
 
+                        // TODO: Comments Cancel button: do nothing
+                        // TODO: OK button pressed, so this should happen:
+                        // 1 - save user gps to Location's user gps. Be careful with the format (conversion...
+                        // or just don't convert at all - straight to String)
+                        // 2 - save user's comments to Location's user comments
+                        // 3 - if the 'don't bother me with more messages' check-box is checked before pressing this OK button,
+                        // set the comments, lat and long userInput isVisible to false
+                        // trip.getCurrentLocation().setCommentsUserInputActive(false);// plus user lat and long
+                        // 4 - call (passing it the whole trip) ... trip is required for setting the GPS Mode
+                        // and the adapter for disabling the number pickers
+                        saveLocation(trip, sightingAdapter);
+                        // TODO: make sure the dialog closes when it should
+
+                    } else {
+                        saveLocation(trip, sightingAdapter);
+                    }
                 }
             }
         });
         // Step 3 ends here
 
-        // Step 4 starts here: // Alex: remove this when finished
-        trip.getCurrentLocation().getSightings().get(0).setQuantity(89); //- too slow, works only when scrolling
-        trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
-        //sightingAdapter.notifyDataSetChanged();//works without this
-
-        // Step 4 ends here
-
-
-        // Extra steps:
-        // Change label to Monicet - Stop 1
-        setTitle(getText(R.string.app_name) + " - " +
-                getText(R.string.location) + " " + trip.getNumberOfLocations());
-        // TODO: get username - do this when dealing with GPS
-
     }
 
-    public void showUserCommentsDialog() {
-        // show the comments dialog fragment here
-        // in case the user checks to stop the future comments
-        // trip.getCurrentLocation().setCommentsUserInputActive(false);// plus user lat and long
+    public void showGpsModeDialog(final UserInput<GpsMode> gpsModeUserInput) {
+        // it comes here only if the user changeable variable is visible (it was not shown before, in this case)
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setTitle("GPS Tracking");
+        alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
+        alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                gpsModeUserInput.setContent(GpsMode.CONTINUOUS);
+                // TODO: GPS this should trigger continuous gps
+            }
+        });
+        alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // do nothing
+                // dialog.dismiss();
+            }
+        });
+        alertDialogBuilder.create();
+        alertDialogBuilder.show();
+        // TODO: if the user presses No or presses outside, I should go into slow or fast gps mode
+        // TODO: this should trigger slow or fast gps, too
+        // to check, verify that it's not in continuous mode, and if not set it to slow or fast
+        // Now, set the user input state to false, registering the fact that the user was asked the question
+        gpsModeUserInput.setVisible(false);
+    }
 
+    public void saveLocation(Trip trip, SightingAdapter sightingAdapter) {
+        Location currentLocation = trip.getCurrentLocation();
+        // TODO: sample (and save Location instance GPS, date and time)
+        //currentLocation.setLatitude();
+        //currentLocation.setLongitude();
+        //currentLocation.setTimeInMilliseconds();
+
+        trip.setGpsMode(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
+
+        for (Sighting sighting: currentLocation.getSightings()) {
+            sighting.getQuantityUserInput().setVisible(false);
+        }
+        sightingAdapter.notifyDataSetChanged();
+
+        Toast.makeText(getApplicationContext(),
+                R.string.location_saved_confirmation_message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),
+                R.string.location_saved_instructions_message, Toast.LENGTH_LONG).show();
+
+        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
+        findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
     }
 
     public Location buildLocationFromResources() {

@@ -30,4 +30,26 @@
         android:layout_centerInParent="true"
         android:id="@+id/fab_save" />
 
+    <android.support.design.widget.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        app:fabSize="normal"
+        app:elevation="10dp"
+        app:srcCompat="@android:drawable/ic_input_add"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/fab_save"
+        android:id="@+id/fab_add" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        app:fabSize="normal"
+        app:elevation="10dp"
+        app:srcCompat="@android:drawable/ic_menu_send"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/fab_save"
+        android:id="@+id/fab_send" />
+
 </RelativeLayout>

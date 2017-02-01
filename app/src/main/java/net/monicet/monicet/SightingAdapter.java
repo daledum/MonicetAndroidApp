@@ -1,6 +1,7 @@
 package net.monicet.monicet;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,15 +60,17 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
         });
 
         final NumberPicker quantity = (NumberPicker) convertView.findViewById(R.id.quantity_number_picker);
-        quantity.setValue(currentSighting.getQuantity()); // autoboxing happening here
         quantity.setMinValue(0);
         quantity.setMaxValue(99);
-        quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-            @Override
-            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+        quantity.setValue(currentSighting.getQuantity()); // autoboxing happening here
 
-                // set the variable etc only if quantity userInput is visible
-                if (currentSighting.getQuantityUserInput().isVisible() == true) {
+        if (currentSighting.getQuantityUserInput().isVisible() == true) {
+            // if coming back to a saved Location to make changes to it (in a future version), uncomment this:
+            quantity.setBackgroundColor(Color.TRANSPARENT);
+            quantity.setEnabled(true);
+            quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+                @Override
+                public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
                     currentSighting.setQuantity(quantity.getValue()); // autoboxing happening here
 
                     // TODO: sample and save GPS
@@ -92,10 +95,11 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                                 Toast.LENGTH_SHORT).show();// get rid of this
                     }
                 }
-
-            }
-        });
-
+            });
+        } else {
+            quantity.setBackgroundColor(Color.GRAY);
+            quantity.setEnabled(false);
+        }
 
         return convertView;
     }
