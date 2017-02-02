@@ -1,6 +1,10 @@
 package net.monicet.monicet;
 
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -10,10 +14,17 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import static android.R.string.no;
+import static android.os.Environment.getExternalStorageDirectory;
 import static net.monicet.monicet.R.string.location;
 
 public class MainActivity extends AppCompatActivity {
@@ -36,25 +47,29 @@ public class MainActivity extends AppCompatActivity {
         //can move outside 'global', also, if I'm not using anonymous inners, can drop the final
         final Trip trip = new Trip(buildLocationFromResources());
 
-        //next time, do this after the addLocation(), if in the same activity (with access to the adapter)
-        // sightingAdapter.clear(); sightingAdapter.add(trip.getCurrentLocation().getSightings());
-
         final SightingAdapter sightingAdapter = new SightingAdapter(this, trip);
-
         ListView listView = (ListView) findViewById(R.id.list_view);
         listView.setAdapter(sightingAdapter);
         // Step 1 ends here
 
         // Testing quantity setting and displaying // Alex: remove this when finished
-        trip.getCurrentLocation().getSightings().get(0).setQuantity(89); //- too slow, works only when scrolling
-        trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
-        sightingAdapter.notifyDataSetChanged();
+        //trip.getCurrentLocation().getSightings().get(0).setQuantity(89); // setValue must come after setmax min
+        //trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
+        //sightingAdapter.notifyDataSetChanged();
 
-        // Extra steps:
+        // Initialization steps:
         // Change label to Monicet - Stop 1
         setTitle(getText(R.string.app_name) + " - " +
                 getText(location) + " " + trip.getNumberOfLocations());
-        // TODO: get username - do this when dealing with GPS
+        // TODO: get username and set it
+        // trip.setUserName();
+        // TODO: start with a reasonably fast gps mode, so that you can sample immediately, then turn it to 'really slow'
+        trip.setGpsMode(GpsMode.FAST);
+        //trip.setStartLatitude();
+        //trip.setStartLongitude();
+        //trip.setStartTimeInMilliseconds(System.currentTimeMillis());
+        trip.setGpsMode(GpsMode.SLOW);
+
 
         // Step 2 starts here:
         // open a dialog (if the dialog wasn't shown before)
@@ -72,9 +87,9 @@ public class MainActivity extends AppCompatActivity {
         // Step 2 ends here
 
         // if coming back from a config change - I should first check if they are visible
-        FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
-        FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
-        FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
+        final FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
+        final FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
+        final FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
 
         // should these be set in the xml initially
         fabAdd.setVisibility(View.INVISIBLE);
@@ -112,6 +127,9 @@ public class MainActivity extends AppCompatActivity {
                         // TODO: OK button pressed, so this should happen:
                         // 1 - save user gps to Location's user gps. Be careful with the format (conversion...
                         // or just don't convert at all - straight to String)
+                        // user gps..take the degrees min seconds values and convert them to decimal
+                        // take other smartphone gps reading (from trip, sighting, location)
+                        // and compare the sign (if near the 0 degree point, don't do this check)
                         // 2 - save user's comments to Location's user comments
                         // 3 - if the 'don't bother me with more messages' check-box is checked before pressing this OK button,
                         // set the comments, lat and long userInput isVisible to false
@@ -128,6 +146,114 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         // Step 3 ends here
+
+        //Step 4 starts here:
+        // ADD + button logic
+        fabAdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                trip.addLocation();
+
+                sightingAdapter.clear();
+                sightingAdapter.addAll(trip.getCurrentLocation().getSightings());
+                sightingAdapter.notifyDataSetChanged();
+
+                fabAdd.setVisibility(View.INVISIBLE);
+                fabSend.setVisibility(View.INVISIBLE);
+                fabSave.setVisibility(View.VISIBLE);
+
+                setTitle(getText(R.string.app_name) + " - " +
+                        getText(R.string.location) + " " + trip.getNumberOfLocations());
+            }
+        });
+        //Step 4 ends here
+
+        //Step 5 starts here:
+        // SEND button logic
+        fabSend.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // TODO: 1 - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
+                //trip.setEndLatitude();
+                //trip.setEndLongitude()
+                //trip.setEndTimeInMilliseconds(System.currentTimeMillis());
+
+                // TODO: 2 - Then jasonize (toJSON, GSON library) your Trip instance object
+                // TODO: 3 - Then serialize (save .json text file). Give the file a XXXX name,
+                // where XXXX is the time, or user or trip number etc.
+
+                // when using SENDTO: http://stackoverflow.com/questions/3132889/action-sendto-for-sending-an-email
+                // sendIntent.setData(Uri.parse("mailto:alex_samprasno1@yahoo.co.uk"));
+                // how to use Gmail only:http://stackoverflow.com/questions/16645100/how-to-send-attached-file-using-intent-in-android
+
+                Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"alex_samprasno1@yahoo.co.uk"});
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "A new trip - name of JSON file"); // add something else
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "toString of trip here");// or tripJson File to String
+                sendIntent.putExtra(Intent.EXTRA_TITLE, "Please, choose Gmail :)");
+
+                // TODO: continuous GPS TRK, GPX, KML, KMZ,PLT
+                if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
+                    // A - a file with the appropriate extension (TRK, GPX, KML, KMZ,PLT) will be created
+                    // B - and the file's name will be assigned to to the routeFileName variable (empty, by default)
+                    // trip.setRouteFileName();
+                    // C - Trip's continuousGpsSamples (Set), continuousDateTime (Set) (empty by default)
+                    // will be saved inside this file
+                    // D - taking the json file, make a zip file
+                    // and attach the file to the intent
+                    // https://developer.android.com/reference/java/util/zip/ZipOutputStream.html
+                    // http://stackoverflow.com/questions/25594792/zipoutputstream-produces-corrupted-zip-file-on-android
+                    // http://stackoverflow.com/questions/34978608/android-java-zipping-files-and-send-with-intent
+                    sendIntent.setType("application/zip");
+
+                } else {
+                    sendIntent.setType("application/json");
+                }
+                // Alex: or intent.setType("*/*");
+
+                // NB make sure it uses the correct file (tripXXX.zip or tripXXX.json)
+                // This opens the file
+                //File tripFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "/Download/monicet/trip.json");
+                File jsonFile = new File(Environment.getExternalStorageDirectory(), "/Download/monicet/trip.json");
+
+//                // Serialize trip to file
+//                try {
+//                    FileOutputStream fileOutputStream = openFileOutput("/Download/monicet/trip.json", Context.MODE_PRIVATE);
+//                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+//                    objectOutputStream.writeObject(trip);
+//                    objectOutputStream.close();
+//                    fileOutputStream.close();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+
+                Uri jsonFileUri = Uri.fromFile(jsonFile);
+                sendIntent.putExtra(Intent.EXTRA_STREAM, jsonFileUri);
+
+                // TODO: 4 - Then turn off the GPS service
+                trip.setGpsMode(GpsMode.OFF);
+                // also, actually turn the gps off
+
+                // 5 - send the saved file(type text) via implicit intent (forced Gmail to ?@monicet.net)
+                if (sendIntent.resolveActivity(getPackageManager()) != null) {
+                    // add a try catch here
+                    sendIntent.setClassName("com.google.android.gm", "com.google.android.gm.ComposeActivityGmail");
+                    // the one below doesn't work
+                    //sendIntent.setClassName("com.google.android.gm", "com.google.android.gm.ConversationListActivity");
+                    startActivity(sendIntent);
+                } else {
+                    Toast.makeText(getApplicationContext(), "No way", Toast.LENGTH_SHORT).show();
+                }
+
+                Toast.makeText(getApplicationContext(), "" + Environment.getExternalStorageDirectory().getAbsolutePath(),
+                        Toast.LENGTH_SHORT).show(); // this comes after opening gmail
+                // Final point - Then stop the application. *make sure you finish it off. Test the order.
+                // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
+                //finish();
+            }
+        });
+        //Step 5 ends here
+
 
     }
 
@@ -164,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
         // TODO: sample (and save Location instance GPS, date and time)
         //currentLocation.setLatitude();
         //currentLocation.setLongitude();
-        //currentLocation.setTimeInMilliseconds();
+        //currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
 
         trip.setGpsMode(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
 

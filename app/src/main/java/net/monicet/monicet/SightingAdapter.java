@@ -91,8 +91,6 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                             trip.setGpsMode(GpsMode.FAST);
                             // TODO: GPS this should actually change the sampling rate (via a View listener?)
                         }
-                        Toast.makeText(getContext(), "" + currentSighting.getQuantityUserInput().getContent(),
-                                Toast.LENGTH_SHORT).show();// get rid of this
                     }
                 }
             });
