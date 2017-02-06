@@ -31,7 +31,7 @@
         <ImageButton
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:srcCompat="@android:drawable/picture_frame"
+            app:srcCompat="@drawable/ic_crop_original_black_24dp"
             android:id="@+id/photo_imageButton"
             android:layout_weight="1"/>
 

@@ -66,7 +66,7 @@ public class Trip implements Serializable {
     // mechanism to the next location (via 'cloning' from the current one)
     // The only way to pass this info (user no longer wants to write comments) via locations, without using the trip
     public void addLocation() {
-        Location currentLocation = mLocationsArray.get(mLocationsArray.size() - 1);
+        Location currentLocation = getCurrentLocation(); // mLocationsArray.get(mLocationsArray.size() - 1);
         mLocationsArray.add(new Location(currentLocation));
     }
 

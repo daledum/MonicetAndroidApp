@@ -6,6 +6,19 @@
     <string name="tracking_dialog_message">
         You are currently in the normal GPS sampling mode.\nActivate the continuous GPS sampling mode, which uses a lot of battery?
     </string>
+    <string name="comments_message_title">
+        Additional information
+    </string>
+    <string name="user_gps_message">
+        You can insert here the GPS coordinates from your own, separate GPS device.
+    </string>
+    <string name="comments_message">
+        You can also add comments.
+    </string>
+    <string name="double_quote">\"</string>
+    <string name="turn_off_comments_message">
+        Select this checkbox, if you\'d like to stop this dialog appearing in the future.
+    </string>
     <string name="no_animals_toast_message">
         There is nothing to save.\nPlease, modify the number of animals that you\'ve seen.
     </string>
@@ -15,6 +28,7 @@
     <string name="location_saved_instructions_message">
         Press ADD to add sightings from a new location or SEND if you\'ve reached the end of your trip.
     </string>
+
 
     <string name="sperm_whale">Sperm whale</string>
     <string name="common_dolphin">Common dolphin</string>

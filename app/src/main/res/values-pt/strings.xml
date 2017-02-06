@@ -36,4 +36,8 @@
     <string name="location">Lugar</string>
     <string name="location_saved_confirmation_message">Os avistamentos para este lugar foram salvos.</string>
     <string name="location_saved_instructions_message">Pressione ADICIONAR para adicionar visualizações de um novo lugar ou ENVIAR se você atingiu o final de sua viagem.</string>
+    <string name="comments_message">Também pode adicionar comentários.</string>
+    <string name="turn_off_comments_message">Seleccione esta caixa, se pretender parar a apresentação deste diálogo no futuro.</string>
+    <string name="user_gps_message">Pode inserir aqui as coordenadas GPS do seu próprio dispositivo GPS separado.</string>
+    <string name="comments_message_title">Informação adicional</string>
 </resources>

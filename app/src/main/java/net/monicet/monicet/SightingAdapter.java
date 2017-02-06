@@ -12,22 +12,26 @@ import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+
 /**
  * Created by ubuntu on 24-01-2017.
  */
 
 public class SightingAdapter extends ArrayAdapter<Sighting> {
 
-    private final Trip trip;
+    //private final Trip trip;
+    private final UserInput<GpsMode> gpsModeUserInput;
 
-//    public SightingAdapter(Activity context, ArrayList<Sighting> sightings) {
-//        super(context, 0, sightings);
-//    }
-
-    public SightingAdapter(Activity context, Trip vTrip) {
-        super(context, 0, vTrip.getCurrentLocation().getSightings());
-        trip = vTrip;
+    public SightingAdapter(Activity context, ArrayList<Sighting> sightings, UserInput<GpsMode> vGpsModeUserInput) {
+        super(context, 0, sightings);
+        gpsModeUserInput = vGpsModeUserInput;
     }
+
+//    public SightingAdapter(Activity context, Trip vTrip) {
+//        super(context, 0, vTrip.getCurrentLocation().getSightings());
+//        trip = vTrip;
+//    }
 
     @NonNull
     @Override
@@ -86,9 +90,9 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     // while in the default (no GPS tracking, infrequent mode)
                     // first click/press on the NumberPicker of a sighting for every location:
                     // start sampling GPS data more often (fast/quickly)
-                    if (trip.getGpsMode() != GpsMode.CONTINUOUS) {
-                        if (trip.getGpsMode() != GpsMode.FAST) {
-                            trip.setGpsMode(GpsMode.FAST);
+                    if (gpsModeUserInput.getContent() != GpsMode.CONTINUOUS) {
+                        if (gpsModeUserInput.getContent() != GpsMode.FAST) {
+                            gpsModeUserInput.setContent(GpsMode.FAST);
                             // TODO: GPS this should actually change the sampling rate (via a View listener?)
                         }
                     }

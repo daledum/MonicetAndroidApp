@@ -1,5 +1,6 @@
 package net.monicet.monicet;
 
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -47,7 +48,8 @@ public class MainActivity extends AppCompatActivity {
         //can move outside 'global', also, if I'm not using anonymous inners, can drop the final
         final Trip trip = new Trip(buildLocationFromResources());
 
-        final SightingAdapter sightingAdapter = new SightingAdapter(this, trip);
+        final SightingAdapter sightingAdapter = new SightingAdapter(
+                this, trip.getCurrentLocation().getSightings(), trip.getGpsModeUserInput());
         ListView listView = (ListView) findViewById(R.id.list_view);
         listView.setAdapter(sightingAdapter);
         // Step 1 ends here
@@ -136,11 +138,15 @@ public class MainActivity extends AppCompatActivity {
                         // trip.getCurrentLocation().setCommentsUserInputActive(false);// plus user lat and long
                         // 4 - call (passing it the whole trip) ... trip is required for setting the GPS Mode
                         // and the adapter for disabling the number pickers
-                        saveLocation(trip, sightingAdapter);
+
+                        DialogFragment commentsDialogFragment = CommentsDialogFragment.newInstance();
+                        commentsDialogFragment.show(getFragmentManager(), "comments");
+                        //saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());  // Alex: this will be called inside the dialog fragment
                         // TODO: make sure the dialog closes when it should
 
                     } else {
-                        saveLocation(trip, sightingAdapter);
+                        saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());
+                        // Alex, just pass the current location, the gpsmodeuserinput, with the sighting adapter
                     }
                 }
             }
@@ -216,16 +222,13 @@ public class MainActivity extends AppCompatActivity {
                 //File tripFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "/Download/monicet/trip.json");
                 File jsonFile = new File(Environment.getExternalStorageDirectory(), "/Download/monicet/trip.json");
 
-//                // Serialize trip to file
 //                try {
-//                    FileOutputStream fileOutputStream = openFileOutput("/Download/monicet/trip.json", Context.MODE_PRIVATE);
-//                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-//                    objectOutputStream.writeObject(trip);
-//                    objectOutputStream.close();
-//                    fileOutputStream.close();
 //                } catch (IOException e) {
 //                    e.printStackTrace();
 //                }
+//                String pathname = Environment.getExternalStorageDirectory().getAbsolutePath();
+//                String filename = "/MyFiles/mysdfile.txt";
+//                File file = new File(pathname, filename);
 
                 Uri jsonFileUri = Uri.fromFile(jsonFile);
                 sendIntent.putExtra(Intent.EXTRA_STREAM, jsonFileUri);
@@ -249,7 +252,9 @@ public class MainActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show(); // this comes after opening gmail
                 // Final point - Then stop the application. *make sure you finish it off. Test the order.
                 // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
-                //finish();
+                // returning to this app from Gmail ?
+                // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
+                //finish(); // TODO: uncomment this when done
             }
         });
         //Step 5 ends here
@@ -285,16 +290,18 @@ public class MainActivity extends AppCompatActivity {
         gpsModeUserInput.setVisible(false);
     }
 
-    public void saveLocation(Trip trip, SightingAdapter sightingAdapter) {
-        Location currentLocation = trip.getCurrentLocation();
+    // TODO: pass the current location and the gpsmodeuserinput, with the sighting adapter
+    public void saveLocation(Location location, SightingAdapter sightingAdapter,
+                             UserInput<GpsMode> gpsModeUserInput) {
+        //Location currentLocation = trip.getCurrentLocation();
         // TODO: sample (and save Location instance GPS, date and time)
-        //currentLocation.setLatitude();
-        //currentLocation.setLongitude();
-        //currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
+        //location.setLatitude();
+        //location.setLongitude();
+        //location.setTimeInMilliseconds(System.currentTimeMillis());
 
-        trip.setGpsMode(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
+        gpsModeUserInput.setContent(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
 
-        for (Sighting sighting: currentLocation.getSightings()) {
+        for (Sighting sighting: location.getSightings()) {
             sighting.getQuantityUserInput().setVisible(false);
         }
         sightingAdapter.notifyDataSetChanged();
