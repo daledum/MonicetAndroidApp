@@ -149,28 +149,4 @@
         android:hint="Age of animals, position.."
         android:layout_gravity="center"/>
 
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="@dimen/activity_vertical_margin">
-
-        <Button
-            android:text="CANCEL"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/cancel_comments" />
-
-        <Button
-            android:text="OK"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/ok_comments" />
-
-    </LinearLayout>
-
-
-
-
 </LinearLayout>

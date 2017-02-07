@@ -1,7 +1,5 @@
 package net.monicet.monicet;
 
-import android.app.DialogFragment;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -11,22 +9,18 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import static android.R.string.no;
-import static android.os.Environment.getExternalStorageDirectory;
-import static net.monicet.monicet.R.string.location;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -62,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         // Initialization steps:
         // Change label to Monicet - Stop 1
         setTitle(getText(R.string.app_name) + " - " +
-                getText(location) + " " + trip.getNumberOfLocations());
+                getText(R.string.location) + " " + trip.getNumberOfLocations());
         // TODO: get username and set it
         // trip.setUserName();
         // TODO: start with a reasonably fast gps mode, so that you can sample immediately, then turn it to 'really slow'
@@ -120,33 +114,91 @@ public class MainActivity extends AppCompatActivity {
                 if (noAnimalsWereSeen) {
                     Toast.makeText(getApplicationContext(),
                             R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
-                } else {// add additionalLat and long visibility ?
+                } else {
                     // in the case the user hasn't turned off the comments (or it's the first show)
                     if (trip.getCurrentLocation().getCommentsUserInput().isVisible() == true) {
-                        // show the comments dialog fragment here
 
-                        // TODO: Comments Cancel button: do nothing
-                        // TODO: OK button pressed, so this should happen:
-                        // 1 - save user gps to Location's user gps. Be careful with the format (conversion...
-                        // or just don't convert at all - straight to String)
-                        // user gps..take the degrees min seconds values and convert them to decimal
-                        // take other smartphone gps reading (from trip, sighting, location)
-                        // and compare the sign (if near the 0 degree point, don't do this check)
-                        // 2 - save user's comments to Location's user comments
-                        // 3 - if the 'don't bother me with more messages' check-box is checked before pressing this OK button,
-                        // set the comments, lat and long userInput isVisible to false
-                        // trip.getCurrentLocation().setCommentsUserInputActive(false);// plus user lat and long
-                        // 4 - call (passing it the whole trip) ... trip is required for setting the GPS Mode
-                        // and the adapter for disabling the number pickers
+                        //DialogFragment commentsDialogFragment = CommentsDialogFragment.newInstance();
+                        //commentsDialogFragment.show(getFragmentManager(), "comments");
+                        ////saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());  // Alex: this will be called inside the dialog fragment
+                        LayoutInflater layoutInflater = LayoutInflater.from(MainActivity.this);
+                        final View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+                        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(MainActivity.this);
 
-                        DialogFragment commentsDialogFragment = CommentsDialogFragment.newInstance();
-                        commentsDialogFragment.show(getFragmentManager(), "comments");
-                        //saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());  // Alex: this will be called inside the dialog fragment
-                        // TODO: make sure the dialog closes when it should
+                        comAlertDialogBuilder.setTitle(R.string.comments_message_title);
 
+                        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // TODO: take other smartphone gps reading (from trip, sighting, location)
+                                // and compare the sign (if near the 0 degree point, don't do this check)
+
+                                EditText latitudeDegrees = (EditText) rootView.findViewById(R.id.lat_degrees_edit_text);
+                                double gpsDegrees = Utility.parseGpsToDouble(
+                                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
+                                );
+                                EditText latitudeMinutes = (EditText) rootView.findViewById(R.id.lat_minutes_edit_text);
+                                double gpsMinutes = Utility.parseGpsToDouble(
+                                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                                );
+                                EditText latitudeSeconds = (EditText) rootView.findViewById(R.id.lat_seconds_edit_text);
+                                double gpsSeconds = Utility.parseGpsToDouble(
+                                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                                );
+
+                                trip.getCurrentLocation().setAdditionalLatitude(
+                                        Utility.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                                );
+
+                                EditText longitudeDegrees = (EditText) rootView.findViewById(R.id.long_degrees_edit_text);
+                                gpsDegrees = Utility.parseGpsToDouble(
+                                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
+                                );
+                                EditText longitudeMinutes = (EditText) rootView.findViewById(R.id.long_minutes_edit_text);
+                                gpsMinutes = Utility.parseGpsToDouble(
+                                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                                );
+                                EditText longitudeSeconds = (EditText) rootView.findViewById(R.id.long_seconds_edit_text);
+                                gpsSeconds = Utility.parseGpsToDouble(
+                                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                                );
+
+                                trip.getCurrentLocation().setAdditionalLongitude(
+                                        Utility.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                                );
+
+                                EditText comments = (EditText) rootView.findViewById(R.id.comments_edit_text);
+                                trip.getCurrentLocation().setComments(comments.getText().toString());
+
+                                CheckBox turnOffCommentsCheckBox = (CheckBox) rootView.findViewById(R.id.turn_off_comment_checkbox);
+                                if (turnOffCommentsCheckBox.isChecked()) {
+                                    trip.getCurrentLocation().getCommentsUserInput().setVisible(false);
+                                    trip.getCurrentLocation().getLatitudeUserInput().setVisible(false);
+                                    trip.getCurrentLocation().getLongitudeUserInput().setVisible(false);
+                                }
+
+                                // Alex - test
+//                                Toast.makeText(getApplicationContext(),
+//                                        ""+trip.getCurrentLocation().getAdditionalLatitude(), Toast.LENGTH_SHORT).show();
+//                                Toast.makeText(getApplicationContext(),
+//                                        ""+trip.getCurrentLocation().getAdditionalLongitude(), Toast.LENGTH_SHORT).show();
+
+
+                                saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());
+                            }
+                        });
+                        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                                // dialog.dismiss();
+                            }
+                        });
+                        comAlertDialogBuilder.setView(rootView);
+                        comAlertDialogBuilder.create();
+                        comAlertDialogBuilder.show();
                     } else {
                         saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());
-                        // Alex, just pass the current location, the gpsmodeuserinput, with the sighting adapter
                     }
                 }
             }
@@ -264,25 +316,25 @@ public class MainActivity extends AppCompatActivity {
 
     public void showGpsModeDialog(final UserInput<GpsMode> gpsModeUserInput) {
         // it comes here only if the user changeable variable is visible (it was not shown before, in this case)
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        alertDialogBuilder.setTitle("GPS Tracking");
-        alertDialogBuilder.setMessage(R.string.tracking_dialog_message);
-        alertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+        AlertDialog.Builder gpsAlertDialogBuilder = new AlertDialog.Builder(this);
+        gpsAlertDialogBuilder.setTitle("GPS Tracking");
+        gpsAlertDialogBuilder.setMessage(R.string.tracking_dialog_message);
+        gpsAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 gpsModeUserInput.setContent(GpsMode.CONTINUOUS);
                 // TODO: GPS this should trigger continuous gps
             }
         });
-        alertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+        gpsAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 // do nothing
                 // dialog.dismiss();
             }
         });
-        alertDialogBuilder.create();
-        alertDialogBuilder.show();
+        gpsAlertDialogBuilder.create();
+        gpsAlertDialogBuilder.show();
         // TODO: if the user presses No or presses outside, I should go into slow or fast gps mode
         // TODO: this should trigger slow or fast gps, too
         // to check, verify that it's not in continuous mode, and if not set it to slow or fast
@@ -290,18 +342,17 @@ public class MainActivity extends AppCompatActivity {
         gpsModeUserInput.setVisible(false);
     }
 
-    // TODO: pass the current location and the gpsmodeuserinput, with the sighting adapter
-    public void saveLocation(Location location, SightingAdapter sightingAdapter,
+    public void saveLocation(Location currentLocation, SightingAdapter sightingAdapter,
                              UserInput<GpsMode> gpsModeUserInput) {
         //Location currentLocation = trip.getCurrentLocation();
-        // TODO: sample (and save Location instance GPS, date and time)
-        //location.setLatitude();
-        //location.setLongitude();
-        //location.setTimeInMilliseconds(System.currentTimeMillis());
+        // TODO: sample (and save Location instance GPS, date and time)... later, slow down the gps sampling
+        //currentLocation.setLatitude();
+        //currentLocation.setLongitude();
+        //currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
 
         gpsModeUserInput.setContent(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
 
-        for (Sighting sighting: location.getSightings()) {
+        for (Sighting sighting: currentLocation.getSightings()) {
             sighting.getQuantityUserInput().setVisible(false);
         }
         sightingAdapter.notifyDataSetChanged();

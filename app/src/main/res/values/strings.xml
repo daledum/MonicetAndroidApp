@@ -3,6 +3,7 @@
 
     <string name="location">Location</string>
 
+    <string name="tracking_dialog_title">Continuous GPS sampling mode</string>
     <string name="tracking_dialog_message">
         You are currently in the normal GPS sampling mode.\nActivate the continuous GPS sampling mode, which uses a lot of battery?
     </string>
