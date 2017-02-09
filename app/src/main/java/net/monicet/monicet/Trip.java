@@ -22,13 +22,14 @@ public class Trip implements Serializable {
     private double mEndLatitude;
     private double mEndLongitude;
 
+    private String mTripFileName;
     private String mRouteFileName;
     // continuousGpsSamples, continuousDateTime (Set): these will be empty by default.
     // If in Continuous Tracking Mode (DialogFragment Tracking YES), a lot of data will be added to the sets very often.
     // This will not be added to the JSON file.
     // A file with the appropriate extension (TRK, GPX, KML, KMZ, PLT) will be created/saved/sent
     // and its name will be assigned to to the routeFileName variable, which will appear in the JSON file.
-    private HashMap<Long,double[]> mContinuousData;//or use a map instead of double[]
+    private transient HashMap<Long,double[]> mContinuousData;//or use a map instead of double[]
 
     public Trip(Location vLocation) {
         mUserName = "";
@@ -39,6 +40,7 @@ public class Trip implements Serializable {
         mEndLatitude = 0;
         mEndLongitude = 0;
         mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
+        mTripFileName = "";
         mRouteFileName = "";
         mContinuousData = new HashMap<Long,double[]>();
         mLocationsArray = new ArrayList<Location>();
@@ -84,6 +86,9 @@ public class Trip implements Serializable {
         mGpsModeUserInput.setContent(vGpsMode);
     }
 
+    public String getTripFileName() { return mTripFileName; }
+    public void setTripFileName(String vTripFileName) { mTripFileName = vTripFileName; }
+
     public String getRouteFileName() { return mRouteFileName; }
     public void setRouteFileName(String vRouteFileName) {
         mRouteFileName = vRouteFileName; //only if in Tracking mode
@@ -91,7 +96,7 @@ public class Trip implements Serializable {
 
     public HashMap<Long,double[]> getContinuousData() { return mContinuousData; }
     public void addContinuousData(long vTimeInMilliseconds, double vLatitude, double vLongitude ) {
-        mContinuousData.put(Long.valueOf(vTimeInMilliseconds), new double[]{vLatitude,vLongitude});
+        mContinuousData.put(vTimeInMilliseconds, new double[]{vLatitude,vLongitude});
     }
 
     public String getUserName() { return mUserName; }

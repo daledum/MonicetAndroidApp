@@ -16,11 +16,21 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
+import static android.R.attr.data;
+import static android.R.attr.path;
 import static android.R.string.no;
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -177,13 +187,6 @@ public class MainActivity extends AppCompatActivity {
                                     trip.getCurrentLocation().getLongitudeUserInput().setVisible(false);
                                 }
 
-                                // Alex - test
-//                                Toast.makeText(getApplicationContext(),
-//                                        ""+trip.getCurrentLocation().getAdditionalLatitude(), Toast.LENGTH_SHORT).show();
-//                                Toast.makeText(getApplicationContext(),
-//                                        ""+trip.getCurrentLocation().getAdditionalLongitude(), Toast.LENGTH_SHORT).show();
-
-
                                 saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());
                             }
                         });
@@ -234,74 +237,103 @@ public class MainActivity extends AppCompatActivity {
                 // TODO: 1 - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
                 //trip.setEndLatitude();
                 //trip.setEndLongitude()
-                //trip.setEndTimeInMilliseconds(System.currentTimeMillis());
+                trip.setEndTimeInMilliseconds(System.currentTimeMillis());
 
-                // TODO: 2 - Then jasonize (toJSON, GSON library) your Trip instance object
-                // TODO: 3 - Then serialize (save .json text file). Give the file a XXXX name,
+                // TODO: serialize your continuous data (if in continuous mode) and trip object. Give the files good names
                 // where XXXX is the time, or user or trip number etc.
 
-                // when using SENDTO: http://stackoverflow.com/questions/3132889/action-sendto-for-sending-an-email
-                // sendIntent.setData(Uri.parse("mailto:alex_samprasno1@yahoo.co.uk"));
-                // how to use Gmail only:http://stackoverflow.com/questions/16645100/how-to-send-attached-file-using-intent-in-android
+                // getExternalFilesDir(null): /storage/sdcard0/Android/data/net.monicet.monicet/files
+                // Environment.getExternalStorageDirectory(): /storage/sdcard0/
+                // Environment.getExternalStorageDirectory().getAbsolutePath(): /storage/sdcard0/
+                // getFilesDir(): /data/data/net.monicet.monicet/files
 
-                Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"alex_samprasno1@yahoo.co.uk"});
-                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "A new trip - name of JSON file"); // add something else
-                sendIntent.putExtra(Intent.EXTRA_TEXT, "toString of trip here");// or tripJson File to String
-                sendIntent.putExtra(Intent.EXTRA_TITLE, "Please, choose Gmail :)");
+                // TODO: I changed android:installLocation to internalOnly
+                // in order for future service to send the files when connected to the Internet
+                //https://developer.android.com/guide/topics/data/install-location.html
+                //http://stackoverflow.com/questions/6169059/android-event-for-internet-connectivity-state-change
+                //http://stackoverflow.com/questions/4238921/detect-whether-there-is-an-internet-connection-available-on-android
+                //http://stackoverflow.com/questions/3767591/check-intent-internet-connection
+                //http://stackoverflow.com/questions/16824341/keep-broadcast-receiver-running-after-application-is-closed
+                //http://stackoverflow.com/questions/16429354/broadcast-receiver-still-running-after-app-close-android
+                //http://stackoverflow.com/questions/12274997/why-broadcastreceiver-works-even-when-app-is-in-background
+                //http://stackoverflow.com/questions/26134560/close-application-from-broadcast-receiver
 
-                // TODO: continuous GPS TRK, GPX, KML, KMZ,PLT
-                if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
-                    // A - a file with the appropriate extension (TRK, GPX, KML, KMZ,PLT) will be created
-                    // B - and the file's name will be assigned to to the routeFileName variable (empty, by default)
-                    // trip.setRouteFileName();
-                    // C - Trip's continuousGpsSamples (Set), continuousDateTime (Set) (empty by default)
-                    // will be saved inside this file
-                    // D - taking the json file, make a zip file
-                    // and attach the file to the intent
-                    // https://developer.android.com/reference/java/util/zip/ZipOutputStream.html
-                    // http://stackoverflow.com/questions/25594792/zipoutputstream-produces-corrupted-zip-file-on-android
-                    // http://stackoverflow.com/questions/34978608/android-java-zipping-files-and-send-with-intent
-                    sendIntent.setType("application/zip");
+                // TODO: write the json and csv files internally
+                // TODO: try to send them via a http post request to a server... if successful, delete the files, if not don't delete the files
+                // TODO: maybe just create the files and leave all the rest to the service (so that the 2 don't step on each other's toes)
+                // TODO: create that server page (page will display all non-empty sightings for the trip, and also create a kml with the csv)
+                // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
+                // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
+                try {
+                    // TODO: stop using this when a service was created to send (and delete) json and csv files
+                    String routePrefix = "route";
+                    String tripPrefix = "trip";
 
-                } else {
-                    sendIntent.setType("application/json");
+                    // Deleting files from the internal storage
+//                        File directory = new File(getFilesDir().toString());
+//                        File[] files = directory.listFiles();
+//                        ArrayList<String> namesOfFilesToDelete = new ArrayList<String>();
+//                        if (files != null ) {
+//
+//                            for (int i = 0; i < files.length; i++) {
+//                                if (files[i].getName().toLowerCase().contains(routePrefix.toLowerCase()) ||
+//                                        files[i].getName().toLowerCase().contains(tripPrefix.toLowerCase())) {
+//                                    namesOfFilesToDelete.add(files[i].getName());
+//                                }
+//                            }
+//
+//                            for (int i = 0; i < files.length; i++) {
+//                                // or deleteFile("filename");//myContext.deleteFile(fileName);
+//                                if (namesOfFilesToDelete.contains(files[i].getName())) { files[i].delete(); }
+//                            }
+//                        }
+
+                    File rootPathExternal = new File(Environment.getExternalStorageDirectory(), "Monicet");//getFilesDir(): /data/data/net.monicet.monicet/files
+                    if (!rootPathExternal.exists()) { rootPathExternal.mkdirs(); } // Alex: maybe a try catch here, throws a SecurityException?
+
+                    if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
+
+                        String routeFileName = routePrefix + System.currentTimeMillis() + ".csv";
+                        trip.setRouteFileName(routeFileName);
+                        File routeFile = new File(rootPathExternal, routeFileName); // for external storage
+                        //File routeFile = new File(getFilesDir(), routeFileName); // for internal storage
+                        FileWriter routeWriter = new FileWriter(routeFile);
+
+                        for (Map.Entry<Long, double[]> entry: trip.getContinuousData().entrySet()) {
+                            double[] coords = entry.getValue();
+                            routeWriter.append(entry.getKey().toString());
+                            routeWriter.append(",");
+                            routeWriter.append("" + coords[0]);
+                            routeWriter.append(",");
+                            routeWriter.append("" + coords[1]);
+                            routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+                        }
+                        routeWriter.flush(); // Alex: redundant?
+                        routeWriter.close();
+                    }
+
+                    String tripFileTitle = tripPrefix + System.currentTimeMillis();
+                    String tripFileExtension = ".json";
+                    String tripFileName = tripFileTitle + tripFileExtension;
+                    trip.setTripFileName(tripFileName);
+                    Gson gson = new GsonBuilder().create();
+                    File tripFile = new File(rootPathExternal, tripFileName); // external storage
+                    //File tripFile = new File(getFilesDir(), tripFileName);// internal storage
+                    FileWriter tripWriter = new FileWriter(tripFile);
+
+                    tripWriter.append(gson.toJson(trip));
+                    tripWriter.flush(); // Alex: redundant?
+                    tripWriter.close();
+
+                } catch (Exception e) {//IOException e
+                    e.printStackTrace();
+                    Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
                 }
-                // Alex: or intent.setType("*/*");
 
-                // NB make sure it uses the correct file (tripXXX.zip or tripXXX.json)
-                // This opens the file
-                //File tripFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), "/Download/monicet/trip.json");
-                File jsonFile = new File(Environment.getExternalStorageDirectory(), "/Download/monicet/trip.json");
-
-//                try {
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                String pathname = Environment.getExternalStorageDirectory().getAbsolutePath();
-//                String filename = "/MyFiles/mysdfile.txt";
-//                File file = new File(pathname, filename);
-
-                Uri jsonFileUri = Uri.fromFile(jsonFile);
-                sendIntent.putExtra(Intent.EXTRA_STREAM, jsonFileUri);
-
-                // TODO: 4 - Then turn off the GPS service
+                // TODO: Then turn off the GPS service
                 trip.setGpsMode(GpsMode.OFF);
                 // also, actually turn the gps off
 
-                // 5 - send the saved file(type text) via implicit intent (forced Gmail to ?@monicet.net)
-                if (sendIntent.resolveActivity(getPackageManager()) != null) {
-                    // add a try catch here
-                    sendIntent.setClassName("com.google.android.gm", "com.google.android.gm.ComposeActivityGmail");
-                    // the one below doesn't work
-                    //sendIntent.setClassName("com.google.android.gm", "com.google.android.gm.ConversationListActivity");
-                    startActivity(sendIntent);
-                } else {
-                    Toast.makeText(getApplicationContext(), "No way", Toast.LENGTH_SHORT).show();
-                }
-
-                Toast.makeText(getApplicationContext(), "" + Environment.getExternalStorageDirectory().getAbsolutePath(),
-                        Toast.LENGTH_SHORT).show(); // this comes after opening gmail
                 // Final point - Then stop the application. *make sure you finish it off. Test the order.
                 // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
                 // returning to this app from Gmail ?
@@ -311,13 +343,12 @@ public class MainActivity extends AppCompatActivity {
         });
         //Step 5 ends here
 
-
     }
 
     public void showGpsModeDialog(final UserInput<GpsMode> gpsModeUserInput) {
         // it comes here only if the user changeable variable is visible (it was not shown before, in this case)
         AlertDialog.Builder gpsAlertDialogBuilder = new AlertDialog.Builder(this);
-        gpsAlertDialogBuilder.setTitle("GPS Tracking");
+        gpsAlertDialogBuilder.setTitle(R.string.tracking_dialog_title);
         gpsAlertDialogBuilder.setMessage(R.string.tracking_dialog_message);
         gpsAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
@@ -350,7 +381,9 @@ public class MainActivity extends AppCompatActivity {
         //currentLocation.setLongitude();
         //currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
 
-        gpsModeUserInput.setContent(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
+        if (gpsModeUserInput.getContent() != GpsMode.CONTINUOUS) {
+            gpsModeUserInput.setContent(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
+        }
 
         for (Sighting sighting: currentLocation.getSightings()) {
             sighting.getQuantityUserInput().setVisible(false);
@@ -359,8 +392,8 @@ public class MainActivity extends AppCompatActivity {
 
         Toast.makeText(getApplicationContext(),
                 R.string.location_saved_confirmation_message, Toast.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(),
-                R.string.location_saved_instructions_message, Toast.LENGTH_LONG).show();
+//        Toast.makeText(getApplicationContext(),
+//                R.string.location_saved_instructions_message, Toast.LENGTH_LONG).show();
 
         findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
         findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
@@ -373,7 +406,7 @@ public class MainActivity extends AppCompatActivity {
         // TODO: implement getting the photo ids and description data later
         String[] photos = new String[30];
         String[] descriptions = new String[30];
-        Arrays.fill(photos, "photo");
+        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
         Arrays.fill(descriptions, "description");
         // here (if the 3 arrays have the same size, at least check) add each sighting to the list, one by one
         int sizeOfArrays = species.length;
