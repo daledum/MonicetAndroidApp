@@ -1,8 +1,10 @@
 package net.monicet.monicet;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
+import android.content.IntentFilter;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.design.widget.FloatingActionButton;
@@ -20,27 +22,66 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import static android.R.attr.data;
 import static android.R.attr.path;
 import static android.R.string.no;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 
 public class MainActivity extends AppCompatActivity {
 
     // declaring trip as a class field made the app not start.. why?
     //final Trip trip = new Trip(buildLocationFromResources());
 
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final Context receivedContext = context;
+
+            // this should run on a separate thread, see:
+            // http://www.grokkingandroid.com/android-tutorial-broadcastreceiver/
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    boolean result = Utils.sendAndDeleteFiles(receivedContext,
+                            Utils.getInternalDirPathFromContext(receivedContext));
+
+                    // if successful - unregister itself
+                    if(result) { unregisterMyReceiver(receiver); }
+                }
+            }).start();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+//        GoogleApiAvailability api = GoogleApiAvailability.getInstance();
+//        int errorCheck = api.isGooglePlayServicesAvailable(this);
+//        if(errorCheck == ConnectionResult.SUCCESS) {
+//            //google play services available, hooray
+//        } else if(api.isUserResolvableError(errorCheck)) {
+//            //GPS_REQUEST_CODE = 1000, and is used in onActivityResult
+//            api.showErrorDialogFragment(this, errorCheck, GPS_REQUEST_CODE);
+//            //stop our activity initialization code
+//            return;
+//        } else {
+//            //GPS not available, user cannot resolve this error
+//            //todo: somehow inform user or fallback to different method
+//            //stop our activity initialization code
+//            return;
+//        }
+
+        // Register the receiver
+
+        // end of receiver registration
 
         // Step 1 starts here:
         // using the data from resources (containing specie names, photos and description),
@@ -58,12 +99,7 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(sightingAdapter);
         // Step 1 ends here
 
-        // Testing quantity setting and displaying // Alex: remove this when finished
-        //trip.getCurrentLocation().getSightings().get(0).setQuantity(89); // setValue must come after setmax min
-        //trip.getCurrentLocation().getSightings().get(1).setQuantity(33);
-        //sightingAdapter.notifyDataSetChanged();
-
-        // Initialization steps:
+        // Initialization steps: *not done in the constructor because they might not be kept in future versions
         // Change label to Monicet - Stop 1
         setTitle(getText(R.string.app_name) + " - " +
                 getText(R.string.location) + " " + trip.getNumberOfLocations());
@@ -73,8 +109,9 @@ public class MainActivity extends AppCompatActivity {
         trip.setGpsMode(GpsMode.FAST);
         //trip.setStartLatitude();
         //trip.setStartLongitude();
-        //trip.setStartTimeInMilliseconds(System.currentTimeMillis());
+        trip.setStartTimeInMilliseconds(System.currentTimeMillis());
         trip.setGpsMode(GpsMode.SLOW);
+        // Initialization steps end here
 
 
         // Step 2 starts here:
@@ -128,9 +165,6 @@ public class MainActivity extends AppCompatActivity {
                     // in the case the user hasn't turned off the comments (or it's the first show)
                     if (trip.getCurrentLocation().getCommentsUserInput().isVisible() == true) {
 
-                        //DialogFragment commentsDialogFragment = CommentsDialogFragment.newInstance();
-                        //commentsDialogFragment.show(getFragmentManager(), "comments");
-                        ////saveLocation(trip.getCurrentLocation(), sightingAdapter, trip.getGpsModeUserInput());  // Alex: this will be called inside the dialog fragment
                         LayoutInflater layoutInflater = LayoutInflater.from(MainActivity.this);
                         final View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
                         AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(MainActivity.this);
@@ -144,37 +178,37 @@ public class MainActivity extends AppCompatActivity {
                                 // and compare the sign (if near the 0 degree point, don't do this check)
 
                                 EditText latitudeDegrees = (EditText) rootView.findViewById(R.id.lat_degrees_edit_text);
-                                double gpsDegrees = Utility.parseGpsToDouble(
+                                double gpsDegrees = Utils.parseGpsToDouble(
                                         latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
                                 );
                                 EditText latitudeMinutes = (EditText) rootView.findViewById(R.id.lat_minutes_edit_text);
-                                double gpsMinutes = Utility.parseGpsToDouble(
+                                double gpsMinutes = Utils.parseGpsToDouble(
                                         latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                                 );
                                 EditText latitudeSeconds = (EditText) rootView.findViewById(R.id.lat_seconds_edit_text);
-                                double gpsSeconds = Utility.parseGpsToDouble(
+                                double gpsSeconds = Utils.parseGpsToDouble(
                                         latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                                 );
 
                                 trip.getCurrentLocation().setAdditionalLatitude(
-                                        Utility.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
                                 );
 
                                 EditText longitudeDegrees = (EditText) rootView.findViewById(R.id.long_degrees_edit_text);
-                                gpsDegrees = Utility.parseGpsToDouble(
+                                gpsDegrees = Utils.parseGpsToDouble(
                                         longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
                                 );
                                 EditText longitudeMinutes = (EditText) rootView.findViewById(R.id.long_minutes_edit_text);
-                                gpsMinutes = Utility.parseGpsToDouble(
+                                gpsMinutes = Utils.parseGpsToDouble(
                                         longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                                 );
                                 EditText longitudeSeconds = (EditText) rootView.findViewById(R.id.long_seconds_edit_text);
-                                gpsSeconds = Utility.parseGpsToDouble(
+                                gpsSeconds = Utils.parseGpsToDouble(
                                         longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                                 );
 
                                 trip.getCurrentLocation().setAdditionalLongitude(
-                                        Utility.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
                                 );
 
                                 EditText comments = (EditText) rootView.findViewById(R.id.comments_edit_text);
@@ -193,7 +227,6 @@ public class MainActivity extends AppCompatActivity {
                         comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                // do nothing
                                 // dialog.dismiss();
                             }
                         });
@@ -239,65 +272,62 @@ public class MainActivity extends AppCompatActivity {
                 //trip.setEndLongitude()
                 trip.setEndTimeInMilliseconds(System.currentTimeMillis());
 
-                // TODO: serialize your continuous data (if in continuous mode) and trip object. Give the files good names
-                // where XXXX is the time, or user or trip number etc.
-
-                // getExternalFilesDir(null): /storage/sdcard0/Android/data/net.monicet.monicet/files
-                // Environment.getExternalStorageDirectory(): /storage/sdcard0/
-                // Environment.getExternalStorageDirectory().getAbsolutePath(): /storage/sdcard0/
-                // getFilesDir(): /data/data/net.monicet.monicet/files
-
-                // TODO: I changed android:installLocation to internalOnly
-                // in order for future service to send the files when connected to the Internet
-                //https://developer.android.com/guide/topics/data/install-location.html
-                //http://stackoverflow.com/questions/6169059/android-event-for-internet-connectivity-state-change
-                //http://stackoverflow.com/questions/4238921/detect-whether-there-is-an-internet-connection-available-on-android
-                //http://stackoverflow.com/questions/3767591/check-intent-internet-connection
-                //http://stackoverflow.com/questions/16824341/keep-broadcast-receiver-running-after-application-is-closed
-                //http://stackoverflow.com/questions/16429354/broadcast-receiver-still-running-after-app-close-android
-                //http://stackoverflow.com/questions/12274997/why-broadcastreceiver-works-even-when-app-is-in-background
-                //http://stackoverflow.com/questions/26134560/close-application-from-broadcast-receiver
-
+                // Alex: android:installLocation is internalOnly
+                // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
                 // TODO: write the json and csv files internally
                 // TODO: try to send them via a http post request to a server... if successful, delete the files, if not don't delete the files
                 // TODO: maybe just create the files and leave all the rest to the service (so that the 2 don't step on each other's toes)
                 // TODO: create that server page (page will display all non-empty sightings for the trip, and also create a kml with the csv)
                 // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
                 // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
+
+                // get the path of the directory in which files are saved
+                // external version - works
+                File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");//getFilesDir(): /data/data/net.monicet.monicet/files
+                if (!directory.exists()) { directory.mkdirs(); } // this is only done for the external storage directory
+
+                //test internal storage with BuildConfig.APPLICATION_ID - test passed OK - works with setAction(.NEW_FILE), but not with net change
+//                    File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);
+//                    File[] files = directory.listFiles();
+//                    for (File file: files) {
+//                        Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
+//                    }
+                // end of internal BuildConfig.APPLICATION_ID test here
+
+
+                // TODO: test internal storage with getFilesDir()
+//                    File directory = new File(Utils.getInternalDirPathFromContext(MainActivity.this));
+//                    File[] files = directory.listFiles();
+//                    for (File file: files) {
+//                        Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
+//                    }
+                //getFilesDir doesn't work?, because receiver doesn't receive any context from Connectivity change action
+                // end of internal getFilesDir() test here
+
                 try {
-                    // TODO: stop using this when a service was created to send (and delete) json and csv files
+
                     String routePrefix = "route";
                     String tripPrefix = "trip";
 
-                    // Deleting files from the internal storage
-//                        File directory = new File(getFilesDir().toString());
-//                        File[] files = directory.listFiles();
-//                        ArrayList<String> namesOfFilesToDelete = new ArrayList<String>();
-//                        if (files != null ) {
-//
-//                            for (int i = 0; i < files.length; i++) {
-//                                if (files[i].getName().toLowerCase().contains(routePrefix.toLowerCase()) ||
-//                                        files[i].getName().toLowerCase().contains(tripPrefix.toLowerCase())) {
-//                                    namesOfFilesToDelete.add(files[i].getName());
-//                                }
-//                            }
-//
-//                            for (int i = 0; i < files.length; i++) {
-//                                // or deleteFile("filename");//myContext.deleteFile(fileName);
-//                                if (namesOfFilesToDelete.contains(files[i].getName())) { files[i].delete(); }
-//                            }
-//                        }
-
-                    File rootPathExternal = new File(Environment.getExternalStorageDirectory(), "Monicet");//getFilesDir(): /data/data/net.monicet.monicet/files
-                    if (!rootPathExternal.exists()) { rootPathExternal.mkdirs(); } // Alex: maybe a try catch here, throws a SecurityException?
+                    String tripFileTitle = tripPrefix + System.currentTimeMillis();
+                    String tripFileName = tripFileTitle + Utils.JSON_FILE_EXTENSION;
+                    trip.setTripFileName(tripFileName);
 
                     if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
 
-                        String routeFileName = routePrefix + System.currentTimeMillis() + ".csv";
-                        trip.setRouteFileName(routeFileName);
-                        File routeFile = new File(rootPathExternal, routeFileName); // for external storage
-                        //File routeFile = new File(getFilesDir(), routeFileName); // for internal storage
+                        String routeFileTitle = routePrefix + System.currentTimeMillis();
+                        String routeFileName = routeFileTitle + Utils.CSV_FILE_EXTENSION;
+                        trip.setRouteFileName(routeFileName); // this will be written to the JSON file
+                        File routeFile = new File(directory, routeFileTitle); // for external storage
+                        // TODO: first create this in /temp directory and then move to /files (so that the File sending listener doesn't try to send them before they're written)
+                        //File routeFile = new File(getFilesDir(), routeFileTitle); // for internal storage
                         FileWriter routeWriter = new FileWriter(routeFile);
+                        routeWriter.append(trip.getUserName());
+                        routeWriter.append(",");
+                        routeWriter.append(tripFileName);
+                        routeWriter.append(",");
+                        routeWriter.append(routeFileName);
+                        routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
 
                         for (Map.Entry<Long, double[]> entry: trip.getContinuousData().entrySet()) {
                             double[] coords = entry.getValue();
@@ -310,25 +340,57 @@ public class MainActivity extends AppCompatActivity {
                         }
                         routeWriter.flush(); // Alex: redundant?
                         routeWriter.close();
+                        // add the extension at the end, so that the broadcast receiver doesn't try to sent it before we're finished with the file
+                        routeFile.renameTo(new File(directory, routeFileName));
+                        //routeFile.renameTo(new File(getFilesDir(), routeFileName)); //internal storage
                     }
 
-                    String tripFileTitle = tripPrefix + System.currentTimeMillis();
-                    String tripFileExtension = ".json";
-                    String tripFileName = tripFileTitle + tripFileExtension;
-                    trip.setTripFileName(tripFileName);
                     Gson gson = new GsonBuilder().create();
-                    File tripFile = new File(rootPathExternal, tripFileName); // external storage
+                    File tripFile = new File(directory, tripFileTitle); // external storage
+                    // TODO: first create this in /temp directory and then move to /files (so that the File sending listener doesn't try to send them before they're written)
                     //File tripFile = new File(getFilesDir(), tripFileName);// internal storage
                     FileWriter tripWriter = new FileWriter(tripFile);
-
                     tripWriter.append(gson.toJson(trip));
                     tripWriter.flush(); // Alex: redundant?
                     tripWriter.close();
+                    // add the extension at the end, so that the broadcast receiver doesn't try to sent it before we're finished with the file
+                    tripFile.renameTo(new File(directory, tripFileName)); // external storage
+                    //tripFile.renameTo(new File(getFilesDir(), tripFileName)); // internal storage
 
-                } catch (Exception e) {//IOException e
+                    // test
+//                    File[] files2 = directory.listFiles();
+//                    for (File file: files2) {
+//                        Toast.makeText(getApplicationContext(), "Before:" + file.getName(), Toast.LENGTH_SHORT).show();
+//                    }
+                    //test
+
+                } catch (IOException e) {
                     e.printStackTrace();
                     Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
                 }
+
+                // TODO: I start up the File sending receiver - throw the kitchen sink at it
+                // firstly - a static receiver (defined in xml, only working pre API 24) is deployed to listen to the network
+                // secondly - use a dynamically created broadcast receiver to listen to the network change
+                // TODO: if the folder is empty (no csv or json files): unregister the dynamically created receiver
+                // it was registered in on create, but it might have been unregistered on a send, so
+                // else: register it
+
+                // check to see if directory still exists and has json and csv files in it
+                if (directory.exists() && directory.listFiles(new MyFileFilter()).length > 0) {
+                    registerMyReceiver(receiver, Utils.INTENT_CONNECTION_ACTION);
+                } else {
+                    unregisterMyReceiver(receiver);
+                }
+
+                // thirdly - use GCM Network Manager
+                // maybe pass it the application context - it only uses it for the path anyways
+                //context.getApplicationContext();
+                //getApplication().getBaseContext();
+                // use it's response
+                SendFilesTaskService.scheduleOneOff(MainActivity.this);
+
+                // fourthly - use Alarm Manager
 
                 // TODO: Then turn off the GPS service
                 trip.setGpsMode(GpsMode.OFF);
@@ -338,7 +400,13 @@ public class MainActivity extends AppCompatActivity {
                 // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
                 // returning to this app from Gmail ?
                 // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
-                //finish(); // TODO: uncomment this when done
+                // TODO: finish(); send: stop application from being in the foreground (exit)...
+                // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
+                // There should be a button for starting a trip and a button for adding a location
+
+                //        if (files.length < 1 || files[0] == null) {
+                //            return null;
+                //        }
             }
         });
         //Step 5 ends here
@@ -379,7 +447,7 @@ public class MainActivity extends AppCompatActivity {
         // TODO: sample (and save Location instance GPS, date and time)... later, slow down the gps sampling
         //currentLocation.setLatitude();
         //currentLocation.setLongitude();
-        //currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
+        currentLocation.setTimeInMilliseconds(System.currentTimeMillis());
 
         if (gpsModeUserInput.getContent() != GpsMode.CONTINUOUS) {
             gpsModeUserInput.setContent(GpsMode.SLOW); // not too slow, it's still needed by the SEND button, when saving the trip
@@ -422,5 +490,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return new Location(sightings);//Location location =
+    }
+
+    public void registerMyReceiver(BroadcastReceiver vReceiver, String action) {
+        // there is no way to check if the receiver was registered or not
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(action);
+            registerReceiver(vReceiver, filter);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void unregisterMyReceiver(BroadcastReceiver vReceiver) {
+        // there is no way to check if the receiver was registered or not
+        try {
+            unregisterReceiver(vReceiver);
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        }
     }
 }
