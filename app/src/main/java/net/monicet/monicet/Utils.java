@@ -10,8 +10,6 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import static android.R.attr.path;
-
 /**
  * Created by ubuntu on 07-02-2017.
  */
@@ -19,10 +17,60 @@ import static android.R.attr.path;
 public final class Utils {
     private Utils() {}
 
+    // Environment.getDataDirectory() : /data
+    // getFilesDir() : /data/data/package/files, where package is net.monicet.monicet
+    //BuildConfig.APPLICATION_ID: net.monicet.monicet
+    //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet"); // external storage
+    // deal with the received path
+    //if (path.isEmpty()) {
+    // internal, using BuildConfig.APPLICATION_ID
+    //File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);
+    // or use hardcoded path
+    //File directory = new File(Environment.getDataDirectory(), "data/net.monicet.monicet/files");
+
+    //} else { // path will be context.getFilesDir().toString()
+    //File directory = new File(path); // internal storage
+    //}
+
+    public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
+
     public static final String JSON_FILE_EXTENSION = ".json";
     public static final String CSV_FILE_EXTENSION = ".csv";
-    public static final String INTERNAL_DIR_PATH = "data/" + BuildConfig.APPLICATION_ID + "/files";
-    public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
+
+    // this will get set by the MainActivity.. as a default: null, of course
+    // this and dirPath are in the utils class, because it needs to accessed by several mechanisms
+    // (after the activity has started them), even at times when the application is stopped
+    private static String[] fileExtensionsArray;
+
+    // this will get set by the MainActivity.. as a default: set it to all the registered extension
+    private static String DIRECTORY;
+    // back-ups, if directory is null (for usage in SendAndDeleteFiles()) // TODO: test need for a / ?
+    public static final String EXTERNAL_DIRECTORY =
+            Environment.getExternalStorageDirectory()
+            + "/Monicet"; // this should be set in the activity via the same mechanism...should drop this
+    // this is a back-up, it's not being used // TODO: test need for a / ?
+    public static final String INTERNAL_DIRECTORY =
+            Environment.getDataDirectory()
+            + "/data/"
+            + BuildConfig.APPLICATION_ID + "/files";
+    // or hard-coded internal path
+    public static final String INTERNAL_DIRECTORY_HARDCODED =
+            Environment.getDataDirectory()
+                    + "/data/net.monicet.monicet/files";
+
+    // allow only a setter (no getter) and only when it's null,
+    // so that the path and extensions only ever get assigned once
+    public static void setDirectory(String dir) {
+        if (DIRECTORY == null) {
+            DIRECTORY = dir;
+        }
+    }
+
+    public static void setFileExtensionsArray(String[] extensions) {
+        if (fileExtensionsArray == null) {
+            fileExtensionsArray = extensions;
+        }
+    }
 
     public static double parseGpsToDouble(String sValue, GpsEdgeValue edgeValue) {
         double result = 0;
@@ -67,38 +115,47 @@ public final class Utils {
         return vDeg + vMin/60 + vSec/3600;
     }
 
-    public static boolean sendAndDeleteFiles(Context context, String path) {
+    public static boolean endsWithOneOfTheseExtensions(File pathname, String[] extensions) {
+        for(String extension: extensions) {
+            if (pathname.getName().toLowerCase().endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-        //test
-        //OK - works with setAction NEW_FILE, but not with connectivity change (only if app is running)
-        File directory = new File(Environment.getExternalStorageDirectory(), "Monicet"); // external storage
-        //test
+    public static boolean sendAndDeleteFiles(Context context) {
 
-        // Environment.getDataDirectory() : /data
-        // getFilesDir() : /data/data/package/files, where package is net.monicet.monicet
-        //BuildConfig.APPLICATION_ID: net.monicet.monicet
-
-        // deal with the received path
-        if (path.isEmpty()) {
-            // internal, using BuildConfig.APPLICATION_ID
-            //File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);
-            // or use hardcoded path
-            //File directory = new File(Environment.getDataDirectory(), "data/net.monicet.monicet/files");
-
-        } else { // path will be context.getFilesDir().toString()
-            //File directory = new File(path); // internal storage
+        File dir;
+        if (DIRECTORY != null) {
+            dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
+        } else {
+            // if this is called before the path was set by the MainActivity (it shouldn't have got lost)
+            dir = new File(INTERNAL_DIRECTORY); // default path, when directory is null
         }
 
-        // this uses Utils.JSON_FILE_EXTENSION and Utils.CSV_FILE_EXTENSION and is instantiated inside the activity, too
-        // a constructor could be implemented for MyFileFilter(String extensions1, String extension 2)
-        // http://stackoverflow.com/questions/5751335/using-file-listfiles-with-filenameextensionfilter
-        FileFilter fileFilter = new MyFileFilter();
+        //test // TODO: remove this after tests
+        dir = new File(EXTERNAL_DIRECTORY);
+        //test
 
+        final String[] extensions;
+        if (fileExtensionsArray != null) {
+            extensions = fileExtensionsArray;
+        } else {
+            // fileExtensionsArray is null if it hasn't been set by the Main Activity)
+            extensions = new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION};
+        }
+        FileFilter fileFilter = new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                return endsWithOneOfTheseExtensions(pathname, extensions);
+            }
+        };
         // check if the directory exists and if so, if it has any of our files
-        if (directory.exists() && directory.listFiles(fileFilter).length > 0) {
+        if (dir.exists() && dir.listFiles(fileFilter).length > 0) {
 
             //test
-            File testFile = new File(directory, "test.test");
+            File testFile = new File(dir, "test.test");
             try {
                 testFile.createNewFile();
             } catch (IOException e) {
@@ -108,7 +165,7 @@ public final class Utils {
 
             // secondly, check that there is an Internet connection
             boolean isConnected;
-            if (context != null) {
+            if (context != null) { // TODO: remove this or keep it as a backup
                 ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
                 NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
                 isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
@@ -122,9 +179,9 @@ public final class Utils {
                 ArrayList<String> namesOfFilesToDelete = new ArrayList<String>();
                 boolean wasSentOk = true;
 
-                while (wasSentOk && directory.listFiles(fileFilter).length > 0) { // if new files are created while we send and delete the old ones
+                while (wasSentOk && dir.listFiles(fileFilter).length > 0) { // if new files are created while we send and delete the old ones
 
-                    File[] files = directory.listFiles(fileFilter);
+                    File[] files = dir.listFiles(fileFilter);
 
                     sending:
                     for (int i = 0; i < files.length; i++) {
@@ -159,13 +216,7 @@ public final class Utils {
         // method is successful if it has sent and therefore deleted all the files
         // returns true if directory doesn't exist or there aren't any of our files in it
         // returns false if directory exists and it has at least one of our files in it
-        return !(directory.exists() && directory.listFiles(fileFilter).length > 0);
+        return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
     }
 
-    public static String getInternalDirPathFromContext(Context context) {
-        if (context != null) {
-            return context.getFilesDir().toString();
-        }
-        return "";
-    }
 }

@@ -23,6 +23,6 @@ public class PreNougatNetworkStateReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Utils.sendAndDeleteFiles(context, Utils.getInternalDirPathFromContext(context));
+        Utils.sendAndDeleteFiles(context);
     }
 }

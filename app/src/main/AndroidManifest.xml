@@ -20,6 +20,17 @@
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".FilesAndBootReceiver"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name=".FILES_PRESENT"/>
+                <action android:name=".FILES_NOT_PRESENT"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <!--<action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE"/>-->
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".AlarmReceiver"/>
         <activity
             android:name=".MainActivity"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">

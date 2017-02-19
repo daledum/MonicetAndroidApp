@@ -7,11 +7,15 @@ import android.os.Environment;
 import com.google.android.gms.gcm.GcmNetworkManager;
 import com.google.android.gms.gcm.GcmTaskService;
 import com.google.android.gms.gcm.OneoffTask;
+import com.google.android.gms.gcm.Task;
 import com.google.android.gms.gcm.TaskParams;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+
+import static android.R.attr.data;
+import static android.R.attr.path;
 
 /**
  * Created by ubuntu on 15-02-2017.
@@ -24,15 +28,21 @@ public class SendFilesTaskService extends GcmTaskService {
 
     @Override
     public void onInitializeTasks() {
-        //TODO: called when app is updated to a new version, reinstalled etc.
-        //you have to schedule your repeating tasks again
         super.onInitializeTasks();
+//        When your package is removed or updated, all of its network tasks are cleared by the GcmNetworkManager.
+//        You can override this method to reschedule them in the case of an updated package.
+//        This is not called when your application is first installed.
+//        This is called on your application's main thread. Schedule your tasks again here.
+        super.onInitializeTasks();
+        // this is a GcmTaskService which is a Service which is a Context
+        SendFilesTaskService.scheduleOneOff(this);
+
     }
 
     @Override
     public int onRunTask(TaskParams taskParams) {
-        Bundle data = taskParams.getExtras();
-        String path = (String)data.getCharSequence(FILES_PATH); // give it the default path: Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH
+        //Bundle data = taskParams.getExtras();
+        //String path = (String)data.getCharSequence(FILES_PATH); // give it the default path: Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH
 
         // test starts here
         File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
@@ -40,7 +50,7 @@ public class SendFilesTaskService extends GcmTaskService {
         try {
             //testFileContext.createNewFile();
             FileWriter routeWriter = new FileWriter(testFileContext);
-            routeWriter.append(path);
+            routeWriter.append(this.getFilesDir().toString());
             routeWriter.flush();
             routeWriter.close();
         } catch (IOException e) {
@@ -48,40 +58,37 @@ public class SendFilesTaskService extends GcmTaskService {
         }
         // test ends here
 
-        // null because we haven't added the context to the bundle
-        // and also because the task is triggered when the device connects to the Internet
-        boolean result = Utils.sendAndDeleteFiles(null, path);
-        if (result) { return GcmNetworkManager.RESULT_SUCCESS; }
+        // this is a GcmTaskService which is a Service which is a Context
+        boolean successful = Utils.sendAndDeleteFiles(this);
+        if (successful) { return GcmNetworkManager.RESULT_SUCCESS; }
 
         return GcmNetworkManager.RESULT_RESCHEDULE;
     }
 
     public static void scheduleOneOff(Context context) {
-        //in this method, single OneOff task is scheduled (the target service that will be called is MyTaskService.class)
-        Bundle data = new Bundle();
-        data.putString(FILES_PATH, Utils.getInternalDirPathFromContext(context));
+
+        //Bundle data = new Bundle();
+        //data.putString(FILES_PATH, Utils.getInternalDirPathFromContext(context)); // Alex: this is not DRY
 
         try {
-            OneoffTask oneoff = new OneoffTask.Builder()
+            OneoffTask oneOff = new OneoffTask.Builder()
                     //specify target service - must extend GcmTaskService
                     .setService(SendFilesTaskService.class)
                     //tag that is unique to this task (can be used to cancel task)
                     .setTag(GCM_ONEOFF_TAG)
-                    //executed between 0 - 20s from now (earliest point to latest point at which your task must be run)
-                    .setExecutionWindow(10, 11) //was 10, 10 ---- 10,11
+                    .setExecutionWindow(0, 1)
                     //specify whether this task should be persisted across reboots
                     .setPersisted(true)
-                    //set required network state, this line is optional, NETWORK_STATE_CONNECTED is the default
-                    //.setRequiredNetwork(Task.NETWORK_STATE_ANY)
+                    //.setRequiredNetwork(Task.NETWORK_STATE_ANY) // Task.NETWORK_STATE_CONNECTED is the default
                     //request that charging must be connected, this line is optional
                     .setRequiresCharging(false)
                     //set some data we want to pass to our task
-                    .setExtras(data)
+                    //.setExtras(data)
                     //if another task with same tag is already scheduled, replace it with this task
                     .setUpdateCurrent(true)
                     .build();
-            GcmNetworkManager.getInstance(context).schedule(oneoff);
-            //Log.v("SendFilesTaskService", "oneoff task scheduled");
+            GcmNetworkManager.getInstance(context).schedule(oneOff);
+            //Log.v("SendFilesTaskService", "one off task scheduled");//Alex: remove this
         } catch (Exception e) {
             e.printStackTrace();
         }
