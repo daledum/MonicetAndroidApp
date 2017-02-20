@@ -32,33 +32,13 @@ import java.util.Arrays;
 import java.util.Map;
 
 import static android.R.string.no;
+import static android.os.Build.VERSION_CODES.M;
+import static net.monicet.monicet.Utils.START_ACTION;
 
 public class MainActivity extends AppCompatActivity {
 
     // declaring trip as a class field made the app not start.. why?
     //final Trip trip = new Trip(buildLocationFromResources());
-
-    private BroadcastReceiver dynamicConnReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final Context receivedContext = context;
-
-            // this should run on a separate thread, see:
-            // http://www.grokkingandroid.com/android-tutorial-broadcastreceiver/
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    // TODO: the dir path should be set by now in order to use sendAndDelete.. or not ..this is just a definition, not a call, it's not doing anything, it's not registered
-                    // must set path before registering this receiver
-                    boolean successful = Utils.sendAndDeleteFiles(receivedContext);
-
-                    // unregister itself TODO: better to disable itself?, if activity doesn't end and a new trip is created, without going through onCreate() again
-                    if(successful) { unregisterMyReceiver(dynamicConnReceiver); }
-                }
-            }).start();
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,9 +61,19 @@ public class MainActivity extends AppCompatActivity {
 //            return;
 //        }
 
-        // Register the receiver
-
-        // end of receiver registration
+        // Declare and initialize the receiver dynamically
+        BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver();
+        // Register the receiver. Once registered it's enabled by default, therefore it could fire (see actions)
+        // It won't find anything in the folder before SEND, so, it will disable itself
+        // The same applies to the static receiver (pre-nougat version of this one) and to the
+        // receivers. They are all enabled after pressing SEND. Disabling them here (start of onCreate),
+        // would stop them from working while the app is alive (not forcefully closed by the user/system).
+        // So, let them do their thing. They disable themselves if the work is done/or if there is no
+        // work to be done.
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Utils.INTENT_CONNECTION_ACTION);
+        filter.addAction(Utils.START_ACTION);
+        getApplicationContext().registerReceiver(dynamicReceiver, filter);
 
         // Step 1 starts here:
         // using the data from resources (containing specie names, photos and description),
@@ -269,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
         fabSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO: 1 - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
+                // TODO: step 1 - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
                 //trip.setEndLatitude();
                 //trip.setEndLongitude()
                 trip.setEndTimeInMilliseconds(System.currentTimeMillis());
@@ -283,28 +273,22 @@ public class MainActivity extends AppCompatActivity {
                 // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
                 // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
 
-                // get the path of the directory in which files are saved
-                // external version - works
-                File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");//getFilesDir(): /data/data/net.monicet.monicet/files
-                if (!directory.exists()) { directory.mkdirs(); } // this is only done for the external storage directory
+                // step 2 - create the files to be sent
+                // test external storage version
+                // TODO: test here the / issue
+                File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
+                //File directory = new File(Utils.EXTERNAL_DIRECTORY);
+                if (!directory.exists()) { directory.mkdirs(); } // only for external
+                //deployment - use internal storage
+                //File directory = new File(getFilesDir().toString());
 
-                //test internal storage with BuildConfig.APPLICATION_ID - test passed OK - works with setAction(.NEW_FILE), but not with net change
-//                    File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);// this changed
-//                    File[] files = directory.listFiles();
-//                    for (File file: files) {
-//                        Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
-//                    }
-                // end of internal BuildConfig.APPLICATION_ID test here
-
-
-                // TODO: test internal storage with getFilesDir()
-//                    File directory = new File(Utils.getInternalDirPathFromContext(MainActivity.this));
-//                    File[] files = directory.listFiles();
-//                    for (File file: files) {
-//                        Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
-//                    }
-                //getFilesDir doesn't work?, because receiver doesn't receive any context from Connectivity change action
-                // end of internal getFilesDir() test here
+                //test
+                //File directory = new File(Utils.INTERNAL_DIRECTORY);
+//                File[] files = directory.listFiles();
+//                for (File file: files) {
+//                    Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
+//                }
+                // end test
 
                 try {
 
@@ -352,7 +336,7 @@ public class MainActivity extends AppCompatActivity {
                     tripWriter.flush(); // Alex: redundant?
                     tripWriter.close();
                     // add the extension at the end, so that the broadcast receiver doesn't try to
-                    // sent it before we're finished with the file
+                    // sent it before we've finished with the file
                     tripFile.renameTo(new File(directory, tripFileName));
 
                     // test
@@ -367,58 +351,59 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
                 }
 
-                ComponentName filesAndBootReceiver = new ComponentName(MainActivity.this, FilesAndBootReceiver.class);
-                PackageManager pm = MainActivity.this.getPackageManager();
-
-                // start up the File sending tools - throw the kitchen sink at it
-                // firstly - a static receiver (defined in xml, only working pre API 24) is deployed to listen to the network
-                // check to see if directory still exists and has json and csv files in it
-
-                // TODO: set directory here for the SendAndDeleteFiles Utils method
-                Utils.setDirectory(directory.toString()); // toString
-                // TODO: do the same for the filefilter extensions
+                // step 3 - inform the package where you saved the files and what extensions you gave them
+                // set directory here for the SendAndDeleteFiles Utils method
+                Utils.setDirectory(directory.toString()); // Alex: toString should be optional
+                // do the same for the FileFilter extensions, used by the same Utils method
                 // write here what extensions you gave your files when saving them
-                final String[] extensions = {Utils.JSON_FILE_EXTENSION, Utils.CSV_FILE_EXTENSION};// or new String[]{,}
-                // just set the extension you've just used for saving files, so that Utils class has them for serving
-                Utils.setFileExtensionsArray(extensions);
-                // and use those extensions when searching for those files here and now
-                FileFilter fileFilter = new FileFilter() {
-                    @Override
-                    public boolean accept(File pathname) {
-                        return Utils.endsWithOneOfTheseExtensions(pathname, extensions);
-                    }
-                };
+                Utils.setFileExtensionsArray(
+                        new String[]{Utils.JSON_FILE_EXTENSION, Utils.CSV_FILE_EXTENSION}
+                );
 
-                if (directory.exists() && directory.listFiles(fileFilter).length > 0) {
+                // step 4 - enable and start mechanism designed to send (and delete if sent)
+                // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
+                // which first checks for a live Internet connection
+                // This is the right moment (after SEND) for enabling them, because they've disabled
+                // themselves by now
 
-                    // secondly - use a dynamically created broadcast receiver to listen to the network change
-                    registerMyReceiver(dynamicConnReceiver, Utils.INTENT_CONNECTION_ACTION);
+                // first - use GCM Network Manager (setPersisted and updateCurrent are true)
+                // maybe pass it the application context - it only uses it for the path anyways
+                // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
+                SendFilesTaskService.scheduleOneOff(MainActivity.this);
 
-                    // thirdly - use GCM Network Manager
-                    // maybe pass it the application context - it only uses it for the path anyways
-                    // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
-                    SendFilesTaskService.scheduleOneOff(MainActivity.this);
+                // then, use receivers
+                // a) a static receiver (defined in xml, only working pre API 24 - Nougat)
+                // is deployed to listen to the network
+                // i) enable it
+                Utils.setComponentState(
+                        MainActivity.this,
+                        StaticNetworkStateReceiver.class.getSimpleName(),
+                        true
+                );
+                // ii) fire it: no need to fire this one right know, because
+                // the dynamic receiver deals with the present moment
 
-                    // fourthly - use Alarm Manager
-                    // Once you enable the receiver this way, it will stay enabled, even if the user reboots the device
-                    pm.setComponentEnabledSetting(filesAndBootReceiver,
-                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                            PackageManager.DONT_KILL_APP);
-                    // now send the intent so that the receiver starts the alarm which starts the receiver,
-                    // which sends and deletes files
-                    //".FILES_PRESENT"
+                // b) a dynamically created broadcast receiver to listen to the network change
+                // i) enable it (it was registered in onCreate already)
+                Utils.setComponentState(
+                        MainActivity.this,
+                        DynamicNetworkStateReceiver.class.getSimpleName(),
+                        true
+                );
+                // ii) fire it, so that it tries to send the files now (before a connection
+                // change occurs, in case the phone is already connected)
+                Intent startIntent = new Intent(Utils.START_ACTION);
+                MainActivity.this.sendBroadcast(startIntent);
 
-
-
-                } else {// TODO: if the folder is empty (no csv or json files): unregister whatever makes sense unregistering
-                    unregisterMyReceiver(dynamicConnReceiver);
-                    // send the intent which should stop the alarm
-                    //".FILES_NOT_PRESENT"
-                    // and disable the receiver which started the alarm in the first place
-                    pm.setComponentEnabledSetting(filesAndBootReceiver,
-                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                            PackageManager.DONT_KILL_APP);
-                }
+                // c) Alarm Manager receiver: starts the hourly alarm which starts the receiver,
+                // which sends and deletes files
+                // i) enable it
+                Utils.setComponentState(
+                        MainActivity.this,
+                        FilesAndBootReceiver.class.getSimpleName(),
+                        true
+                );
+                // ii) fire it: already done above (see dynamic receiver)
 
                 // TODO: Then turn off the GPS service
                 trip.setGpsMode(GpsMode.OFF);
@@ -520,23 +505,4 @@ public class MainActivity extends AppCompatActivity {
         return new Location(sightings);//Location location =
     }
 
-    public void registerMyReceiver(BroadcastReceiver vReceiver, String action) {
-        // there is no way to check if the receiver was registered or not
-        try {
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(action);
-            registerReceiver(vReceiver, filter);
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void unregisterMyReceiver(BroadcastReceiver vReceiver) {
-        // there is no way to check if the receiver was registered or not
-        try {
-            unregisterReceiver(vReceiver);
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
-    }
 }

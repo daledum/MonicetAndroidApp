@@ -14,8 +14,9 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         boolean successful = Utils.sendAndDeleteFiles(context);
         if(successful) {
-            // send Intent to broadcast, thus stopping the alarm for the rest of the day
-            //".FILES_NOT_PRESENT"
+            // send Intent to filesAndBoot receiver, thus stopping the alarms and disabling the receiver
+            Intent stopIntent = new Intent(Utils.STOP_ACTION);
+            context.sendBroadcast(stopIntent);
         }
     }
 }

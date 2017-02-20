@@ -17,16 +17,27 @@ public class FilesAndBootReceiver extends BroadcastReceiver {
 
         // TODO: only works with local storage ? - see manifest
         AlarmManager alarmMgr = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+        // Set the Intent (even when creating a new one, comparison will be done using filterEquals)
         Intent myIntent = new Intent(context, AlarmReceiver.class);
-        PendingIntent alarmIntent = PendingIntent.getBroadcast(context, 0, myIntent, 0);
+        // Returns an existing or new PendingIntent (if it wasn't previously created) matching the given parameters
+        PendingIntent alarmIntent = PendingIntent.getBroadcast(context, 0, myIntent, 0); //PendingIntent.FLAG_UPDATE_CURRENT
 
-        alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
-                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,
-                AlarmManager.INTERVAL_HOUR, alarmIntent);
-
-        // here, if the action is boot completed check to see if directory is empty and if so, don't start the alarm, shouldn't check the directory, the utils method does it and replies
-        // and if it's not empty, start the alarm
-        // if the action is files_present, check that alarm exists and if not: start the alarm (else, do nothing)
-        // if the action is not_present, check that alarm exists and if yes: cancel alarm (else do nothing)
+        if (intent.getAction().equals(Utils.STOP_ACTION)) {
+            // Cancel the alarm
+            alarmMgr.cancel(alarmIntent);
+            // Docs: Only the original application owning a PendingIntent can cancel it.
+            // alarmIntent.cancel(); // This receiver runs even when the Monicet application doesn't
+            // Disable this receiver
+            Utils.setComponentState(
+                    context,
+                    this.getClass().getSimpleName(),
+                    false
+            );
+        } else {
+            // it's either BOOT COMPLETED or START, so start the alarm
+            alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
+                    SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,
+                    AlarmManager.INTERVAL_HOUR, alarmIntent);
+        }
     }
 }

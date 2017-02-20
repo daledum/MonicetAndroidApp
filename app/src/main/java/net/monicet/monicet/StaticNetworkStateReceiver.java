@@ -19,10 +19,18 @@ import static net.monicet.monicet.Utils.sendAndDeleteFiles;
  * Created by ubuntu on 13-02-2017.
  */
 
-public class PreNougatNetworkStateReceiver extends BroadcastReceiver {
+// this is used for Android API 23 and below, pre-Nougat
+public class StaticNetworkStateReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-
-        Utils.sendAndDeleteFiles(context);
+        boolean successful = Utils.sendAndDeleteFiles(context);
+        if (successful) {
+            // disable itself
+            Utils.setComponentState(
+                    context,
+                    this.getClass().getSimpleName(),
+                    false
+            );
+        }
     }
 }

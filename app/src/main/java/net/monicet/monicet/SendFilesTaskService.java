@@ -42,7 +42,7 @@ public class SendFilesTaskService extends GcmTaskService {
     @Override
     public int onRunTask(TaskParams taskParams) {
         //Bundle data = taskParams.getExtras();
-        //String path = (String)data.getCharSequence(FILES_PATH); // give it the default path: Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH
+        //String path = (String)data.getCharSequence(FILES_PATH);
 
         // test starts here
         File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
@@ -88,7 +88,6 @@ public class SendFilesTaskService extends GcmTaskService {
                     .setUpdateCurrent(true)
                     .build();
             GcmNetworkManager.getInstance(context).schedule(oneOff);
-            //Log.v("SendFilesTaskService", "one off task scheduled");//Alex: remove this
         } catch (Exception e) {
             e.printStackTrace();
         }

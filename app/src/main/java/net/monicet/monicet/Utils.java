@@ -1,6 +1,10 @@
 package net.monicet.monicet;
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
@@ -19,6 +23,7 @@ public final class Utils {
 
     // Environment.getDataDirectory() : /data
     // getFilesDir() : /data/data/package/files, where package is net.monicet.monicet
+    ////getFilesDir(): /data/data/net.monicet.monicet/files
     //BuildConfig.APPLICATION_ID: net.monicet.monicet
     //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet"); // external storage
     // deal with the received path
@@ -28,11 +33,15 @@ public final class Utils {
     // or use hardcoded path
     //File directory = new File(Environment.getDataDirectory(), "data/net.monicet.monicet/files");
 
+    // http://www.grokkingandroid.com/android-tutorial-broadcastreceiver/
+
     //} else { // path will be context.getFilesDir().toString()
     //File directory = new File(path); // internal storage
     //}
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
+    public static final String START_ACTION = ".START";
+    public static final String STOP_ACTION = ".STOP";
 
     public static final String JSON_FILE_EXTENSION = ".json";
     public static final String CSV_FILE_EXTENSION = ".csv";
@@ -130,8 +139,14 @@ public final class Utils {
         if (DIRECTORY != null) {
             dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
         } else {
-            // if this is called before the path was set by the MainActivity (it shouldn't have got lost)
-            dir = new File(INTERNAL_DIRECTORY); // default path, when directory is null
+            // if this is called before the path was set by the MainActivity
+            // (for the dynamic receiver, registered at the beginning of onCreate)
+            // default path, when DIRECTORY is null
+            if (context != null) {
+                dir = new File(context.getFilesDir().toString());
+            } else {
+                dir = new File(INTERNAL_DIRECTORY);
+            }
         }
 
         //test // TODO: remove this after tests
@@ -218,5 +233,46 @@ public final class Utils {
         // returns false if directory exists and it has at least one of our files in it
         return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
     }
+
+    public static void setComponentState(Context context, String componentClassName, boolean enabled) {
+
+        // Alex: maybe just use context
+        // dynamically (programmatically) enabled/disabled state is kept across reboots
+        PackageManager pm = context.getApplicationContext().getPackageManager();
+
+        ComponentName componentName = new ComponentName(
+                context.getApplicationContext(),
+                componentClassName
+        );
+
+        int state = enabled ?
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED :
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
+        pm.setComponentEnabledSetting(componentName, state, PackageManager.DONT_KILL_APP);
+    }
+
+    // class name
+    // this.getClass().getSimpleName(); //this.getLocalClassName();// getBaseContext().getLocalClassName();
+    // getApplicationContext().getLocalClassName();//MainActivity.class.getSimpleName();
+
+//    public static void registerMyReceiver(Context context, BroadcastReceiver vReceiver, String action) {
+//        // there is no way to check if the receiver was registered or not
+//        try {
+//            IntentFilter filter = new IntentFilter();
+//            filter.addAction(action);
+//            context.registerReceiver(vReceiver, filter);
+//        } catch (IllegalArgumentException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    public static void unregisterMyReceiver(Context context, BroadcastReceiver vReceiver) {
+//        // there is no way to check if the receiver was registered or not
+//        try {
+//            context.unregisterReceiver(vReceiver);
+//        } catch (IllegalArgumentException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
 }
