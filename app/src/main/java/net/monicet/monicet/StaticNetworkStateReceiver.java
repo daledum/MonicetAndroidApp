@@ -9,6 +9,7 @@ import android.os.Environment;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -23,12 +24,23 @@ import static net.monicet.monicet.Utils.sendAndDeleteFiles;
 public class StaticNetworkStateReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+
+        // test starts here
+        File dir = new File(Utils.EXTERNAL_DIRECTORY);
+        File testFile = new File(dir, "staticRec" + System.currentTimeMillis());
+        try {
+            testFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //test
+
         boolean successful = Utils.sendAndDeleteFiles(context);
         if (successful) {
             // disable itself
             Utils.setComponentState(
                     context,
-                    this.getClass().getSimpleName(),
+                    StaticNetworkStateReceiver.class,
                     false
             );
         }

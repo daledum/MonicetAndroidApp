@@ -30,7 +30,7 @@ public class FilesAndBootReceiver extends BroadcastReceiver {
             // Disable this receiver
             Utils.setComponentState(
                     context,
-                    this.getClass().getSimpleName(),
+                    FilesAndBootReceiver.class,
                     false
             );
         } else {

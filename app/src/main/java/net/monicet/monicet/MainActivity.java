@@ -31,14 +31,46 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
+import static android.R.attr.enabled;
 import static android.R.string.no;
 import static android.os.Build.VERSION_CODES.M;
+import static net.monicet.monicet.Utils.CSV_FILE_EXTENSION;
+import static net.monicet.monicet.Utils.JSON_FILE_EXTENSION;
 import static net.monicet.monicet.Utils.START_ACTION;
 
 public class MainActivity extends AppCompatActivity {
 
     // declaring trip as a class field made the app not start.. why?
     //final Trip trip = new Trip(buildLocationFromResources());
+
+    // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
+    final BroadcastReceiver dynamicReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final Context receivedContext = context;
+
+            // test starts here
+            File dir = new File(Utils.EXTERNAL_DIRECTORY);
+            File testFile = new File(dir, "dynamicRec" + System.currentTimeMillis());
+            try {
+                testFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //test
+
+            // dynamic receivers run on the UI thread, so this should run on a separate thread
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    // this receiver will fire before the directory path is set (which is done after SEND)
+                    // it will use the default path
+                    Utils.sendAndDeleteFiles(receivedContext);// or use getApplicationContext() ?
+                }
+            }).start();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,25 +88,32 @@ public class MainActivity extends AppCompatActivity {
 //            return;
 //        } else {
 //            //GPS not available, user cannot resolve this error
-//            //todo: somehow inform user or fallback to different method
+//            //todo: somehow inform user or fallback to different method, this relates to the GCM too
 //            //stop our activity initialization code
 //            return;
 //        }
 
-        // Declare and initialize the receiver dynamically
-        BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver();
-        // Register the receiver. Once registered it's enabled by default, therefore it could fire (see actions)
-        // It won't find anything in the folder before SEND, so, it will disable itself
-        // The same applies to the static receiver (pre-nougat version of this one) and to the
-        // receivers. They are all enabled after pressing SEND. Disabling them here (start of onCreate),
-        // would stop them from working while the app is alive (not forcefully closed by the user/system).
-        // So, let them do their thing. They disable themselves if the work is done/or if there is no
-        // work to be done.
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Utils.INTENT_CONNECTION_ACTION);
-        filter.addAction(Utils.START_ACTION);
-        getApplicationContext().registerReceiver(dynamicReceiver, filter);
+        // Register the dynamic receiver. Once registered it's enabled by default,
+        // therefore it could fire on connectivity change before SEND.
+        // android.net.conn.CONNECTIVITY_CHANGE is a sticky broadcast, so, the receiver fires when registered
+        // in order to stop that, do work in onReceive only if if (!isInitialStickyBroadcast())
+        // All the "file sending" receivers are enabled by default and after pressing SEND.
+        // Disabling them here (start of onCreate), would stop them from working while the app
+        // is alive (not forcefully closed by the user/system). So, let them do their thing.
+        // They disable themselves if the work is done/or if there is no work to be done (except
+        // the dynamic receiver, which lives and tries to send the files throughout the lifetime of the app)
+//        IntentFilter filter = new IntentFilter();//TODO: maybe register it in onResume or onStart
+//        filter.addAction(Utils.INTENT_CONNECTION_ACTION);
+//        filter.addAction(Utils.START_ACTION);
+//        getApplicationContext().registerReceiver(dynamicReceiver, filter); // application lifetime or just activity
 
+        // TODO: check after intsalling the app if dynamic receiver runs even after restart
+        // (bad, that means it's not unregistering), when the app is not running
+        //check for receiver on monicet package
+//        adb shell dumpsys activity broadcasts or
+//        dumpsys activity -h
+//        dumpsys activity b
+//        dumpsys package net.monicet.monicet
         // Step 1 starts here:
         // using the data from resources (containing specie names, photos and description),
         // create the first Location, then instantiate a Trip (which will contain one location)
@@ -134,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
         // SAVE floating action button
         // Check first if this Location has at least one non-empty Sighting (quantity different to 0)
         // If it is non-empty, open Comments dialogFragment
-        // Else (all quantities are 0): put a LONG Toast on the screen (and do nothing), with the message:
+        // Else (all quantities are 0): put a toast on the screen (and do nothing), with the message:
         //"your trip has no sightings. There is nothing to send. Please add the quantity of individuals that you've seen.
         // Or no species were seen/No animals were seen at this location. There is nothing to save."
         fabSave.setOnClickListener(new View.OnClickListener() {
@@ -151,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (noAnimalsWereSeen) {
-                    Toast.makeText(getApplicationContext(),
+                    Toast.makeText(MainActivity.this,
                             R.string.no_animals_toast_message, Toast.LENGTH_LONG).show();
                 } else {
                     // in the case the user hasn't turned off the comments (or it's the first show)
@@ -259,10 +298,11 @@ public class MainActivity extends AppCompatActivity {
         fabSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO: step 1 - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
+                // TODO: step I - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
                 //trip.setEndLatitude();
                 //trip.setEndLongitude()
                 trip.setEndTimeInMilliseconds(System.currentTimeMillis());
+                // step I ends here
 
                 // Alex: android:installLocation is internalOnly
                 // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
@@ -273,18 +313,17 @@ public class MainActivity extends AppCompatActivity {
                 // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
                 // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
 
-                // step 2 - create the files to be sent
+                // step II - create the files to be sent
                 // test external storage version
-                // TODO: test here the / issue
                 File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
                 //File directory = new File(Utils.EXTERNAL_DIRECTORY);
                 if (!directory.exists()) { directory.mkdirs(); } // only for external
                 //deployment - use internal storage
                 //File directory = new File(getFilesDir().toString());
 
-                //test
-                //File directory = new File(Utils.INTERNAL_DIRECTORY);
-//                File[] files = directory.listFiles();
+                //test - show files in directory
+//                final File d = new File(Utils.INTERNAL_DIRECTORY);
+//                File[] files = d.listFiles();
 //                for (File file: files) {
 //                    Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
 //                }
@@ -296,13 +335,13 @@ public class MainActivity extends AppCompatActivity {
                     String tripPrefix = "trip";
 
                     String tripFileTitle = tripPrefix + System.currentTimeMillis();
-                    String tripFileName = tripFileTitle + Utils.JSON_FILE_EXTENSION;
+                    String tripFileName = tripFileTitle + JSON_FILE_EXTENSION;
                     trip.setTripFileName(tripFileName);
 
                     if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
 
                         String routeFileTitle = routePrefix + System.currentTimeMillis();
-                        String routeFileName = routeFileTitle + Utils.CSV_FILE_EXTENSION;
+                        String routeFileName = routeFileTitle + CSV_FILE_EXTENSION;
                         trip.setRouteFileName(routeFileName); // this will be written to the JSON file
                         File routeFile = new File(directory, routeFileTitle);
                         FileWriter routeWriter = new FileWriter(routeFile);
@@ -345,65 +384,81 @@ public class MainActivity extends AppCompatActivity {
 //                        Toast.makeText(getApplicationContext(), "Before:" + file.getName(), Toast.LENGTH_SHORT).show();
 //                    }
                     //test
+                    //test - delete internal dir
+//                    FileFilter fileFilter = new FileFilter() {
+//                        @Override
+//                        public boolean accept(File pathname) {
+//                            return Utils.endsWithOneOfTheseExtensions(pathname,
+//                                    new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION});
+//                        }
+//                    };
+//                    File[] fs = d.listFiles(fileFilter);
+//                    for (File f: fs) {
+//                        f.delete();
+//                    }
+                    //test
 
                 } catch (IOException e) {
                     e.printStackTrace();
                     Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
                 }
+                // step II ends here
 
-                // step 3 - inform the package where you saved the files and what extensions you gave them
+                // step III - inform the package where you saved the files and what extensions you gave them
                 // set directory here for the SendAndDeleteFiles Utils method
                 Utils.setDirectory(directory.toString()); // Alex: toString should be optional
                 // do the same for the FileFilter extensions, used by the same Utils method
                 // write here what extensions you gave your files when saving them
                 Utils.setFileExtensionsArray(
-                        new String[]{Utils.JSON_FILE_EXTENSION, Utils.CSV_FILE_EXTENSION}
+                        new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION}
                 );
+                // step III ends here
 
-                // step 4 - enable and start mechanism designed to send (and delete if sent)
+                // step IV - enable and start mechanism designed to send (and delete if sent)
                 // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
-                // which first checks for a live Internet connection
+                // which first checks for a live Internet connection)
                 // This is the right moment (after SEND) for enabling them, because they've disabled
-                // themselves by now
+                // themselves by now (if folder doesn't contain json or csv files aka empty...
+                // although it always has one instant-run file)
 
-                // first - use GCM Network Manager (setPersisted and updateCurrent are true)
+                // first - use GCM Network Manager. I updates itself and stops when folder is empty
+                // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
                 // maybe pass it the application context - it only uses it for the path anyways
                 // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
                 SendFilesTaskService.scheduleOneOff(MainActivity.this);
 
-                // then, use receivers
-                // a) a static receiver (defined in xml, only working pre API 24 - Nougat)
-                // is deployed to listen to the network
+                // secondly, use broadcast receivers
+                // a) Alarm Manager receiver: starts an hourly alarm after BOOT COMPLETED or START_ACTION
+                // which starts the receiver, which sends and deletes files.
+                // It disables itself if folder is empty. It doesn't listen to the network
                 // i) enable it
-                Utils.setComponentState(
-                        MainActivity.this,
-                        StaticNetworkStateReceiver.class.getSimpleName(),
-                        true
-                );
+//                Utils.setComponentState(
+//                        MainActivity.this,
+//                        FilesAndBootReceiver.class,
+//                        true
+//                );
+//                // ii) fire it:
+//                Intent startIntent = new Intent(Utils.START_ACTION);
+//                MainActivity.this.sendBroadcast(startIntent);
+
+                // b) dynamicReceiver: a dynamically created broadcast receiver to listen to the network change
+                // i) enable it: don't touch. It's an error prone mechanism. It was already registered.
+                // ii) fire it, so that it tries to send the files now (before a connection
+                // change occurs, in case the phone is already connected)
+                // it's fired above (the alarm and this dynamic receiver are both fired by START_ACTION)
+
+                // c) a static receiver (defined in xml, only working pre API 24 - Nougat)
+                // is deployed to listen to the network. It disables itself if the folder is empty
+                // i) enable it
+//                Utils.setComponentState(
+//                        MainActivity.this,
+//                        StaticNetworkStateReceiver.class,
+//                        true
+//                );
                 // ii) fire it: no need to fire this one right know, because
                 // the dynamic receiver deals with the present moment
 
-                // b) a dynamically created broadcast receiver to listen to the network change
-                // i) enable it (it was registered in onCreate already)
-                Utils.setComponentState(
-                        MainActivity.this,
-                        DynamicNetworkStateReceiver.class.getSimpleName(),
-                        true
-                );
-                // ii) fire it, so that it tries to send the files now (before a connection
-                // change occurs, in case the phone is already connected)
-                Intent startIntent = new Intent(Utils.START_ACTION);
-                MainActivity.this.sendBroadcast(startIntent);
-
-                // c) Alarm Manager receiver: starts the hourly alarm which starts the receiver,
-                // which sends and deletes files
-                // i) enable it
-                Utils.setComponentState(
-                        MainActivity.this,
-                        FilesAndBootReceiver.class.getSimpleName(),
-                        true
-                );
-                // ii) fire it: already done above (see dynamic receiver)
+                //step IV ends here
 
                 // TODO: Then turn off the GPS service
                 trip.setGpsMode(GpsMode.OFF);
@@ -413,11 +468,11 @@ public class MainActivity extends AppCompatActivity {
                 // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
                 // returning to this app from Gmail ?
                 // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
-                // TODO: finish(); send: stop application from being in the foreground (exit)...
+                // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
                 // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
                 // There should be a button for starting a trip and a button for adding a location
 
-                //        if (files.length < 1 || files[0] == null) {
+                //        if (files.length < 1 || files[0] == null) {//AsyncTask
                 //            return null;
                 //        }
             }
@@ -471,9 +526,9 @@ public class MainActivity extends AppCompatActivity {
         }
         sightingAdapter.notifyDataSetChanged();
 
-        Toast.makeText(getApplicationContext(),
+        Toast.makeText(MainActivity.this,
                 R.string.location_saved_confirmation_message, Toast.LENGTH_SHORT).show();
-//        Toast.makeText(getApplicationContext(),
+//        Toast.makeText(MainActivity.this,
 //                R.string.location_saved_instructions_message, Toast.LENGTH_LONG).show();
 
         findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);

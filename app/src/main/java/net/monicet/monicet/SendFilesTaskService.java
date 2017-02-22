@@ -33,9 +33,10 @@ public class SendFilesTaskService extends GcmTaskService {
 //        You can override this method to reschedule them in the case of an updated package.
 //        This is not called when your application is first installed.
 //        This is called on your application's main thread. Schedule your tasks again here.
-        super.onInitializeTasks();
-        // this is a GcmTaskService which is a Service which is a Context
-        SendFilesTaskService.scheduleOneOff(this);
+        // TODO: uncomment super. and .scheduleOne when deloying (commented now because restarts task every time)
+//        super.onInitializeTasks();
+//        // this is a GcmTaskService which is a Service which is a Context
+//        SendFilesTaskService.scheduleOneOff(this);
 
     }
 
@@ -45,17 +46,15 @@ public class SendFilesTaskService extends GcmTaskService {
         //String path = (String)data.getCharSequence(FILES_PATH);
 
         // test starts here
-        File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
-        File testFileContext = new File(directory, "filesdir.txt");
+        File dir = new File(Utils.EXTERNAL_DIRECTORY);
+        File testFile = new File(dir, "oneOff" + System.currentTimeMillis());
         try {
-            //testFileContext.createNewFile();
-            FileWriter routeWriter = new FileWriter(testFileContext);
-            routeWriter.append(this.getFilesDir().toString());
-            routeWriter.flush();
-            routeWriter.close();
+            testFile.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        //test
+
         // test ends here
 
         // this is a GcmTaskService which is a Service which is a Context
@@ -79,7 +78,7 @@ public class SendFilesTaskService extends GcmTaskService {
                     .setExecutionWindow(0, 1)
                     //specify whether this task should be persisted across reboots
                     .setPersisted(true)
-                    //.setRequiredNetwork(Task.NETWORK_STATE_ANY) // Task.NETWORK_STATE_CONNECTED is the default
+                    //.setRequiredNetwork(Task.NETWORK_STATE_ANY) // default NETWORK_STATE_CONNECTED
                     //request that charging must be connected, this line is optional
                     .setRequiresCharging(false)
                     //set some data we want to pass to our task

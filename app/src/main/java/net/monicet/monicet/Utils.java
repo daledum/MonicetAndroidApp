@@ -21,24 +21,6 @@ import java.util.ArrayList;
 public final class Utils {
     private Utils() {}
 
-    // Environment.getDataDirectory() : /data
-    // getFilesDir() : /data/data/package/files, where package is net.monicet.monicet
-    ////getFilesDir(): /data/data/net.monicet.monicet/files
-    //BuildConfig.APPLICATION_ID: net.monicet.monicet
-    //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet"); // external storage
-    // deal with the received path
-    //if (path.isEmpty()) {
-    // internal, using BuildConfig.APPLICATION_ID
-    //File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);
-    // or use hardcoded path
-    //File directory = new File(Environment.getDataDirectory(), "data/net.monicet.monicet/files");
-
-    // http://www.grokkingandroid.com/android-tutorial-broadcastreceiver/
-
-    //} else { // path will be context.getFilesDir().toString()
-    //File directory = new File(path); // internal storage
-    //}
-
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";
     public static final String STOP_ACTION = ".STOP";
@@ -53,11 +35,11 @@ public final class Utils {
 
     // this will get set by the MainActivity.. as a default: set it to all the registered extension
     private static String DIRECTORY;
-    // back-ups, if directory is null (for usage in SendAndDeleteFiles()) // TODO: test need for a / ?
+    // back-ups, if directory is null (for usage in SendAndDeleteFiles())
     public static final String EXTERNAL_DIRECTORY =
             Environment.getExternalStorageDirectory()
             + "/Monicet"; // this should be set in the activity via the same mechanism...should drop this
-    // this is a back-up, it's not being used // TODO: test need for a / ?
+    // this is a back-up, it's not being used
     public static final String INTERNAL_DIRECTORY =
             Environment.getDataDirectory()
             + "/data/"
@@ -65,7 +47,7 @@ public final class Utils {
     // or hard-coded internal path
     public static final String INTERNAL_DIRECTORY_HARDCODED =
             Environment.getDataDirectory()
-                    + "/data/net.monicet.monicet/files";
+            + "/data/net.monicet.monicet/files";
 
     // allow only a setter (no getter) and only when it's null,
     // so that the path and extensions only ever get assigned once
@@ -140,7 +122,7 @@ public final class Utils {
             dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
         } else {
             // if this is called before the path was set by the MainActivity
-            // (for the dynamic receiver, registered at the beginning of onCreate)
+            // (for the dynamic receiver, registered and triggered at the beginning of onCreate)
             // default path, when DIRECTORY is null
             if (context != null) {
                 dir = new File(context.getFilesDir().toString());
@@ -151,6 +133,15 @@ public final class Utils {
 
         //test // TODO: remove this after tests
         dir = new File(EXTERNAL_DIRECTORY);
+        //test
+
+        //test
+        File testFile = new File(dir, "send" + System.currentTimeMillis());
+        try {
+            testFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         //test
 
         final String[] extensions;
@@ -168,15 +159,6 @@ public final class Utils {
         };
         // check if the directory exists and if so, if it has any of our files
         if (dir.exists() && dir.listFiles(fileFilter).length > 0) {
-
-            //test
-            File testFile = new File(dir, "test.test");
-            try {
-                testFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            //test
 
             // secondly, check that there is an Internet connection
             boolean isConnected;
@@ -206,7 +188,7 @@ public final class Utils {
                         // TODO: check if (files[i].exists()) { }, in case it was already deleted by the receiver
                         //then send the files via http post...one by one
                         // an error can appear here
-                        if (System.currentTimeMillis() != 1111111111) {// if successfully sent (connection established etc):
+                        if (System.currentTimeMillis() != 1111111111) {//true TODO: successfully sent (connection established etc):
                             namesOfFilesToDelete.add(files[i].getName());
                             wasSentOk = true;
                         } else {
@@ -234,7 +216,7 @@ public final class Utils {
         return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
     }
 
-    public static void setComponentState(Context context, String componentClassName, boolean enabled) {
+    public static void setComponentState(Context context, Class componentClass, boolean enabled) {
 
         // Alex: maybe just use context
         // dynamically (programmatically) enabled/disabled state is kept across reboots
@@ -242,7 +224,7 @@ public final class Utils {
 
         ComponentName componentName = new ComponentName(
                 context.getApplicationContext(),
-                componentClassName
+                componentClass
         );
 
         int state = enabled ?
@@ -254,6 +236,24 @@ public final class Utils {
     // class name
     // this.getClass().getSimpleName(); //this.getLocalClassName();// getBaseContext().getLocalClassName();
     // getApplicationContext().getLocalClassName();//MainActivity.class.getSimpleName();
+
+    // Environment.getDataDirectory() : /data
+    // getFilesDir() : /data/data/package/files, where package is net.monicet.monicet
+    ////getFilesDir(): /data/data/net.monicet.monicet/files
+    //BuildConfig.APPLICATION_ID: net.monicet.monicet
+    //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet"); // external storage
+    // deal with the received path
+    //if (path.isEmpty()) {
+    // internal, using BuildConfig.APPLICATION_ID
+    //File directory = new File(Environment.getDataDirectory(), Utils.INTERNAL_DIR_PATH);
+    // or use hardcoded path
+    //File directory = new File(Environment.getDataDirectory(), "data/net.monicet.monicet/files");
+
+    // http://www.grokkingandroid.com/android-tutorial-broadcastreceiver/
+
+    //} else { // path will be context.getFilesDir().toString()
+    //File directory = new File(path); // internal storage
+    //}
 
 //    public static void registerMyReceiver(Context context, BroadcastReceiver vReceiver, String action) {
 //        // there is no way to check if the receiver was registered or not
