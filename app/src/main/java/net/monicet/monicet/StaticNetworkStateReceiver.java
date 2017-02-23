@@ -24,6 +24,7 @@ import static net.monicet.monicet.Utils.sendAndDeleteFiles;
 public class StaticNetworkStateReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        final Context receivedContext = context;
 
         // test starts here
         File dir = new File(Utils.EXTERNAL_DIRECTORY);
@@ -35,14 +36,20 @@ public class StaticNetworkStateReceiver extends BroadcastReceiver {
         }
         //test
 
-        boolean successful = Utils.sendAndDeleteFiles(context);
-        if (successful) {
-            // disable itself
-            Utils.setComponentState(
-                    context,
-                    StaticNetworkStateReceiver.class,
-                    false
-            );
-        }
+        // does network work, so it needs to be on a separate thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean successful = Utils.sendAndDeleteFiles(receivedContext);
+                if (successful) {
+                    // disable itself
+                    Utils.setComponentState(
+                            receivedContext,
+                            StaticNetworkStateReceiver.class,
+                            false
+                    );
+                }
+            }
+        }).start();
     }
 }

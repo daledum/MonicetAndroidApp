@@ -1,13 +1,8 @@
 package net.monicet.monicet;
 
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -24,19 +19,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import static android.R.attr.enabled;
 import static android.R.string.no;
-import static android.os.Build.VERSION_CODES.M;
-import static net.monicet.monicet.Utils.CSV_FILE_EXTENSION;
-import static net.monicet.monicet.Utils.JSON_FILE_EXTENSION;
-import static net.monicet.monicet.Utils.START_ACTION;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,33 +33,7 @@ public class MainActivity extends AppCompatActivity {
     //final Trip trip = new Trip(buildLocationFromResources());
 
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
-    final BroadcastReceiver dynamicReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final Context receivedContext = context;
-
-            // test starts here
-            File dir = new File(Utils.EXTERNAL_DIRECTORY);
-            File testFile = new File(dir, "dynamicRec" + System.currentTimeMillis());
-            try {
-                testFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            //test
-
-            // dynamic receivers run on the UI thread, so this should run on a separate thread
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    // this receiver will fire before the directory path is set (which is done after SEND)
-                    // it will use the default path
-                    Utils.sendAndDeleteFiles(receivedContext);// or use getApplicationContext() ?
-                }
-            }).start();
-        }
-    };
+    final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,6 +56,12 @@ public class MainActivity extends AppCompatActivity {
 //            return;
 //        }
 
+        // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
+        // set directory here for the SendAndDeleteFiles Utils method
+        Utils.setDirectory(Utils.EXTERNAL_DIRECTORY);
+        //should be Utils.setDirectory(getFilesDir().toString()); // Alex: was, directory.toString(), toString should be optional
+        // step III ends here
+
         // Register the dynamic receiver. Once registered it's enabled by default,
         // therefore it could fire on connectivity change before SEND.
         // android.net.conn.CONNECTIVITY_CHANGE is a sticky broadcast, so, the receiver fires when registered
@@ -107,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
 //        filter.addAction(Utils.START_ACTION);
 //        getApplicationContext().registerReceiver(dynamicReceiver, filter); // application lifetime or just activity
 
-        // TODO: check after intsalling the app if dynamic receiver runs even after restart
+        // TODO: check after installing the app if dynamic receiver runs even after restart
         // (bad, that means it's not unregistering), when the app is not running
         //check for receiver on monicet package
 //        adb shell dumpsys activity broadcasts or
@@ -314,34 +283,35 @@ public class MainActivity extends AppCompatActivity {
                 // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
 
                 // step II - create the files to be sent
-                // test external storage version
-                File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
-                //File directory = new File(Utils.EXTERNAL_DIRECTORY);
-                if (!directory.exists()) { directory.mkdirs(); } // only for external
-                //deployment - use internal storage
-                //File directory = new File(getFilesDir().toString());
+                try {
 
-                //test - show files in directory
+                    // test external storage version
+                    File directory = new File(Utils.getDirectory());
+                    //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
+                    //File directory = new File(Utils.EXTERNAL_DIRECTORY);
+                    if (!directory.exists()) { directory.mkdirs(); } // only for external, TODO: remove this?
+                    //deployment - use internal storage
+                    //File directory = new File(getFilesDir().toString());
+
+                    //test - show files in directory
 //                final File d = new File(Utils.INTERNAL_DIRECTORY);
 //                File[] files = d.listFiles();
 //                for (File file: files) {
 //                    Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
 //                }
-                // end test
-
-                try {
+                    // end test
 
                     String routePrefix = "route";
                     String tripPrefix = "trip";
 
                     String tripFileTitle = tripPrefix + System.currentTimeMillis();
-                    String tripFileName = tripFileTitle + JSON_FILE_EXTENSION;
+                    String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
                     trip.setTripFileName(tripFileName);
 
                     if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
 
                         String routeFileTitle = routePrefix + System.currentTimeMillis();
-                        String routeFileName = routeFileTitle + CSV_FILE_EXTENSION;
+                        String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
                         trip.setRouteFileName(routeFileName); // this will be written to the JSON file
                         File routeFile = new File(directory, routeFileTitle);
                         FileWriter routeWriter = new FileWriter(routeFile);
@@ -388,8 +358,7 @@ public class MainActivity extends AppCompatActivity {
 //                    FileFilter fileFilter = new FileFilter() {
 //                        @Override
 //                        public boolean accept(File pathname) {
-//                            return Utils.endsWithOneOfTheseExtensions(pathname,
-//                                    new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION});
+//                            return false;
 //                        }
 //                    };
 //                    File[] fs = d.listFiles(fileFilter);
@@ -404,17 +373,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 // step II ends here
 
-                // step III - inform the package where you saved the files and what extensions you gave them
-                // set directory here for the SendAndDeleteFiles Utils method
-                Utils.setDirectory(directory.toString()); // Alex: toString should be optional
-                // do the same for the FileFilter extensions, used by the same Utils method
-                // write here what extensions you gave your files when saving them
-                Utils.setFileExtensionsArray(
-                        new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION}
-                );
-                // step III ends here
-
-                // step IV - enable and start mechanism designed to send (and delete if sent)
+                // step III - enable and start mechanisms designed to send (and delete if sent)
                 // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
                 // which first checks for a live Internet connection)
                 // This is the right moment (after SEND) for enabling them, because they've disabled
@@ -425,6 +384,7 @@ public class MainActivity extends AppCompatActivity {
                 // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
                 // maybe pass it the application context - it only uses it for the path anyways
                 // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
+                // new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
                 SendFilesTaskService.scheduleOneOff(MainActivity.this);
 
                 // secondly, use broadcast receivers
@@ -458,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
                 // ii) fire it: no need to fire this one right know, because
                 // the dynamic receiver deals with the present moment
 
-                //step IV ends here
+                //step III ends here
 
                 // TODO: Then turn off the GPS service
                 trip.setGpsMode(GpsMode.OFF);

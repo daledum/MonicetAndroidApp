@@ -1,9 +1,7 @@
 package net.monicet.monicet;
 
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -25,14 +23,6 @@ public final class Utils {
     public static final String START_ACTION = ".START";
     public static final String STOP_ACTION = ".STOP";
 
-    public static final String JSON_FILE_EXTENSION = ".json";
-    public static final String CSV_FILE_EXTENSION = ".csv";
-
-    // this will get set by the MainActivity.. as a default: null, of course
-    // this and dirPath are in the utils class, because it needs to accessed by several mechanisms
-    // (after the activity has started them), even at times when the application is stopped
-    private static String[] fileExtensionsArray;
-
     // this will get set by the MainActivity.. as a default: set it to all the registered extension
     private static String DIRECTORY;
     // back-ups, if directory is null (for usage in SendAndDeleteFiles())
@@ -49,19 +39,13 @@ public final class Utils {
             Environment.getDataDirectory()
             + "/data/net.monicet.monicet/files";
 
-    // allow only a setter (no getter) and only when it's null,
-    // so that the path and extensions only ever get assigned once
+    // allow to be set only once, only when it's null
     public static void setDirectory(String dir) {
         if (DIRECTORY == null) {
             DIRECTORY = dir;
         }
     }
-
-    public static void setFileExtensionsArray(String[] extensions) {
-        if (fileExtensionsArray == null) {
-            fileExtensionsArray = extensions;
-        }
-    }
+    public static String getDirectory() { return DIRECTORY; }
 
     public static double parseGpsToDouble(String sValue, GpsEdgeValue edgeValue) {
         double result = 0;
@@ -106,15 +90,6 @@ public final class Utils {
         return vDeg + vMin/60 + vSec/3600;
     }
 
-    public static boolean endsWithOneOfTheseExtensions(File pathname, String[] extensions) {
-        for(String extension: extensions) {
-            if (pathname.getName().toLowerCase().endsWith(extension)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static boolean sendAndDeleteFiles(Context context) {
 
         File dir;
@@ -122,7 +97,7 @@ public final class Utils {
             dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
         } else {
             // if this is called before the path was set by the MainActivity
-            // (for the dynamic receiver, registered and triggered at the beginning of onCreate)
+            // (in case the dynamic receiver is registered, thus (sticky intent) triggered before setting the dir)
             // default path, when DIRECTORY is null
             if (context != null) {
                 dir = new File(context.getFilesDir().toString());
@@ -144,19 +119,18 @@ public final class Utils {
         }
         //test
 
-        final String[] extensions;
-        if (fileExtensionsArray != null) {
-            extensions = fileExtensionsArray;
-        } else {
-            // fileExtensionsArray is null if it hasn't been set by the Main Activity)
-            extensions = new String[]{JSON_FILE_EXTENSION, CSV_FILE_EXTENSION};
-        }
         FileFilter fileFilter = new FileFilter() {
             @Override
             public boolean accept(File pathname) {
-                return endsWithOneOfTheseExtensions(pathname, extensions);
+                for(AllowedFileExtension fe: AllowedFileExtension.values()) {
+                    if (pathname.getName().toLowerCase().endsWith(fe.toString())) {
+                        return true;
+                    }
+                }
+                return false;
             }
         };
+
         // check if the directory exists and if so, if it has any of our files
         if (dir.exists() && dir.listFiles(fileFilter).length > 0) {
 
@@ -180,6 +154,7 @@ public final class Utils {
 
                     File[] files = dir.listFiles(fileFilter);
 
+                    // this is done file by file
                     sending:
                     for (int i = 0; i < files.length; i++) {
                         wasSentOk = false;
@@ -188,8 +163,18 @@ public final class Utils {
                         // TODO: check if (files[i].exists()) { }, in case it was already deleted by the receiver
                         //then send the files via http post...one by one
                         // an error can appear here
+
+                        // if response is 200 ..meaning it was sent fine // TODO: uncomment this
+                        // OR files[i] doesn't exist (it was sent and deleted by another mechanism)
+//                        if (!files[i].exists() || response == 200) {
+//                            wasSentOk = true;
+//                            if (files[i].exists()) { namesOfFilesToDelete.add(files[i].getName()); }
+//                        } else {
+//                            break sending; // exit the loop if response is not 200 and the file still exists, wasSentOk is false, so the outer while will stop
+//                        }
+
                         if (System.currentTimeMillis() != 1111111111) {//true TODO: successfully sent (connection established etc):
-                            namesOfFilesToDelete.add(files[i].getName());
+                            namesOfFilesToDelete.add(files[i].getName());//check it exists
                             wasSentOk = true;
                         } else {
                             break sending; // exit the loop if there are problems, wasSentOk is false, so the outer while will stop
@@ -215,6 +200,25 @@ public final class Utils {
         // returns false if directory exists and it has at least one of our files in it
         return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
     }
+
+//    private static void sendFile(URL url, File file, Context context) {
+//        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+//        try {
+//            urlConnection.setDoOutput(true);// set it for output
+//            //urlConnection.setChunkedStreamingMode(0);
+//            //urlConnection.setFixedLengthStreamingMode(); // get content length The number of bytes
+//
+//            OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
+//            writeStream(out);
+//
+//            InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+//            readStream(in);
+//        } finally {
+//            urlConnection.disconnect();
+//        }
+//
+//
+//    }
 
     public static void setComponentState(Context context, Class componentClass, boolean enabled) {
 

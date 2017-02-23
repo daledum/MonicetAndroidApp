@@ -14,6 +14,7 @@ import java.io.IOException;
 public class AlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        final Context receivedContext = context;
 
         // test starts here
         File dir = new File(Utils.EXTERNAL_DIRECTORY);
@@ -25,11 +26,17 @@ public class AlarmReceiver extends BroadcastReceiver {
         }
         //test
 
-        boolean successful = Utils.sendAndDeleteFiles(context);
-        if(successful) {
-            // send Intent to filesAndBoot receiver, thus stopping the alarms and disabling the receiver
-            Intent stopIntent = new Intent(Utils.STOP_ACTION);
-            context.sendBroadcast(stopIntent);
-        }
+        // does network work, so it needs to be on a separate thread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean successful = Utils.sendAndDeleteFiles(receivedContext);
+                if(successful) {
+                    // send Intent to filesAndBoot receiver, thus stopping the alarms and disabling the receiver
+                    Intent stopIntent = new Intent(Utils.STOP_ACTION);
+                    receivedContext.sendBroadcast(stopIntent);
+                }
+            }
+        }).start();
     }
 }
