@@ -41,4 +41,7 @@
     <string name="user_gps_message">Pode inserir aqui as coordenadas GPS do seu próprio dispositivo GPS separado.</string>
     <string name="comments_message_title">Informação adicional</string>
     <string name="tracking_dialog_title">Amostragem GPS contínuo</string>
+    <string name="no_locations_toast_message">Não há nada para enviar.\nPor favor, adicione um lugar quando tiver atingido a sua primeira paragem.</string>
+    <string name="start_trip">Inicie a viagem</string>
+    <string name="add_location">Adicione lugar</string>
 </resources>

@@ -25,7 +25,9 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
 
     public SightingAdapter(Activity context, ArrayList<Sighting> sightings, UserInput<GpsMode> vGpsModeUserInput) {
         super(context, 0, sightings);
-        gpsModeUserInput = vGpsModeUserInput;
+        gpsModeUserInput = vGpsModeUserInput; // TODO: this is connected only to the initial value?.. it should be ok, a reference
+        // test it - it gets the reference, maybe it's fine
+        // when we update the array adapter, we only update the sightings, but it's the same adapter
     }
 
 //    public SightingAdapter(Activity context, Trip vTrip) {
@@ -42,67 +44,73 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item, parent, false);
         }
 
-        TextView specie = (TextView) convertView.findViewById(R.id.specie_text_view);
-        specie.setText(currentSighting.getAnimal().getSpecie());
+        if (currentSighting != null) {
 
-        ImageButton photo = (ImageButton) convertView.findViewById(R.id.photo_imageButton);
-        photo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO: open image for that particular specie
-                Toast.makeText(getContext(), currentSighting.getAnimal().getPhoto(), Toast.LENGTH_SHORT).show();
-            }
-        });
+            TextView specie = (TextView) convertView.findViewById(R.id.specie_text_view);
+            specie.setText(currentSighting.getAnimal().getSpecie());
 
-        ImageButton description = (ImageButton) convertView.findViewById(R.id.description_imageButton);
-        description.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO: open description for that particular specie
-                Toast.makeText(getContext(), currentSighting.getAnimal().getDescription(), Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        final NumberPicker quantity = (NumberPicker) convertView.findViewById(R.id.quantity_number_picker);
-        quantity.setMinValue(0);
-        quantity.setMaxValue(99);
-        quantity.setValue(currentSighting.getQuantity()); // autoboxing happening here
-
-        if (currentSighting.getQuantityUserInput().isVisible() == true) {
-            // if coming back to a saved Location to make changes to it (in a future version), uncomment this:
-            quantity.setBackgroundColor(Color.TRANSPARENT);
-            quantity.setEnabled(true);
-            quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            ImageButton photo = (ImageButton) convertView.findViewById(R.id.photo_imageButton);
+            photo.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                    currentSighting.setQuantity(quantity.getValue()); // autoboxing happening here
-
-                    // TODO: sample and save GPS
-                    // GPS, date and time values from the phone should be saved to their Sighting
-                    // instance variables.
-                    // If several clicks, save each time, overwriting,
-                    // or immediately afterwards, in case it needs a few seconds for calibrating
-                    //currentSighting.setLatitude();
-                    //currentSighting.setLongitude();
-                    currentSighting.setTimeInMilliseconds(System.currentTimeMillis());
-
-
-                    // while in the default (no GPS tracking, infrequent mode)
-                    // first click/press on the NumberPicker of a sighting for every location:
-                    // start sampling GPS data more often (fast/quickly)
-                    if (gpsModeUserInput.getContent() != GpsMode.CONTINUOUS) {
-                        if (gpsModeUserInput.getContent() != GpsMode.FAST) {
-                            gpsModeUserInput.setContent(GpsMode.FAST);
-                            // TODO: GPS this should actually change the sampling rate (via a View listener?)
-                        }
-                    }
+                public void onClick(View v) {
+                    // TODO: open image for that particular specie
+                    Toast.makeText(getContext(), currentSighting.getAnimal().getPhoto(), Toast.LENGTH_SHORT).show();
                 }
             });
-        } else {
-            quantity.setBackgroundColor(Color.GRAY);
-            quantity.setEnabled(false);
-        }
 
+            ImageButton description = (ImageButton) convertView.findViewById(R.id.description_imageButton);
+            description.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // TODO: open description for that particular specie
+                    Toast.makeText(getContext(), currentSighting.getAnimal().getDescription(), Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            final NumberPicker quantity = (NumberPicker) convertView.findViewById(R.id.quantity_number_picker);
+            quantity.setMinValue(0);
+            quantity.setMaxValue(99);
+            quantity.setValue(currentSighting.getQuantity()); // autoboxing happening here
+
+            if (currentSighting.getQuantityUserInput().isVisible() == true) {
+                // if coming back to a saved Location to make changes to it (in a future version), uncomment this:
+                quantity.setBackgroundColor(Color.TRANSPARENT);
+                quantity.setEnabled(true);
+                quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+                    @Override
+                    public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                        currentSighting.setQuantity(quantity.getValue()); // autoboxing happening here
+
+                        // TODO: sample and save GPS
+                        // GPS, date and time values from the phone should be saved to their Sighting
+                        // instance variables.
+                        // If several clicks, save each time, overwriting,
+                        // or immediately afterwards, in case it needs a few seconds for calibrating
+                        //currentSighting.setLatitude();
+                        //currentSighting.setLongitude();
+                        currentSighting.setTimeInMilliseconds(System.currentTimeMillis());
+
+
+                        // while in the default (no GPS tracking, infrequent mode)
+                        // first click/press on the NumberPicker of a sighting for every location:
+                        // start sampling GPS data more often (fast/quickly)
+
+                        // TODO: IMPORTANT: does this adapter have access to the initial gpsmode, from when it was created
+                        // or to the up to date one? If only initial, it might not change the mode. It needs a live connection
+                        if (gpsModeUserInput.getContent() != GpsMode.CONTINUOUS) {
+                            if (gpsModeUserInput.getContent() != GpsMode.FAST) {
+                                gpsModeUserInput.setContent(GpsMode.FAST);
+                                // TODO: GPS this should actually change the sampling rate (via a View listener?)
+                            }
+                        }
+                    }
+                });
+            } else {
+                quantity.setBackgroundColor(Color.GRAY);
+                quantity.setEnabled(false);
+            }
+
+        }
         return convertView;
     }
 

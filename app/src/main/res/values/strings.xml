@@ -3,6 +3,9 @@
 
     <string name="location">Location</string>
 
+    <string name="start_trip">Start trip</string>
+    <string name="add_location">Add location</string>
+
     <string name="tracking_dialog_title">Continuous GPS sampling</string>
     <string name="tracking_dialog_message">
         You are currently in the normal GPS sampling mode.\nActivate the continuous GPS sampling mode, which uses a lot of battery?
@@ -16,6 +19,9 @@
     </string>
     <string name="no_animals_toast_message">
         There is nothing to save.\nPlease, modify the number of animals that you\'ve seen.
+    </string>
+    <string name="no_locations_toast_message">
+        There is nothing to send.\nPlease, add a place when you\'ve reached your first destination.
     </string>
     <string name="location_saved_confirmation_message">
         The sightings for this location have been saved.

@@ -61,7 +61,7 @@ public class Location implements Serializable {
     private ArrayList<Sighting> getBlankSightings() {
         // get rid of this when deploying
         if (mSightingsArray.size() == 0) {
-            Log.d("Main Activity", "Building a Location from a location with no sightings");
+            Log.d("MainActivity,LocatClass", "Building a Location from a location with no sightings");
         }
         //do the new here, via Sighting constructor - there are only primitives there (no tied reference issues),
         // except the Animal, which is the same for everyone and cannot be removed from a Location
@@ -114,8 +114,4 @@ public class Location implements Serializable {
         mCommentsUserInput.setContent(vComments); //garbage collector will keep the reference alive
     }
 
-//    @Override
-//    public String toString() {
-//        return super.toString();// use Utility for gps, time etc
-//    }
 }

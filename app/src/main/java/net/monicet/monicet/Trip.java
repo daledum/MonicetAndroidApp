@@ -1,5 +1,7 @@
 package net.monicet.monicet;
 
+import android.util.Log;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,9 +55,21 @@ public class Trip implements Serializable {
 
     public int getNumberOfLocations() { return mLocationsArray.size(); }
     public Location getLocationAtIndex(int vIndex) { return mLocationsArray.get(vIndex); }
-    public Location getCurrentLocation() { return mLocationsArray.get(mLocationsArray.size() - 1); }
+    public Location getCurrentLocation() {
+        // TODO: decide if this should return null or not
+        // get rid of this when deploying, do I really need this check?, non-dry MainActivity uses this check, too
+        if (getNumberOfLocations() == 0) {
+            Log.d("MainActivity,Trip class", "Getting a Location from a trip with no locations");
+            return null;
+        }
+        return mLocationsArray.get(getNumberOfLocations() - 1); // Alex: was mLocationsArray.size()
+    }
 
-    // the trip will always have at least one location (at index 0), due to its constructor
+    public Location getSeedLocation() {
+        return getCurrentLocation();
+    }
+
+    // the trip will always have at least one location (at index 0), due to its constructor - not true anymore
     // add a new, barebone(or blank) location (only containing species, photos and descriptions)
 //    public void addLocation() {
 //        Location firstLocation = mLocationsArray.get(0);
@@ -67,9 +81,15 @@ public class Trip implements Serializable {
     // if user disabled the 'comments' message when saving a location, that gets sent through this ...
     // mechanism to the next location (via 'cloning' from the current one)
     // The only way to pass this info (user no longer wants to write comments) via locations, without using the trip
-    public void addLocation() {
-        Location currentLocation = getCurrentLocation(); // mLocationsArray.get(mLocationsArray.size() - 1);
-        mLocationsArray.add(new Location(currentLocation));
+//    public void addLocation() { // get rid
+//        // make sure it has a location already
+//        // getcurrentlocation == null ? .add(new Location(from resources), .add(new Location(getcurrentLoc)
+//        Location currentLocation = getCurrentLocation(); // mLocationsArray.get(mLocationsArray.size() - 1);
+//        mLocationsArray.add(new Location(currentLocation));
+//    }
+
+    public void addLocation(Location location) { // use this instead
+        mLocationsArray.add(location);
     }
 
 //    public void addLocation(int s) { mLocationsArray.add(getBlankLocation()); }
@@ -128,8 +148,4 @@ public class Trip implements Serializable {
     public double getEndLongitude() { return mEndLongitude; }
     public void setEndLongitude(double vEndLongitude) { mEndLongitude = vEndLongitude; }
 
-//    @Override
-//    public String toString() {
-//        return super.toString();//time and lat utility methods
-//    }
 }

@@ -2,7 +2,6 @@ package net.monicet.monicet;
 
 import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
-import android.content.IntentFilter;
 import android.support.v7.app.AlertDialog;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -23,14 +22,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 
 import static android.R.string.no;
+import static android.R.transition.move;
 
 public class MainActivity extends AppCompatActivity {
 
     // declaring trip as a class field made the app not start.. why?
-    //final Trip trip = new Trip(buildLocationFromResources());
+    //final Trip trip = new Trip(buildNewLocationFromResources());
 
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
@@ -89,23 +90,35 @@ public class MainActivity extends AppCompatActivity {
         // and feed its array of sightings to the custom ListView ArrayAdapter
         // Create the custom ArrayAdapter and populate it
 
+        // TODO: all this should happen after the play button was pressed (get the checkbox value too, and use it with the newly created trip)
+
         //this will create a trip with one location, Alex: trip was declared and initialized here
         //can move outside 'global', also, if I'm not using anonymous inners, can drop the final
-        final Trip trip = new Trip(buildLocationFromResources());
+        final Trip trip = new Trip(buildNewLocationFromResources());//TODO: change constructor of trip() and make global
 
+        //Sighting[] nullSightingsArray = {null}; // change the adapter, too
+        ArrayList<Sighting> nullSightingsArrayList =
+                new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})); // or nullSightingsArray
+        // TODO: give it the gpsmodeuserinput, but give it null in place of sightings, also change SightingAdapter to deal with null
         final SightingAdapter sightingAdapter = new SightingAdapter(
-                this, trip.getCurrentLocation().getSightings(), trip.getGpsModeUserInput());
+                this, trip.getCurrentLocation().getSightings(), trip.getGpsModeUserInput());//nullSightingsArrayList
         ListView listView = (ListView) findViewById(R.id.list_view);
-        listView.setAdapter(sightingAdapter);
+        listView.setAdapter(sightingAdapter); // TODO: maybe I should do this after the first ADD (disable the listview in xml)
+        // if not disabling .. then play is pressed..no listview,
+        // then press ADD (setAdapter in it, if trip has no locations aka first press).. or a little later
         // Step 1 ends here
 
-        // Initialization steps: *not done in the constructor because they might not be kept in future versions
+        // Initialization steps: not done in the constructor because they might not be kept in future versions
+        //TODO: this is in ADD, you could have pre-play (create trip) button the label saying START TRIP
+        // and after START TRIP, it could say ADD LOCATION
         // Change label to Monicet - Stop 1
         setTitle(getText(R.string.app_name) + " - " +
                 getText(R.string.location) + " " + trip.getNumberOfLocations());
+        setTitle(getText(R.string.app_name) + " - " + getText(R.string.add_location));
         // TODO: get username and set it
         // trip.setUserName();
         // TODO: start with a reasonably fast gps mode, so that you can sample immediately, then turn it to 'really slow'
+        // TODO: remember to set the mode to continuous if the checkbox was checked
         trip.setGpsMode(GpsMode.FAST);
         //trip.setStartLatitude();
         //trip.setStartLongitude();
@@ -114,11 +127,12 @@ public class MainActivity extends AppCompatActivity {
         // Initialization steps end here
 
 
+        // TODO: implement this in the play button view
         // Step 2 starts here:
         // open a dialog (if the dialog wasn't shown before)
         // and ask the user if they want the Continuous GPS Tracking Mode
         // if 'yes', set the trip variable accordingly
-        if (trip.getGpsModeUserInput().isVisible() == true) {
+        if (trip.getGpsModeUserInput().isVisible() == true) { // get rid of this
             showGpsModeDialog(trip.getGpsModeUserInput());
         } else {
             //here we arrive in the case the user was already asked about the gps mode,
@@ -135,8 +149,9 @@ public class MainActivity extends AppCompatActivity {
         final FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
 
         // should these be set in the xml initially
-        fabAdd.setVisibility(View.INVISIBLE);
+        fabAdd.setVisibility(View.INVISIBLE); // should be invisible in xml, made visible here (before implementing the play button)
         fabSend.setVisibility(View.INVISIBLE);
+        // Save button should be invisible in xml and made visible
 
         // Step 3 starts here:
         // SAVE floating action button
@@ -246,7 +261,18 @@ public class MainActivity extends AppCompatActivity {
         fabAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                trip.addLocation();
+                //trip.addLocation();
+                if (trip.getNumberOfLocations() == 0) {
+                    // if the trip has no locations, create a new one from resources
+                    trip.addLocation(buildNewLocationFromResources());
+                } else {
+                    // important to create a new location based on the seed(current) one, and not just reference the current one
+                    // and the current one must be used, not a different one,
+                    // because it' guaranteed to hold the valid state data for user input objects etc.
+                    // if for one location, comments are turned off, that should be copied to the next location
+                    // we can insure that correct chaining only if that next location is created on the bases of the previous location
+                    trip.addLocation(new Location(trip.getSeedLocation()));
+                }
 
                 sightingAdapter.clear();
                 sightingAdapter.addAll(trip.getCurrentLocation().getSightings());
@@ -267,94 +293,108 @@ public class MainActivity extends AppCompatActivity {
         fabSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO: step I - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
-                //trip.setEndLatitude();
-                //trip.setEndLongitude()
-                trip.setEndTimeInMilliseconds(System.currentTimeMillis());
-                // step I ends here
 
-                // Alex: android:installLocation is internalOnly
-                // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
-                // TODO: write the json and csv files internally
-                // TODO: try to send them via a http post request to a server... if successful, delete the files, if not don't delete the files
-                // TODO: maybe just create the files and leave all the rest to the service (so that the 2 don't step on each other's toes)
-                // TODO: create that server page (page will display all non-empty sightings for the trip, and also create a kml with the csv)
-                // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
-                // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
+                if (trip.getNumberOfLocations() == 0) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.no_locations_toast_message,
+                            Toast.LENGTH_LONG
+                    ).show();
 
-                // step II - create the files to be sent
-                try {
+                } else {
+                    // TODO: step I - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
+                    //trip.setEndLatitude();
+                    //trip.setEndLongitude()
+                    trip.setEndTimeInMilliseconds(System.currentTimeMillis());
+                    // step I ends here
 
-                    // test external storage version
-                    File directory = new File(Utils.getDirectory());
-                    //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
-                    //File directory = new File(Utils.EXTERNAL_DIRECTORY);
-                    if (!directory.exists()) { directory.mkdirs(); } // only for external, TODO: remove this?
-                    //deployment - use internal storage
-                    //File directory = new File(getFilesDir().toString());
+                    // Alex: android:installLocation is internalOnly
+                    // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
+                    // TODO: write the json and csv files internally
+                    // TODO: try to send them via a http post request to a server... if successful, delete the files, if not don't delete the files
+                    // TODO: maybe just create the files and leave all the rest to the service (so that the 2 don't step on each other's toes)
+                    // TODO: create that server page (page will display all non-empty sightings for the trip, and also create a kml with the csv)
+                    // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
+                    // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
 
-                    //test - show files in directory
+                    // step II - create the files to be sent
+                    try {
+
+                        // test external storage version
+                        File directory = new File(Utils.getDirectory());
+                        //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
+                        //File directory = new File(Utils.EXTERNAL_DIRECTORY);
+                        if (!directory.exists()) {
+                            directory.mkdirs();
+                        } // only for external, TODO: remove this?
+                        //deployment - use internal storage
+                        //File directory = new File(getFilesDir().toString());
+
+                        //test - show files in directory
 //                final File d = new File(Utils.INTERNAL_DIRECTORY);
 //                File[] files = d.listFiles();
 //                for (File file: files) {
 //                    Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
 //                }
-                    // end test
+                        // end test
 
-                    String routePrefix = "route";
-                    String tripPrefix = "trip";
+                        String routePrefix = "route";
+                        String tripPrefix = "trip";
 
-                    String tripFileTitle = tripPrefix + System.currentTimeMillis();
-                    String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
-                    trip.setTripFileName(tripFileName);
+                        String tripFileTitle = tripPrefix + System.currentTimeMillis();
+                        String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
+                        trip.setTripFileName(tripFileName);
 
-                    if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
+                        if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
 
-                        String routeFileTitle = routePrefix + System.currentTimeMillis();
-                        String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
-                        trip.setRouteFileName(routeFileName); // this will be written to the JSON file
-                        File routeFile = new File(directory, routeFileTitle);
-                        FileWriter routeWriter = new FileWriter(routeFile);
-                        routeWriter.append(trip.getUserName());
-                        routeWriter.append(",");
-                        routeWriter.append(tripFileName);
-                        routeWriter.append(",");
-                        routeWriter.append(routeFileName);
-                        routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
-
-                        for (Map.Entry<Long, double[]> entry: trip.getContinuousData().entrySet()) {
-                            double[] coords = entry.getValue();
-                            routeWriter.append(entry.getKey().toString());
+                            String routeFileTitle = routePrefix + System.currentTimeMillis();
+                            String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
+                            trip.setRouteFileName(routeFileName); // this will be written to the JSON file
+                            File routeFile = new File(directory, routeFileTitle);
+                            FileWriter routeWriter = new FileWriter(routeFile);
+                            routeWriter.append(trip.getUserName());
                             routeWriter.append(",");
-                            routeWriter.append("" + coords[0]);
+                            routeWriter.append(tripFileName);
                             routeWriter.append(",");
-                            routeWriter.append("" + coords[1]);
+                            routeWriter.append(routeFileName);
                             routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+
+                            for (Map.Entry<Long, double[]> entry : trip.getContinuousData().entrySet()) {
+                                double[] coords = entry.getValue();
+                                routeWriter.append(entry.getKey().toString());
+                                routeWriter.append(",");
+                                routeWriter.append("" + coords[0]);
+                                routeWriter.append(",");
+                                routeWriter.append("" + coords[1]);
+                                routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+                            }
+                            routeWriter.flush(); // Alex: redundant?
+                            routeWriter.close();
+                            // add the extension at the end, so that the broadcast receiver doesn't
+                            // try to sent it before we're finished with the file
+                            routeFile.renameTo(new File(directory, routeFileName));
                         }
-                        routeWriter.flush(); // Alex: redundant?
-                        routeWriter.close();
-                        // add the extension at the end, so that the broadcast receiver doesn't
-                        // try to sent it before we're finished with the file
-                        routeFile.renameTo(new File(directory, routeFileName));
-                    }
 
-                    Gson gson = new GsonBuilder().create();
-                    File tripFile = new File(directory, tripFileTitle);
-                    FileWriter tripWriter = new FileWriter(tripFile);
-                    tripWriter.append(gson.toJson(trip));
-                    tripWriter.flush(); // Alex: redundant?
-                    tripWriter.close();
-                    // add the extension at the end, so that the broadcast receiver doesn't try to
-                    // sent it before we've finished with the file
-                    tripFile.renameTo(new File(directory, tripFileName));
+                        Gson gson = new GsonBuilder().create();
+                        File tripFile = new File(directory, tripFileTitle);
+                        FileWriter tripWriter = new FileWriter(tripFile);
+                        // get rid of the empty sightings
+                        trimTrip(trip);
+                        // jasonize the trip
+                        tripWriter.append(gson.toJson(trip));
+                        tripWriter.flush(); // Alex: redundant?
+                        tripWriter.close();
+                        // add the extension at the end, so that the broadcast receiver doesn't try to
+                        // sent it before we've finished with the file
+                        tripFile.renameTo(new File(directory, tripFileName));
 
-                    // test
+                        // test
 //                    File[] files2 = directory.listFiles();
 //                    for (File file: files2) {
 //                        Toast.makeText(getApplicationContext(), "Before:" + file.getName(), Toast.LENGTH_SHORT).show();
 //                    }
-                    //test
-                    //test - delete internal dir
+                        //test
+                        //test - delete internal dir
 //                    FileFilter fileFilter = new FileFilter() {
 //                        @Override
 //                        public boolean accept(File pathname) {
@@ -365,33 +405,33 @@ public class MainActivity extends AppCompatActivity {
 //                    for (File f: fs) {
 //                        f.delete();
 //                    }
-                    //test
+                        //test
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
-                }
-                // step II ends here
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
+                    }
+                    // step II ends here
 
-                // step III - enable and start mechanisms designed to send (and delete if sent)
-                // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
-                // which first checks for a live Internet connection)
-                // This is the right moment (after SEND) for enabling them, because they've disabled
-                // themselves by now (if folder doesn't contain json or csv files aka empty...
-                // although it always has one instant-run file)
+                    // step III - enable and start mechanisms designed to send (and delete if sent)
+                    // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
+                    // which first checks for a live Internet connection)
+                    // This is the right moment (after SEND) for enabling them, because they've disabled
+                    // themselves by now (if folder doesn't contain json or csv files aka empty...
+                    // although it always has one instant-run file)
 
-                // first - use GCM Network Manager. I updates itself and stops when folder is empty
-                // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
-                // maybe pass it the application context - it only uses it for the path anyways
-                // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
-                // new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
-                SendFilesTaskService.scheduleOneOff(MainActivity.this);
+                    // first - use GCM Network Manager. I updates itself and stops when folder is empty
+                    // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
+                    // maybe pass it the application context - it only uses it for the path anyways
+                    // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
+                    // TODO: new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
+                    SendFilesTaskService.scheduleOneOff(MainActivity.this);
 
-                // secondly, use broadcast receivers
-                // a) Alarm Manager receiver: starts an hourly alarm after BOOT COMPLETED or START_ACTION
-                // which starts the receiver, which sends and deletes files.
-                // It disables itself if folder is empty. It doesn't listen to the network
-                // i) enable it
+                    // secondly, use broadcast receivers
+                    // a) Alarm Manager receiver: starts an hourly alarm after BOOT COMPLETED or START_ACTION
+                    // which starts the receiver, which sends and deletes files.
+                    // It disables itself if folder is empty. It doesn't listen to the network
+                    // i) enable it
 //                Utils.setComponentState(
 //                        MainActivity.this,
 //                        FilesAndBootReceiver.class,
@@ -401,40 +441,41 @@ public class MainActivity extends AppCompatActivity {
 //                Intent startIntent = new Intent(Utils.START_ACTION);
 //                MainActivity.this.sendBroadcast(startIntent);
 
-                // b) dynamicReceiver: a dynamically created broadcast receiver to listen to the network change
-                // i) enable it: don't touch. It's an error prone mechanism. It was already registered.
-                // ii) fire it, so that it tries to send the files now (before a connection
-                // change occurs, in case the phone is already connected)
-                // it's fired above (the alarm and this dynamic receiver are both fired by START_ACTION)
+                    // b) dynamicReceiver: a dynamically created broadcast receiver to listen to the network change
+                    // i) enable it: don't touch. It's an error prone mechanism. It was already registered.
+                    // ii) fire it, so that it tries to send the files now (before a connection
+                    // change occurs, in case the phone is already connected)
+                    // it's fired above (the alarm and this dynamic receiver are both fired by START_ACTION)
 
-                // c) a static receiver (defined in xml, only working pre API 24 - Nougat)
-                // is deployed to listen to the network. It disables itself if the folder is empty
-                // i) enable it
+                    // c) a static receiver (defined in xml, only working pre API 24 - Nougat)
+                    // is deployed to listen to the network. It disables itself if the folder is empty
+                    // i) enable it
 //                Utils.setComponentState(
 //                        MainActivity.this,
 //                        StaticNetworkStateReceiver.class,
 //                        true
 //                );
-                // ii) fire it: no need to fire this one right know, because
-                // the dynamic receiver deals with the present moment
+                    // ii) fire it: no need to fire this one right know, because
+                    // the dynamic receiver deals with the present moment
 
-                //step III ends here
+                    //step III ends here
 
-                // TODO: Then turn off the GPS service
-                trip.setGpsMode(GpsMode.OFF);
-                // also, actually turn the gps off
+                    // TODO: Then turn off the GPS service
+                    trip.setGpsMode(GpsMode.OFF);
+                    // also, actually turn the gps off
 
-                // Final point - Then stop the application. *make sure you finish it off. Test the order.
-                // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
-                // returning to this app from Gmail ?
-                // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
-                // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
-                // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
-                // There should be a button for starting a trip and a button for adding a location
+                    // Final point - Then stop the application. *make sure you finish it off. Test the order.
+                    // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
+                    // returning to this app from Gmail ?
+                    // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
+                    // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
+                    // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
+                    // There should be a button for starting a trip and a button for adding a location
 
-                //        if (files.length < 1 || files[0] == null) {//AsyncTask
-                //            return null;
-                //        }
+                    //        if (files.length < 1 || files[0] == null) {//AsyncTask
+                    //            return null;
+                    //        }
+                }// Alex: up to here
             }
         });
         //Step 5 ends here
@@ -496,12 +537,13 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
     }
 
-    public Location buildLocationFromResources() {
+    public Location buildNewLocationFromResources() { //? should be: build array of sightings from resources
 
+        // get the resources (species, descriptions, photos)
         String[] species = getResources().getStringArray(R.array.speciesArray);
         // TODO: implement getting the photo ids and description data later
         String[] photos = new String[30];
-        String[] descriptions = new String[30];
+        String[] descriptions = new String[30]; // all descriptions can be in one single text file
         Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
         Arrays.fill(descriptions, "description");
         // here (if the 3 arrays have the same size, at least check) add each sighting to the list, one by one
@@ -510,6 +552,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d("MainActivity", "the sizes of the specie, photo and description arrays are not the same");
         }
 
+        // create an array of sightings
         ArrayList<Sighting> sightings = new ArrayList<Sighting>(sizeOfArrays);
 
         for (int i = 0; i < sizeOfArrays; i++ ) {
@@ -517,7 +560,24 @@ public class MainActivity extends AppCompatActivity {
             sightings.add(new Sighting(animal));
         }
 
-        return new Location(sightings);//Location location =
+        return new Location(sightings);
+    }
+
+    //the activity has finish() at the end, therefore the big trip gets gc-ed, so decide what it is that you want to save
+    // to the json file... for reopening...do you really want to reopen the big trip on the phone?
+    public void trimTrip(Trip trip) {
+
+        for (int i = 0; i < trip.getNumberOfLocations(); i++) {
+            Iterator<Sighting> iter = trip.getLocationAtIndex(i).getSightings().iterator();
+
+            while (iter.hasNext()) {
+                Sighting sighting = iter.next();
+
+                if (sighting.isEmpty()) {
+                    iter.remove();
+                }
+            }
+        }
     }
 
 }

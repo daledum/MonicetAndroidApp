@@ -68,8 +68,5 @@ public class Sighting implements Serializable {
     public void setLongitude(double vLongitude) {
         mLongitude = vLongitude;
     }
-//    @Override
-//    public String toString() {
-//        return super.toString();//use Utility time to string and gps to string for this
-//    }
+
 }
