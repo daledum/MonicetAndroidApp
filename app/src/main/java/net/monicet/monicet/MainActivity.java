@@ -457,7 +457,12 @@ public class MainActivity extends AppCompatActivity {
                     // maybe pass it the application context - it only uses it for the path anyways
                     // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
                     // TODO: new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
-                    SendFilesTaskService.scheduleOneOff(MainActivity.this);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            SendFilesTaskService.scheduleOneOff(MainActivity.this);//maybe the thread needs to be inside scheduleOneOff
+                        }
+                    });
 
                     // secondly, use broadcast receivers
                     // a) Alarm Manager receiver: starts an hourly alarm after BOOT COMPLETED or START_ACTION

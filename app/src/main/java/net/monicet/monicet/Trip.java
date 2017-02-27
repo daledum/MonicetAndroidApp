@@ -49,22 +49,6 @@ public class Trip implements Serializable {
         mLocationsArray = new ArrayList<Location>();
     }
 
-    public Trip(Location vLocation) {
-        mUserName = "";
-        mStartTimeInMilliseconds = 0;
-        mEndTimeInMilliseconds = 0;
-        mStartLatitude = 0;
-        mStartLongitude = 0;
-        mEndLatitude = 0;
-        mEndLongitude = 0;
-        mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
-        mTripFileName = "";
-        mRouteFileName = "";
-        mContinuousData = new HashMap<Long,double[]>();
-        mLocationsArray = new ArrayList<Location>();
-        mLocationsArray.add(vLocation);
-    }
-
     // not implementing this - programmer will have too much power, removing and adding locations and breaking the logic,
     // the trip must always have at least one location and adding locations is done only via addLocation
 //    public ArrayList<Location> getLocations() { return mLocationsArray; }
