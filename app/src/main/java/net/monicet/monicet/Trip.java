@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 import static android.media.CamcorderProfile.get;
 
 /**
@@ -32,6 +33,21 @@ public class Trip implements Serializable {
     // A file with the appropriate extension (TRK, GPX, KML, KMZ, PLT) will be created/saved/sent
     // and its name will be assigned to to the routeFileName variable, which will appear in the JSON file.
     private transient HashMap<Long,double[]> mContinuousData;//or use a map instead of double[]
+
+    public Trip() {
+        mUserName = "";
+        mStartTimeInMilliseconds = 0;
+        mEndTimeInMilliseconds = 0;
+        mStartLatitude = 0;
+        mStartLongitude = 0;
+        mEndLatitude = 0;
+        mEndLongitude = 0;
+        mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
+        mTripFileName = "";
+        mRouteFileName = "";
+        mContinuousData = new HashMap<Long,double[]>();
+        mLocationsArray = new ArrayList<Location>();
+    }
 
     public Trip(Location vLocation) {
         mUserName = "";

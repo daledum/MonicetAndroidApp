@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
 
     // declaring trip as a class field made the app not start.. why?
     //final Trip trip = new Trip(buildNewLocationFromResources());
+    final Trip trip = new Trip();
 
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
@@ -90,68 +91,93 @@ public class MainActivity extends AppCompatActivity {
         // and feed its array of sightings to the custom ListView ArrayAdapter
         // Create the custom ArrayAdapter and populate it
 
-        // TODO: all this should happen after the play button was pressed (get the checkbox value too, and use it with the newly created trip)
-
         //this will create a trip with one location, Alex: trip was declared and initialized here
         //can move outside 'global', also, if I'm not using anonymous inners, can drop the final
-        final Trip trip = new Trip(buildNewLocationFromResources());//TODO: change constructor of trip() and make global
+        //final Trip trip = new Trip(buildNewLocationFromResources());//TODO: change constructor of trip() and make global
 
-        //Sighting[] nullSightingsArray = {null}; // change the adapter, too
-        ArrayList<Sighting> nullSightingsArrayList =
-                new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})); // or nullSightingsArray
-        // TODO: give it the gpsmodeuserinput, but give it null in place of sightings, also change SightingAdapter to deal with null
+        // Initialization steps: not done in the constructor because they might not be kept in future versions
+        // set label to MONICET - START TRIP
+        setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
+        // TODO: start the GPS so that it's calibrated when you first sample (start button pressed)
+        // set the mode to SLOW (before this, it was OFF, trip is constructed with OFF)
+        trip.setGpsMode(GpsMode.SLOW); // TODO: setGpsMode should calibrate the google location services gps - should be connected
+        // Initialization steps end here
+
+        // TODO: should these be set in the xml initially
+        // should be invisible in xml, made visible here (before implementing the play button)
+        //fabAdd.setVisibility(View.INVISIBLE);
+        //fabSend.setVisibility(View.INVISIBLE);
+        // Save button should be invisible in xml and made visible
+
+        // TODO: get rid of all these assignment and just use findViewById, so that you can split in methods?
+        // if coming back from a config change - I should first check if they are visible
+        final FloatingActionButton fabStart = (FloatingActionButton) findViewById(R.id.fab_start);
+        final FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
+        final FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
+        final FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
+        final CheckBox checkboxTrackingGps = (CheckBox) findViewById(R.id.checkBox_tracking_gpsmode);
+        final ListView listView = (ListView) findViewById(R.id.list_view);
+
+        // TODO: give it the gpsmodeuserinput.. it's a reference, but give it null in place of sightings, also change SightingAdapter to deal with null
         final SightingAdapter sightingAdapter = new SightingAdapter(
-                this, trip.getCurrentLocation().getSightings(), trip.getGpsModeUserInput());//nullSightingsArrayList
-        ListView listView = (ListView) findViewById(R.id.list_view);
+                this,
+                new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})),
+                trip.getGpsModeUserInput()
+        );
+//        final SightingAdapter sightingAdapter = new SightingAdapter(
+//                this, trip.getCurrentLocation().getSightings(), trip.getGpsModeUserInput());
+        // set the adapter
         listView.setAdapter(sightingAdapter); // TODO: maybe I should do this after the first ADD (disable the listview in xml)
         // if not disabling .. then play is pressed..no listview,
         // then press ADD (setAdapter in it, if trip has no locations aka first press).. or a little later
         // Step 1 ends here
 
-        // Initialization steps: not done in the constructor because they might not be kept in future versions
-        //TODO: this is in ADD, you could have pre-play (create trip) button the label saying START TRIP
-        // and after START TRIP, it could say ADD LOCATION
-        // Change label to Monicet - Stop 1
-        setTitle(getText(R.string.app_name) + " - " +
-                getText(R.string.location) + " " + trip.getNumberOfLocations());
-        setTitle(getText(R.string.app_name) + " - " + getText(R.string.add_location));
-        // TODO: get username and set it
-        // trip.setUserName();
-        // TODO: start with a reasonably fast gps mode, so that you can sample immediately, then turn it to 'really slow'
-        // TODO: remember to set the mode to continuous if the checkbox was checked
-        trip.setGpsMode(GpsMode.FAST);
-        //trip.setStartLatitude();
-        //trip.setStartLongitude();
-        trip.setStartTimeInMilliseconds(System.currentTimeMillis());
-        trip.setGpsMode(GpsMode.SLOW);
-        // Initialization steps end here
+        //Step 2 starts here:
+        // START floating action button
+        fabStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
+                // a) when pressed takes the value from the tracking gpsmode checkbox
+                // (if selected set gpsmode to continuous)
+                if (checkboxTrackingGps.isChecked()) {
+                    if (trip.getGpsModeUserInput().isVisible() == true) { // get rid of this?
+                        trip.setGpsMode(GpsMode.CONTINUOUS);
+                        // TODO: GPS this should trigger continuous gps
 
-        // TODO: implement this in the play button view
-        // Step 2 starts here:
-        // open a dialog (if the dialog wasn't shown before)
-        // and ask the user if they want the Continuous GPS Tracking Mode
-        // if 'yes', set the trip variable accordingly
-        if (trip.getGpsModeUserInput().isVisible() == true) { // get rid of this
-            showGpsModeDialog(trip.getGpsModeUserInput());
-        } else {
-            //here we arrive in the case the user was already asked about the gps mode,
-            // therefore the trip already has the gps mode set
-            // TODO: this should trigger the trip.getGpsMode mode
-        }
-        //
-        // b) after the dialog was exited, then we do nothing
-        // Step 2 ends here
+                        trip.getGpsModeUserInput().setVisible(false);
+                    } else {
+                        //here we arrive in the case the user was already asked about the gps mode,
+                        // therefore the trip already has the gps mode set
+                        // TODO: this should trigger the trip.getGpsMode mode
+                    }
+                }
 
-        // if coming back from a config change - I should first check if they are visible
-        final FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
-        final FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
-        final FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
+                // b) TODO: get username and set it
+                // trip.setUserName();
 
-        // should these be set in the xml initially
-        fabAdd.setVisibility(View.INVISIBLE); // should be invisible in xml, made visible here (before implementing the play button)
-        fabSend.setVisibility(View.INVISIBLE);
-        // Save button should be invisible in xml and made visible
+                // c) the gps was already started (when app was started): take gps sample, date and time
+                // TODO: started (see above) with a gps mode SLOW, so that you can sample immediately, then turn it to 'really slow'?
+                // TODO: remember to set the mode to continuous if the checkbox was checked
+                //trip.setGpsMode(GpsMode.FAST); //? this before sampling
+                //trip.setGpsMode(GpsMode.SLOW); //? this after sampling
+                //trip.setStartLatitude();
+                //trip.setStartLongitude();
+                trip.setStartTimeInMilliseconds(System.currentTimeMillis());
+                // d) set lable to Monicet - Add location
+                setTitle(getText(R.string.app_name) + " - " + getText(R.string.add_location));
+
+                // d) make itself and the checkbox gone or invisible
+                fabStart.setVisibility(View.INVISIBLE);
+                checkboxTrackingGps.setVisibility(View.INVISIBLE);
+
+                // e) make the ADD and SEND buttons visible
+                fabAdd.setVisibility(View.VISIBLE);
+                fabSend.setVisibility(View.VISIBLE);
+
+            }
+        });
+        //Step 2 ends here
 
         // Step 3 starts here:
         // SAVE floating action button
@@ -261,6 +287,8 @@ public class MainActivity extends AppCompatActivity {
         fabAdd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                // TODO: remember to set the adapter if the first time and to make the listview visible
                 //trip.addLocation();
                 if (trip.getNumberOfLocations() == 0) {
                     // if the trip has no locations, create a new one from resources
@@ -273,6 +301,10 @@ public class MainActivity extends AppCompatActivity {
                     // we can insure that correct chaining only if that next location is created on the bases of the previous location
                     trip.addLocation(new Location(trip.getSeedLocation()));
                 }
+
+                // do I need this after every add - or just once, when it's first pressed (in the if above)
+                // make listview (sighting adapter - list of sightings) visible
+                listView.setVisibility(View.VISIBLE);
 
                 sightingAdapter.clear();
                 sightingAdapter.addAll(trip.getCurrentLocation().getSightings());
@@ -379,7 +411,7 @@ public class MainActivity extends AppCompatActivity {
                         File tripFile = new File(directory, tripFileTitle);
                         FileWriter tripWriter = new FileWriter(tripFile);
                         // get rid of the empty sightings
-                        trimTrip(trip);
+                        trimTrip();
                         // jasonize the trip
                         tripWriter.append(gson.toJson(trip));
                         tripWriter.flush(); // Alex: redundant?
@@ -482,34 +514,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void showGpsModeDialog(final UserInput<GpsMode> gpsModeUserInput) {
-        // it comes here only if the user changeable variable is visible (it was not shown before, in this case)
-        AlertDialog.Builder gpsAlertDialogBuilder = new AlertDialog.Builder(this);
-        gpsAlertDialogBuilder.setTitle(R.string.tracking_dialog_title);
-        gpsAlertDialogBuilder.setMessage(R.string.tracking_dialog_message);
-        gpsAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                gpsModeUserInput.setContent(GpsMode.CONTINUOUS);
-                // TODO: GPS this should trigger continuous gps
-            }
-        });
-        gpsAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // do nothing
-                // dialog.dismiss();
-            }
-        });
-        gpsAlertDialogBuilder.create();
-        gpsAlertDialogBuilder.show();
-        // TODO: if the user presses No or presses outside, I should go into slow or fast gps mode
-        // TODO: this should trigger slow or fast gps, too
-        // to check, verify that it's not in continuous mode, and if not set it to slow or fast
-        // Now, set the user input state to false, registering the fact that the user was asked the question
-        gpsModeUserInput.setVisible(false);
-    }
-
+    // modify saveLocation(so that it takes 4 Views, fabadd, send, save and list_view) and the sighting adapter
     public void saveLocation(Location currentLocation, SightingAdapter sightingAdapter,
                              UserInput<GpsMode> gpsModeUserInput) {
         //Location currentLocation = trip.getCurrentLocation();
@@ -532,9 +537,12 @@ public class MainActivity extends AppCompatActivity {
 //        Toast.makeText(MainActivity.this,
 //                R.string.location_saved_instructions_message, Toast.LENGTH_LONG).show();
 
+        // TODO: is this smelly code? addressing the view by id.. we initialized variables with them in onCreate
         findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
         findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
         findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
+        // TODO: maybe also set
+        //findViewById(R.id.list_view).setVisibility(View.INVISIBLE);
     }
 
     public Location buildNewLocationFromResources() { //? should be: build array of sightings from resources
@@ -563,9 +571,10 @@ public class MainActivity extends AppCompatActivity {
         return new Location(sightings);
     }
 
+    // no argument for this one, trip is a class variable
     //the activity has finish() at the end, therefore the big trip gets gc-ed, so decide what it is that you want to save
     // to the json file... for reopening...do you really want to reopen the big trip on the phone?
-    public void trimTrip(Trip trip) {
+    public void trimTrip() {
 
         for (int i = 0; i < trip.getNumberOfLocations(); i++) {
             Iterator<Sighting> iter = trip.getLocationAtIndex(i).getSightings().iterator();
@@ -579,5 +588,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    //    public void showGpsModeDialog(final UserInput<GpsMode> gpsModeUserInput) {}
+    // it comes here only if the user changeable variable is visible (it was not shown before, in this case)
 
 }

@@ -44,4 +44,5 @@
     <string name="no_locations_toast_message">Não há nada para enviar.\nPor favor, adicione um lugar quando tiver atingido a sua primeira paragem.</string>
     <string name="start_trip">Inicie a viagem</string>
     <string name="add_location">Adicione lugar</string>
+    <string name="checkbox_tracking_text">Seleccione esta caixa para ativar o modo de amostragem GPS contínuo, que usa muita bateria.</string>
 </resources>
