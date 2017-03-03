@@ -1,6 +1,9 @@
 package net.monicet.monicet;
 
+import android.util.Log;
+
 import java.io.Serializable;
+import java.util.ArrayList;
 
 /**
  * Created by ubuntu on 23-01-2017.
@@ -8,65 +11,52 @@ import java.io.Serializable;
 
 public class Sighting implements Serializable {
 
-    private UserInput<Integer> mQuantityUserInput;
+    private Animal animal;
 
-    private final Animal mAnimal;
-    private long mTimeInMilliseconds;
-    private double mLatitude;
-    private double mLongitude;
+    private TimeAndPlace startTimeAndPlace;
+    private TimeAndPlace endTimeAndPlace;
 
-    public Sighting(Animal vAnimal) {
-        mAnimal = vAnimal;
-        mTimeInMilliseconds = 0;
-        mLatitude = 0;
-        mLongitude = 0;
-        mQuantityUserInput = new UserInput<Integer>(0, true);
+    private TimeAndPlace userStartTimeAndPlace;
+    private TimeAndPlace userEndTimeAndPlace;
+
+    private String userComments;
+
+    public Sighting() {
+        animal = null;
+        startTimeAndPlace = new TimeAndPlace();
+        endTimeAndPlace = new TimeAndPlace();
+        userStartTimeAndPlace = new TimeAndPlace();
+        userEndTimeAndPlace = new TimeAndPlace();
+        userComments = "";
     }
 
-    public Sighting(Sighting vSighting) {
-        this(vSighting.getAnimal());
-    }
-
+    //this could return null
     public Animal getAnimal() {
-        return mAnimal;
+        return animal;
+    }
+    public void setAnimal(Animal vAnimal) { animal = new Animal(vAnimal); }
+
+    public TimeAndPlace getStartTimeAndPlace() { return startTimeAndPlace; }
+    public void setStartTimeAndPlace(TimeAndPlace vTimeAndPlace) {
+        startTimeAndPlace = vTimeAndPlace;
     }
 
-    public UserInput<Integer> getQuantityUserInput() { return mQuantityUserInput; }
-
-    // shorter form of getQuantityUserInput().getContent()
-    public Integer getQuantity() {
-        return mQuantityUserInput.getContent();
-    }
-    // shorter form of getQuantityUserInput().setContent()
-    public void setQuantity(Integer vQuantity) {
-        mQuantityUserInput.setContent(vQuantity);
+    public TimeAndPlace getEndTimeAndPlace() { return endTimeAndPlace; }
+    public void setEndTimeAndPlace(TimeAndPlace vTimeAndPlace) {
+        endTimeAndPlace = vTimeAndPlace;
     }
 
-    public boolean isEmpty() {
-        return 0 == (int) mQuantityUserInput.getContent();
+    public TimeAndPlace getUserStartTimeAndPlace() { return userStartTimeAndPlace; }
+    public void setUserStartTimeAndPlace(TimeAndPlace vTimeAndPlace) {
+        userStartTimeAndPlace = vTimeAndPlace;
     }
 
-    public long getTimeInMilliseconds() {
-        return mTimeInMilliseconds;
+    public TimeAndPlace getUserEndTimeAndPlace() { return userEndTimeAndPlace; }
+    public void setUserEndTimeAndPlace(TimeAndPlace vTimeAndPlace) {
+        userEndTimeAndPlace = vTimeAndPlace;
     }
 
-    public void setTimeInMilliseconds(long vTimeInMilliseconds) {
-        mTimeInMilliseconds = vTimeInMilliseconds;
-    }
-
-    public double getLatitude() {
-        return mLatitude;
-    }
-
-    public void setLatitude(double vLatitude) {
-        mLatitude = vLatitude;
-    }
-
-    public double getLongitude() {
-        return mLongitude;
-    }
-    public void setLongitude(double vLongitude) {
-        mLongitude = vLongitude;
-    }
+    public String getUserComments() { return userComments; }
+    public void setUserComments(String vUserComments) { userComments = vUserComments; }
 
 }

@@ -8,31 +8,29 @@ import java.io.Serializable;
 
 public class Animal implements Serializable {
 
-    // The specie field is retrieved from resources species array string
-    private String mSpecie;
+    private int startQuantity;
+    private int endQuantity;
+    // more fields to be added here, age etc
 
-    // Link to drawable resource image(s)
-    private String mPhoto;
+    private final Specie specie;
 
-    // Link to text file
-    private String mDescription;
-
-    public Animal(String vSpecie, String vPhoto, String vDescription) {
-        mSpecie = vSpecie;
-        mPhoto = vPhoto;
-        mDescription = vDescription;
+    public Animal(Specie vSpecie) {
+        specie = vSpecie;
+        startQuantity = 0;
+        endQuantity = -1;//or 99 so that I can use it in the Number Picker
     }
 
-    public String getSpecie() {
-        return mSpecie;
+    public Animal(Animal vAnimal) {
+        this(vAnimal.getSpecie());
+        startQuantity = vAnimal.getStartQuantity();
     }
 
-    public String getPhoto() {
-        return mPhoto;
-    }
+    public Specie getSpecie() { return specie; }
 
-    public String getDescription() {
-        return mDescription;
-    }
+    public int getStartQuantity() { return startQuantity; }
+    public void setStartQuantity(int vQuantity) { startQuantity = vQuantity; }
+
+    public int getEndQuantity() { return endQuantity; }
+    public void setEndQuantity(int vEndQuantity) { endQuantity = vEndQuantity; }
 
 }

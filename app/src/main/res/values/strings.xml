@@ -1,10 +1,12 @@
 <resources>
     <string name="app_name">Monicet</string>
 
-    <string name="location">Location</string>
+    <string name="sighting">Sighting</string>
 
     <string name="start_trip">Start trip</string>
-    <string name="add_location">Add location</string>
+    <string name="add_sighting">Add sighting</string>
+    <string name="edit_sighting">Edit sighting</string>
+    <string name="my_sightings">My sightings</string>
 
     <string name="tracking_dialog_title">Continuous GPS sampling</string>
     <string name="tracking_dialog_message">
@@ -17,20 +19,26 @@
     <string name="user_gps_message">You can insert here the GPS coordinates from your own, separate GPS device.</string>
     <string name="comments_message">You can also add comments.</string>
     <string name="double_quote">\"</string>
-    <string name="turn_off_comments_message">
-        Select this checkbox, if you\'d like to stop this dialog appearing in the future.
+    <string name="only_one_animal_message">
+        Please, select only one specie.\nOnly one number can be different from zero.
     </string>
-    <string name="no_animals_toast_message">
+    <string name="no_animals_to_save_message">
         There is nothing to save.\nPlease, modify the number of animals that you\'ve seen.
     </string>
-    <string name="no_locations_toast_message">
-        There is nothing to send.\nPlease, add a place when you\'ve reached your first destination.
+    <string name="no_sighting_to_send_message">
+        There is nothing to send.\nPlease, add a sighting when you\'ve reached your first destination.
     </string>
-    <string name="location_saved_confirmation_message">
-        The sightings for this location have been saved.
+    <string name="no_sighting_to_show_message">
+        There is nothing to show.\nPlease, add a sighting when you\'ve reached your first destination.
     </string>
-    <string name="location_saved_instructions_message">
-        Press ADD to add sightings from a new location or SEND if you\'ve reached the end of your trip.
+    <string name="sighting_saved_confirmation_message">
+        The sighting has been saved.
+    </string>
+        <string name="sighting_finished_confirmation_message">
+        The sighting has been finished.
+    </string>
+    <string name="sighting_saved_instructions_message">
+        Press ADD to add sightings or SEND if you\'ve reached the end of your trip.
     </string>
 
 
