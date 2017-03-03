@@ -49,4 +49,6 @@
     <string name="my_sightings">Meus avistamentos</string>
     <string name="sighting_finished_confirmation_message">O avistamento foi terminado.</string>
     <string name="no_sighting_to_show_message">Não há nada para mostrar.\nPor favor, adicione um avistamento quando tiver atingido a sua primeira paragem.</string>
+    <string name="delete_sighting_title">Apagar avistamento</string>
+    <string name="delete_sighting_message">Você tem certeza que deseja apagar este avistamento?</string>
 </resources>

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
+import static android.R.attr.value;
 import static android.R.string.no;
 
 public class MainActivity extends AppCompatActivity implements MainActivityInterface {
@@ -169,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                 //trip.getEndTimeAndPlace().setLongitude();
 
                 // deal with the views
-                showSightings(); // shared between the START, ADD and BACK buttons
+                showSightings(sightingAdapter); // shared between the START, SAVE, BACK and DELETE buttons
             }
         });
         //Step 2 ends here
@@ -207,7 +208,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
 
                 stopFastStartSlowGps(); // shared between the BACK and SAVE buttons
                 // prepare views - hide and show what's needed
-                showSightings(); // shared between the START, ADD and BACK buttons
+                showSightings(sightingAdapter); // shared between the START, SAVE, BACK and DELETE buttons
             }
         });
 
@@ -278,12 +279,12 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
 //                                R.string.sighting_saved_instructions_message, Toast.LENGTH_LONG).show();
 
                         // show and hide the appropriate views
-                        showSightings(); // shared among the START, ADD and BACK buttons
+                        showSightings(sightingAdapter); // shared among the START, SAVE, BACK and DELETE buttons
 
-                        // update sighting adapter Alex
-                        sightingAdapter.clear();
-                        sightingAdapter.addAll(trip.getSightings());
-                        sightingAdapter.notifyDataSetChanged();
+//                        // update sighting adapter Alex
+//                        sightingAdapter.clear();
+//                        sightingAdapter.addAll(trip.getSightings());
+//                        sightingAdapter.notifyDataSetChanged();
                     }
                 }
             }
@@ -566,36 +567,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
         openedSightings[0] = null;
     }
 
-    // method shared by START, BACK and SAVE buttons
-    public void showSightings() {
-        // set label
-        setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));
-
-        // hide START button
-        findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
-        // hide GPS mode checkbox
-        findViewById(R.id.checkBox_tracking_gpsmode).setVisibility(View.INVISIBLE);
-        // hide BACK button
-        findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
-        // hide SAVE button
-        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
-        // hide animals list view
-        findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE); // it was already INVISIBLE, when coming from START
-
-        // show ADD button
-        findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
-        // show SEND button
-        findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
-
-        if (trip.getNumberOfSightings() == 0) {
-            // show the no sightings message (its text is set in XML), if the trip is empty
-            findViewById(R.id.no_sightings_text_view).setVisibility(View.VISIBLE);
-        } else {
-            // show sightings list view, if the trip has any sightings
-            findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
-        }
-    }
-
     @Override
     public void openSighting(String label, Sighting sighting, AnimalAdapter animalAdapter) {
         // set openedSighting - to be later used by SAVE
@@ -642,17 +613,64 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
         findViewById(R.id.fab_back).setVisibility(View.VISIBLE);
     }
 
+    // method called by START, BACK, SAVE, DELETE, STOP/END and Comments buttons
     @Override
-    public void showSightingCommentsDialog(final Sighting sighting) {
+    public void showSightings(SightingAdapter sightingAdapter) {
+        // set label
+        setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));
+
+        // hide START button
+        findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
+        // hide GPS mode checkbox
+        findViewById(R.id.checkBox_tracking_gpsmode).setVisibility(View.INVISIBLE);
+        // hide BACK button
+        findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
+        // hide SAVE button
+        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
+        // hide animals list view
+        findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE); // it was already INVISIBLE, when coming from START
+
+        // show ADD button
+        findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
+        // show SEND button
+        findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
+
+        if (trip.getNumberOfSightings() == 0) {
+            // show the no sightings message (its text is set in XML), if the trip is empty
+            findViewById(R.id.no_sightings_text_view).setVisibility(View.VISIBLE);
+            findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
+        } else {
+            // show sightings list view, if the trip has any sightings
+            findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
+            findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+        }
+
+        // update sighting adapter Alex
+        sightingAdapter.clear();
+        sightingAdapter.addAll(trip.getSightings());
+        sightingAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void showSightingCommentsDialog(final Sighting sighting,
+                                           final SightingAdapter sightingAdapter) {
         // TODO: take other smartphone gps reading (from trip, sighting, animal)
         // and compare the sign (if near the 0 degree point, don't do this check)
         LayoutInflater layoutInflater = LayoutInflater.from(this);
 
-        final View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
+        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
+        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
+        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
 
-        // TODO: show whatever was there from previous comments
-        // via rootview, make them final for the onClick
-        // also showing what was saved in the gps fields will be difficult (new textview maybe) - deg, min, sec
+        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
+        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
+        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
+        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
+
+        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
+        comments.setText(sighting.getUserComments());
 
         AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
 
@@ -662,38 +680,30 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
-                // take the user's latitude
-                EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
+                // take and set the user's latitude
                 double gpsDegrees = Utils.parseGpsToDouble(
                         latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
                 );
-                EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
                 double gpsMinutes = Utils.parseGpsToDouble(
                         latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                 );
-                EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
                 double gpsSeconds = Utils.parseGpsToDouble(
                         latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                 );
-
                 sighting.getUserEndTimeAndPlace().setLatitude(
                         Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
                 );
 
-                // take the user's longitude
-                EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
+                // take and set the user's longitude
                 gpsDegrees = Utils.parseGpsToDouble(
                         longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
                 );
-                EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
                 gpsMinutes = Utils.parseGpsToDouble(
                         longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                 );
-                EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
                 gpsSeconds = Utils.parseGpsToDouble(
                         longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
                 );
-
                 sighting.getUserEndTimeAndPlace().setLongitude(
                         Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
                 );
@@ -702,9 +712,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                 // this is giving me the time when they edited the comments the last time
                 sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
 
-                // take the user's comments
-                EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
+                // take and set the user's comments
                 sighting.setUserComments(comments.getText().toString());
+
+                // refresh the views (maybe the final quantity was changed)
+                showSightings(sightingAdapter);
             }
         });
         comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
@@ -715,6 +727,33 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
         });
 
         comAlertDialogBuilder.setView(rootView);
+        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
+    @Override
+    public void deleteSightingCommentsDialog(final Sighting sighting,
+                                             final SightingAdapter sightingAdapter) {
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.delete_sighting_title);
+        comAlertDialogBuilder.setMessage(R.string.delete_sighting_message);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                trip.getSightings().remove(sighting);
+                // refresh the views
+                showSightings(sightingAdapter);
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // dialog.dismiss();
+            }
+        });
+
         comAlertDialogBuilder.create();
         comAlertDialogBuilder.show();
     }

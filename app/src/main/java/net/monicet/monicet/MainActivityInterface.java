@@ -14,7 +14,11 @@ public interface MainActivityInterface {
                       Sighting sighting,
                       AnimalAdapter animalAdapter);
 
-    void showSightingCommentsDialog(Sighting sighting);
+    void showSightings(SightingAdapter sightingAdapter);
+
+    void showSightingCommentsDialog(Sighting sighting, SightingAdapter sightingAdapter);
+
+    void deleteSightingCommentsDialog(Sighting sighting, SightingAdapter sightingAdapter);
 
     Activity getMyActivity();
 }

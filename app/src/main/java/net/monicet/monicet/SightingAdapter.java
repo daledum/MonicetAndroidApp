@@ -1,6 +1,7 @@
 package net.monicet.monicet;
 
 import android.support.annotation.NonNull;
+import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,10 +52,20 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                 public void onClick(View v) {
                     //sets and saves the end time and gps for the current sighting
                     currentSighting.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+
                     // TODO: maybe set the gps sampling rate to something quick enough to sample on such a short notice
                     //currentSighting.getEndTimeAndPlace().setLatitude();
                     //currentSighting.getEndTimeAndPlace().setLongitude();
-                    // TODO: needs a Toast here.. confirming it ended it OK
+
+                    // if end quantity has not been changed by the user inside the comments, make it the start one
+                    if (currentSighting.getAnimal().getEndQuantity() == -1) {
+                        currentSighting.getAnimal().
+                                setEndQuantity(currentSighting.getAnimal().getStartQuantity());
+                    }
+
+                    // refresh views
+                    mainActivity.showSightings(SightingAdapter.this);
+
                     Toast.makeText(
                             getContext(),
                             R.string.sighting_finished_confirmation_message,
@@ -70,16 +81,66 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             commentsImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mainActivity.showSightingCommentsDialog(currentSighting);
+                    mainActivity.showSightingCommentsDialog(currentSighting, SightingAdapter.this);
                 }
             });
 
-            // show the quantity text
+            ImageButton deleteImgBtn =
+                    (ImageButton)convertView.findViewById(R.id.delete_imageButton);
+            deleteImgBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mainActivity.deleteSightingCommentsDialog(currentSighting, SightingAdapter.this);
+                }
+            });
+
+            // show the time the sighting started
+            TextView startTimeSightingTextView =
+                    (TextView)convertView.findViewById(R.id.sighting_start_time_text_view);
+            startTimeSightingTextView.setText(
+                    DateFormat.format(
+                            //http://alvinalexander.com/java/jwarehouse/android/core/java/android/text/format/DateFormat.java.shtml
+                            "kk:mm",
+                            currentSighting.getStartTimeAndPlace().getTimeInMillis()
+                    ).toString()
+            );
+
+            // show the start quantity text
             TextView startQuantityTxtView =
-                    (TextView)convertView.findViewById(R.id.animal_quantity_text_view);
+                    (TextView)convertView.findViewById(R.id.start_animal_quantity_text_view);
             startQuantityTxtView.setText(
                     String.valueOf(currentSighting.getAnimal().getStartQuantity())
-            );// was ""+
+            );
+
+            TextView endTimeSightingTextView =
+                    (TextView)convertView.findViewById(R.id.sighting_end_time_text_view);
+            TextView endQuantityTxtView =
+                    (TextView)convertView.findViewById(R.id.end_animal_quantity_text_view);
+
+            // doing these inside onClick of STOP/END did not keep between orientation changes
+            // important to have it after the STOP button onClick listener
+            // if end time was set (user pressed STOP/END), then show the end time and place
+            if (currentSighting.getEndTimeAndPlace().getTimeInMillis() != 0) {
+                // set and show inside the view the time the sighting ended (when user clicked on STOP button)
+                endTimeSightingTextView.setText(
+                        DateFormat.format(
+                                "kk:mm",
+                                currentSighting.getEndTimeAndPlace().getTimeInMillis()
+                        ).toString()
+                );
+                endTimeSightingTextView.setVisibility(View.VISIBLE);
+                // disable STOP/END button
+                endImgBtn.setEnabled(false);
+            }
+
+            // show the end quantity (after STOP/END press of after user changed the value to something else than -1 (or 99)
+            if (currentSighting.getAnimal().getEndQuantity() != -1) {
+                // set and show the end quantity text
+                endQuantityTxtView.setText(
+                        String.valueOf(currentSighting.getAnimal().getEndQuantity())
+                );
+                endQuantityTxtView.setVisibility(View.VISIBLE);
+            }
 
             // show the specie name
             TextView specieNameTxtView =
@@ -88,17 +149,14 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     String.valueOf(currentSighting.getAnimal().getSpecie().getName())
             );
 
-            //TODO: change layout and show the start time of that sighting below the quantity and specie name
-
             // when clicking on the sighting
             View sightingDetailsView = convertView.findViewById(R.id.sighting_details);
             sightingDetailsView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     // clicking on quantity or specie name or time
-                    // TODO: CLICK on sighting and ADD share the openSighting method (Main Activity):
+                    // CLICK on sighting and ADD share the openSighting method (Main Activity):
                     mainActivity.openSighting(
-                            // TODO: find a way around this... Utils set it once from resources
                             //too expensive to getMyActivity
                             getContext().getText(R.string.app_name)
                                     + " - " +
