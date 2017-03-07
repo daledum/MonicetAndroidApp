@@ -34,8 +34,11 @@
     <string name="sighting_saved_confirmation_message">
         The sighting has been saved.
     </string>
-        <string name="sighting_finished_confirmation_message">
+    <string name="sighting_finished_confirmation_message">
         The sighting has been finished.
+    </string>
+    <string name="send_sightings_title_message">
+        Are you sure you want to send these sightings?
     </string>
     <string name="sighting_saved_instructions_message">
         Press ADD to add sightings or SEND if you\'ve reached the end of your trip.

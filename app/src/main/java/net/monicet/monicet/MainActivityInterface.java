@@ -1,6 +1,7 @@
 package net.monicet.monicet;
 
 import android.app.Activity;
+import android.widget.ArrayAdapter;
 
 import static android.R.attr.label;
 

@@ -12,6 +12,8 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
+import static android.drm.DrmStore.Playback.STOP;
+
 /**
  * Created by ubuntu on 28-02-2017.
  */
@@ -50,18 +52,18 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             endImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    // TODO: new rule - end quantity can be set only on long sightings in comments only
+                    // after the end button was pressed, after that, in comments you can change anything and the
+                    // comments listener will update the views (via runonuithread?)
+                    currentSighting.getAnimal().
+                            setEndQuantity(currentSighting.getAnimal().getStartQuantity());
+
                     //sets and saves the end time and gps for the current sighting
                     currentSighting.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
 
                     // TODO: maybe set the gps sampling rate to something quick enough to sample on such a short notice
                     //currentSighting.getEndTimeAndPlace().setLatitude();
                     //currentSighting.getEndTimeAndPlace().setLongitude();
-
-                    // if end quantity has not been changed by the user inside the comments, make it the start one
-                    if (currentSighting.getAnimal().getEndQuantity() == -1) {
-                        currentSighting.getAnimal().
-                                setEndQuantity(currentSighting.getAnimal().getStartQuantity());
-                    }
 
                     // refresh views
                     mainActivity.showSightings(SightingAdapter.this);
@@ -94,6 +96,13 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                 }
             });
 
+            // show the start quantity text
+            TextView startQuantityTxtView =
+                    (TextView)convertView.findViewById(R.id.start_animal_quantity_text_view);
+            startQuantityTxtView.setText(
+                    String.valueOf(currentSighting.getAnimal().getStartQuantity())
+            );
+
             // show the time the sighting started
             TextView startTimeSightingTextView =
                     (TextView)convertView.findViewById(R.id.sighting_start_time_text_view);
@@ -105,13 +114,6 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     ).toString()
             );
 
-            // show the start quantity text
-            TextView startQuantityTxtView =
-                    (TextView)convertView.findViewById(R.id.start_animal_quantity_text_view);
-            startQuantityTxtView.setText(
-                    String.valueOf(currentSighting.getAnimal().getStartQuantity())
-            );
-
             TextView endTimeSightingTextView =
                     (TextView)convertView.findViewById(R.id.sighting_end_time_text_view);
             TextView endQuantityTxtView =
@@ -119,9 +121,17 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
 
             // doing these inside onClick of STOP/END did not keep between orientation changes
             // important to have it after the STOP button onClick listener
-            // if end time was set (user pressed STOP/END), then show the end time and place
-            if (currentSighting.getEndTimeAndPlace().getTimeInMillis() != 0) {
-                // set and show inside the view the time the sighting ended (when user clicked on STOP button)
+            // show the end quantity (after STOP/END press it becomes visible)
+            if (currentSighting.getAnimal().getEndQuantity() != Utils.INITIAL_VALUE) {
+                endQuantityTxtView.setText(
+                        String.valueOf(currentSighting.getAnimal().getEndQuantity())
+                );
+                endQuantityTxtView.setVisibility(View.VISIBLE);
+            }
+
+            // end time of sighting becomes visible when user presses STOP/END
+            // set and show inside the view the time the sighting ended (when user clicked on STOP button)
+            if (currentSighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
                 endTimeSightingTextView.setText(
                         DateFormat.format(
                                 "kk:mm",
@@ -131,15 +141,6 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                 endTimeSightingTextView.setVisibility(View.VISIBLE);
                 // disable STOP/END button
                 endImgBtn.setEnabled(false);
-            }
-
-            // show the end quantity (after STOP/END press of after user changed the value to something else than -1 (or 99)
-            if (currentSighting.getAnimal().getEndQuantity() != -1) {
-                // set and show the end quantity text
-                endQuantityTxtView.setText(
-                        String.valueOf(currentSighting.getAnimal().getEndQuantity())
-                );
-                endQuantityTxtView.setVisibility(View.VISIBLE);
             }
 
             // show the specie name

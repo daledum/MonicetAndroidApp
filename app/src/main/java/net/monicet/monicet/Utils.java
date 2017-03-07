@@ -19,6 +19,11 @@ import java.util.ArrayList;
 public final class Utils {
     private Utils() {}
 
+    // this is used for dealing with views in the SightingAdapter (when working with Animal end quantity and TimeAndPlace)
+    // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
+    // running on ui thread...
+    public static final int INITIAL_VALUE = -1;
+
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";
     public static final String STOP_ACTION = ".STOP";
