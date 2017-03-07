@@ -21,14 +21,11 @@ import static android.drm.DrmStore.Playback.STOP;
 public class SightingAdapter extends ArrayAdapter<Sighting> {
 
     private final MainActivityInterface mainActivity;
-    private final AnimalAdapter animalAdapter;
 
     public SightingAdapter(MainActivityInterface vMainActivity,
-                           ArrayList<Sighting> sightings,
-                           AnimalAdapter vAnimalAdapter) {
+                           ArrayList<Sighting> sightings) {
         super(vMainActivity.getMyActivity(), 0, sightings);// it wanted a context, an activity is a context
         mainActivity = vMainActivity;
-        animalAdapter = vAnimalAdapter;
     }
 
     @NonNull
@@ -43,7 +40,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
 
         if (currentSighting != null) {
 
-            // I want to reinflate the view ? every time?
+            // I want to reinflate the view ? every time? There will only be 5 or 6 sightings at most
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_sighting, parent, false);
 
             // show the STOP/END/FINISH image button
@@ -55,6 +52,8 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     // TODO: new rule - end quantity can be set only on long sightings in comments only
                     // after the end button was pressed, after that, in comments you can change anything and the
                     // comments listener will update the views (via runonuithread?)
+                    // also end quantity, when you change it by clicking on sighting (when you change start quantity)
+                    // will be the new start quantity - you can change it inside comments
                     currentSighting.getAnimal().
                             setEndQuantity(currentSighting.getAnimal().getStartQuantity());
 
@@ -66,7 +65,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     //currentSighting.getEndTimeAndPlace().setLongitude();
 
                     // refresh views
-                    mainActivity.showSightings(SightingAdapter.this);
+                    mainActivity.showSightings();
 
                     Toast.makeText(
                             getContext(),
@@ -83,7 +82,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             commentsImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mainActivity.showSightingCommentsDialog(currentSighting, SightingAdapter.this);
+                    mainActivity.showSightingCommentsDialog(currentSighting);
                 }
             });
 
@@ -92,7 +91,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             deleteImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mainActivity.deleteSightingCommentsDialog(currentSighting, SightingAdapter.this);
+                    mainActivity.deleteSightingCommentsDialog(currentSighting);
                 }
             });
 
@@ -121,17 +120,11 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
 
             // doing these inside onClick of STOP/END did not keep between orientation changes
             // important to have it after the STOP button onClick listener
-            // show the end quantity (after STOP/END press it becomes visible)
-            if (currentSighting.getAnimal().getEndQuantity() != Utils.INITIAL_VALUE) {
-                endQuantityTxtView.setText(
-                        String.valueOf(currentSighting.getAnimal().getEndQuantity())
-                );
-                endQuantityTxtView.setVisibility(View.VISIBLE);
-            }
-
             // end time of sighting becomes visible when user presses STOP/END
-            // set and show inside the view the time the sighting ended (when user clicked on STOP button)
+            // when user pressed stopped end time stopped having the initial value
             if (currentSighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
+
+                // set and show inside the view the time the sighting ended (when user clicked on STOP button)
                 endTimeSightingTextView.setText(
                         DateFormat.format(
                                 "kk:mm",
@@ -139,6 +132,13 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                         ).toString()
                 );
                 endTimeSightingTextView.setVisibility(View.VISIBLE);
+
+                // show the end quantity (after STOP/END press it becomes visible)
+                endQuantityTxtView.setText(
+                        String.valueOf(currentSighting.getAnimal().getEndQuantity())
+                );
+                endQuantityTxtView.setVisibility(View.VISIBLE);
+
                 // disable STOP/END button
                 endImgBtn.setEnabled(false);
             }
@@ -158,12 +158,11 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     // clicking on quantity or specie name or time
                     // CLICK on sighting and ADD share the openSighting method (Main Activity):
                     mainActivity.openSighting(
-                            //too expensive to getMyActivity
+                            //too expensive to getMyActivity ?
                             getContext().getText(R.string.app_name)
                                     + " - " +
                                     getContext().getText(R.string.edit_sighting),
-                            currentSighting,
-                            animalAdapter
+                            currentSighting
                     );
                 }
             });

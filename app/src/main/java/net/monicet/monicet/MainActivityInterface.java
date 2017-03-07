@@ -12,14 +12,13 @@ import static android.R.attr.label;
 public interface MainActivityInterface {
 
     void openSighting(String label,
-                      Sighting sighting,
-                      AnimalAdapter animalAdapter);
+                      Sighting sighting);
 
-    void showSightings(SightingAdapter sightingAdapter);
+    void showSightings();
 
-    void showSightingCommentsDialog(Sighting sighting, SightingAdapter sightingAdapter);
+    void showSightingCommentsDialog(Sighting sighting);
 
-    void deleteSightingCommentsDialog(Sighting sighting, SightingAdapter sightingAdapter);
+    void deleteSightingCommentsDialog(Sighting sighting);
 
     Activity getMyActivity();
 }

@@ -3,8 +3,9 @@ package net.monicet.monicet;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.support.v7.app.AlertDialog;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.DateFormat;
@@ -31,14 +32,10 @@ import static android.R.string.no;
 
 public class MainActivity extends AppCompatActivity implements MainActivityInterface {
 
-    //test
-    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];
-    //test
     final Trip trip = new Trip();
     final Sighting[] openedSightings = new Sighting[1]; // artifact so I can use it inside anonymous classes
     final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();
-
-
+    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
@@ -46,6 +43,232 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // TODO: if coming back from a config change - I should first check if the views are visible?
+
+        if (areGooglePlayServicesInstalled() != true) {
+            //dialog
+            finish();
+        } else {
+            // start gps sampling (trip should be on SLOW by default)
+            startGpsSampling();
+
+            // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
+            setDataDirectory();
+
+            //registerDynamicReceiver();
+
+            // create seed animals from resources,containing specie names, photos and description
+            // (to feed the custom ListView ArrayAdapter)
+            buildSeedAnimalsFromResources();
+
+            // create animal adapter (which uses seed animals) +
+            // create the custom Sightings ArrayAdapter and populate it will null
+            makeAndSetArrayAdapters();
+
+            // TODO: should I use this or MainActivity.this
+            // initialize and show the views (with their logic)... list views, buttons, labels
+            initViews();
+        }
+
+    }
+
+    @Override
+    public void openSighting(String label, Sighting sighting//, AnimalAdapter animalAdapter
+    ) {
+        // set openedSighting - to be later used by SAVE
+        openedSightings[0] = sighting; // TODO: issues here?
+
+        // set label
+        setTitle(label);
+
+        Animal animal = sighting.getAnimal();
+        String specieName = null;
+        if (animal != null) {
+            specieName = animal.getSpecie().getName();
+        }
+
+        // Insert the sighting's animal quantity within the seed animals for displaying in the animal adapter
+        // it might not have an animal, it might return null
+        for (Animal seedAnimal: seedAnimals) {
+
+            if (specieName != null && specieName.equals(seedAnimal.getSpecie().getName())) {
+                // this is the same animal (with the same specie as this sighting's animal)
+                // set its quantity so that the animal adapter displays it
+                seedAnimal.setStartQuantity(sighting.getAnimal().getStartQuantity());
+            } else {
+                // we are going through the seed animals which are different from this sighting's animal
+                // and clear (set to 0) whatever was there from before
+                seedAnimal.setStartQuantity(0);
+            }
+        }
+
+        // let the animal adapter know that the seedAnimals changed
+        arrayAdapters[0].notifyDataSetChanged();
+
+        // make sighting list view invisible
+        findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
+        // make "no sightings message" invisible
+        findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+
+        // make animal list view visible
+        findViewById(R.id.list_view_animals).setVisibility(View.VISIBLE);
+
+        findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_save).setVisibility(View.VISIBLE);
+        findViewById(R.id.fab_back).setVisibility(View.VISIBLE);
+    }
+
+    // method called by START, BACK, SAVE, DELETE, STOP/END and Comments buttons
+    @Override
+    public void showSightings() {
+        // set label
+        setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));
+
+        // hide START button
+        findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
+        // hide GPS mode checkbox
+        findViewById(R.id.checkBox_tracking_gpsmode).setVisibility(View.INVISIBLE);
+        // hide BACK button
+        findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
+        // hide SAVE button
+        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
+        // hide animals list view
+        findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE); // it was already INVISIBLE, when coming from START
+
+        // show ADD button
+        findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
+        // show SEND button
+        findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
+
+        if (trip.getNumberOfSightings() == 0) {
+            // show the no sightings message (its text is set in XML), if the trip is empty
+            findViewById(R.id.no_sightings_text_view).setVisibility(View.VISIBLE);
+            findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
+        } else {
+            // show sightings list view, if the trip has any sightings
+            findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
+            findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+        }
+
+        // update sighting adapter
+        arrayAdapters[1].clear();
+        arrayAdapters[1].addAll(trip.getSightings());
+        arrayAdapters[1].notifyDataSetChanged();
+    }
+
+    @Override
+    public void showSightingCommentsDialog(final Sighting sighting) {
+        // TODO: take other smartphone gps reading (from trip, sighting, animal)
+        // and compare the sign (if near the 0 degree point, don't do this check)
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+
+        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
+        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
+        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
+        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
+
+        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
+        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
+        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
+        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
+
+        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
+        comments.setText(sighting.getUserComments());
+
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.comments_message_title);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                // take and set the user's latitude
+                double gpsDegrees = Utils.parseGpsToDouble(
+                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
+                );
+                double gpsMinutes = Utils.parseGpsToDouble(
+                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                double gpsSeconds = Utils.parseGpsToDouble(
+                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLatitude(
+                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                );
+
+                // take and set the user's longitude
+                gpsDegrees = Utils.parseGpsToDouble(
+                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
+                );
+                gpsMinutes = Utils.parseGpsToDouble(
+                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                gpsSeconds = Utils.parseGpsToDouble(
+                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLongitude(
+                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+                );
+
+                // take the system's time
+                // this is giving me the time when they edited the comments the last time
+                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+
+                // take and set the user's comments
+                sighting.setUserComments(comments.getText().toString());
+
+                // refresh the views (maybe the final quantity was changed)
+                showSightings();
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // dialog.dismiss();
+            }
+        });
+
+        comAlertDialogBuilder.setView(rootView);
+        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
+    @Override
+    public void deleteSightingCommentsDialog(final Sighting sighting) {
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.delete_sighting_title);
+        comAlertDialogBuilder.setMessage(R.string.delete_sighting_message);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                trip.getSightings().remove(sighting);
+                // refresh the views
+                showSightings();
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // dialog.dismiss();
+            }
+        });
+
+        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
+    @Override
+    public Activity getMyActivity() {
+        return this;
+    }
+
+    public boolean areGooglePlayServicesInstalled() {
 
         // check Google Play Services method starts here - gps needs it, gcm has backups
         // make a method out of this? and if it returns false...
@@ -66,15 +289,34 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
 //            //stop our activity initialization code
 //            return;
 //        }
-        // check GPS() up to here
+        return true;
+    }
 
+    public void startGpsSampling() {
+        // TODO: start the GPS so that it's calibrated when you first sample (start button pressed)
+        // set the mode to SLOW (before this, it was OFF, trip is constructed with OFF) - maybe just use SLOW and FAST (continuous)
+        trip.setGpsMode(GpsMode.SLOW); // TODO: setGpsMode should calibrate the google location services gps - should be connected
+
+    }
+
+    // method called by the BACK and SAVE buttons - I will probably get rid of this (just use SLOW and FAST gps)
+    public void stopFastStartSlowGps() {
+        // stop the fast gps mode and start the slow one
+        if (trip.getGpsMode() != GpsMode.CONTINUOUS) {
+            // not too slow, it's still needed by the SEND button, when saving the trip
+            trip.setGpsMode(GpsMode.SLOW);//TODO: this actually needs to change the sampling rate
+        }
+    }
+
+    public void setDataDirectory() {
         // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
         // set directory here for the SendAndDeleteFiles Utils method
         Utils.setDirectory(Utils.EXTERNAL_DIRECTORY); // have this in the initData() method - must be called before registerDynamicReceiver()
         //should be Utils.setDirectory(getFilesDir().toString()); // Alex: was, directory.toString(), toString should be optional
-        // step III ends here
 
-        // registerDynamicReceiver() starts here
+    }
+
+    public void registerDynamicReceiver() {
         // Register the dynamic receiver. Once registered it's enabled by default,
         // therefore it could fire on connectivity change before SEND.
         // android.net.conn.CONNECTIVITY_CHANGE is a sticky broadcast, so, the receiver fires when registered
@@ -84,10 +326,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
         // is alive (not forcefully closed by the user/system). So, let them do their thing.
         // They disable themselves if the work is done/or if there is no work to be done (except
         // the dynamic receiver, which lives and tries to send the files throughout the lifetime of the app)
-//        IntentFilter filter = new IntentFilter();//TODO: maybe register it in onResume or onStart
-//        filter.addAction(Utils.INTENT_CONNECTION_ACTION);
-//        filter.addAction(Utils.START_ACTION);
-//        getApplicationContext().registerReceiver(dynamicReceiver, filter); // application lifetime or just activity
+        IntentFilter filter = new IntentFilter();//TODO: maybe register it in onResume or onStart
+        filter.addAction(Utils.INTENT_CONNECTION_ACTION);
+        filter.addAction(Utils.START_ACTION);
+        getApplicationContext().registerReceiver(dynamicReceiver, filter); // application lifetime or just activity
 
         // TODO: check after installing the app if dynamic receiver runs even after restart
         // (bad, that means it's not unregistering), when the app is not running
@@ -96,75 +338,92 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
 //        dumpsys activity -h
 //        dumpsys activity b
 //        dumpsys package net.monicet.monicet
-        // registerDynamicReceiver() ends here
 
-        //initData() starts here
-        // Initialization steps: not done in the constructor because they might not be kept in future versions
-        // Step 1 starts here:
-        // using the data from resources (containing specie names, photos and description),
-        // create the seed animals and feed them to the custom ListView ArrayAdapter
-        // Create the custom Sightings ArrayAdapter and populate it will null
+    }
 
-        // TODO: start the GPS so that it's calibrated when you first sample (start button pressed)
-        // set the mode to SLOW (before this, it was OFF, trip is constructed with OFF) - maybe just use SLOW and FAST (continuous)
-        trip.setGpsMode(GpsMode.SLOW); // TODO: setGpsMode should calibrate the google location services gps - should be connected
+    public void buildSeedAnimalsFromResources() {
 
-        // TODO: if coming back from a config change - I should first check if they are visible?
-        // populate the seed animals from resources
-        buildSeedAnimalsFromResources();
-        // TODO: give it the gpsmodeuserinput.. it's a reference, but give it null in place of animals, also change AnimalAdapter to deal with null
-        final AnimalAdapter animalAdapter = new AnimalAdapter(this, seedAnimals);
-        //test
-        //arrayAdapters[0] = new AnimalAdapter(this, seedAnimals);
-        //or
-        //arrayAdapters[0] = animalAdapter;
-        //test
+        // get the resources (specie_names, descriptions, photos)
+        String[] specie_names = getResources().getStringArray(R.array.speciesArray);
+        // TODO: implement getting the photo ids and description data later
+        String[] photos = new String[30];
+        String[] descriptions = new String[30]; // all descriptions can be in one single text file
+        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
+        Arrays.fill(descriptions, "description");
+
+        // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
+        int sizeOfArrays = specie_names.length;
+
+        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
+            Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+        }
+
+        for (int i = 0; i < sizeOfArrays; i++ ) {
+            Specie specie = new Specie(specie_names[i], photos[i], descriptions[i]);
+            seedAnimals.add(new Animal(specie));
+        }
+
+    }
+
+    public void makeAndSetArrayAdapters() {
+        // TODO: give it the gpsmodeuserinput.. it's a reference
+        arrayAdapters[0] = new AnimalAdapter(this, seedAnimals);
 
         // giving it null here, because the trip doesn't have any sightings, yet
-        final SightingAdapter sightingAdapter = new SightingAdapter(
+        arrayAdapters[1] = new SightingAdapter(
                 this,
-                new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})),
-                animalAdapter
+                new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null}))
         );
-        // initData() ends here
-        // call initViews() here, before calling initViews()
 
-        // Alex - initViews() from here
+    }
+
+
+    // method called by BACK and SAVE
+    public void disconnectOpenedSighting() {
+        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
+        openedSightings[0] = null;
+    }
+
+    public void initViews() {
         // set label to MONICET - START TRIP
         setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
-        // why are all these marked final (except checkbox) ? - not used inside inner classes. Also, they're only used once (separate method)
-        final CheckBox checkboxTrackingGps = (CheckBox) findViewById(R.id.checkBox_tracking_gpsmode);// only used once inside START
-        // need the sighting adapter (inside an inner class, so the adapter needs to be final)
-        final FloatingActionButton fabStart = (FloatingActionButton) findViewById(R.id.fab_start);
-        final FloatingActionButton fabSave = (FloatingActionButton) findViewById(R.id.fab_save);
-        final FloatingActionButton fabBack = (FloatingActionButton) findViewById(R.id.fab_back);
 
-        // needs the animal adapter
-        final FloatingActionButton fabAdd = (FloatingActionButton) findViewById(R.id.fab_add);
+        // set animal adapter to custom list view
+        ((ListView) findViewById(R.id.list_view_animals)).setAdapter(arrayAdapters[0]);
 
-        // needs nothing
-        final FloatingActionButton fabSend = (FloatingActionButton) findViewById(R.id.fab_send);
+        // set sighting adapter to custom list view
+        ((ListView) findViewById(R.id.list_view_sightings)).setAdapter(arrayAdapters[1]);
 
-        // needs animal adapter
-        final ListView listViewAnimals = (ListView) findViewById(R.id.list_view_animals);//alex why is this final? + it's only used once
-        // set the adapter
-        listViewAnimals.setAdapter(animalAdapter);
+        // buttons - this must come after the adapter initialization procedure
+        // START - starts the trip
+        startButtonLogic();
 
-        // needs sighting adapter
-        final ListView listViewSightings = (ListView) findViewById(R.id.list_view_sightings);//alex why is this final? + it's only used once
-        // set the adapter
-        listViewSightings.setAdapter(sightingAdapter);
-        // Step 1 ends here
+        // ADD - adds a sighting to the trip
+        // (this view is displayed at the same time with the Sighting adapter)
+        addButtonLogic();
 
-        //Step 2 starts here:
-        // START floating action button
-        fabStart.setOnClickListener(new View.OnClickListener() {
+        // SEND - sends the trip (all its sightings) to a server
+        // (this view is displayed at the same time with the Sighting adapter)
+        sendButtonLogic();
+
+        // BACK - goes back to the view showing the ADD and SEND buttons (and the Sighting adapter)
+        //(this view is displayed at the same time with the Animal adapter)
+        backButtonLogic();
+
+        // SAVE - saves the sighting (its (new) animal and (new) start quantity
+        //(this view is displayed at the same time with the Animal adapter)
+        saveButtonLogic();
+
+    }
+
+    public void startButtonLogic() {
+        findViewById(R.id.fab_start).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 // a) when pressed takes the value from the tracking gpsmode checkbox
                 // (if selected set gpsmode to continuous)
-                if (checkboxTrackingGps.isChecked()) {
+                if (((CheckBox) findViewById(R.id.checkBox_tracking_gpsmode)).isChecked()) {
                     trip.setGpsMode(GpsMode.CONTINUOUS);
                     // TODO: GPS this should trigger continuous gps
                 }
@@ -182,125 +441,14 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                 //trip.getEndTimeAndPlace().setLongitude();
 
                 // deal with the views
-                showSightings(sightingAdapter); // shared between the START, SAVE, BACK and DELETE buttons
+                showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
             }
         });
-        //Step 2 ends here
+    }
 
-        // Step 3 starts here:
-        // SAVE floating action button
-        // Check first if this Sighting has at least one non-empty Animal (quantity different to 0)
-        // If it is non-empty, open Comments dialogFragment
-        // Else (all quantities are 0): put a toast on the screen (and do nothing), with the message:
-        //"your trip has no sightings/animals. There is nothing to send. Please add the quantity of individuals that you've seen.
-        // Or no species were seen/No animals were seen during this sighting. There is nothing to save."
-
-
-        fabBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // maybe move ADD logic to SAVE logic, so here, we do nothing,
-                // like we should, see SAVE button logic for more info
-
-                // openedSighting should no longer point to our unsaved (if coming from ADD)
-                // or opened sighting (if coming from CLICK on sight)
-                // shared by the SAVE and BACK button
-                // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
-                // hopefully, the unsaved sighting will be GC-ed soon
-                disconnectOpenedSighting();
-
-                // check that the most recent sighting has an Animal
-                // we are here after ADD or CLICK on a sighting logic, therefore at least a sighting exists
-                if (trip.getLastCreatedSighting().getAnimal() == null) {
-                    // in this case, we arrived here after ADD (newly created, animal-less sighting
-                    // so, remove this sighting from this trip
-                    trip.getSightings().remove(trip.getLastCreatedSighting());
-                }
-                // else - we're coming here from CLICK on Sight, we are not touching that already existing sighting
-
-                stopFastStartSlowGps(); // shared between the BACK and SAVE buttons
-                // prepare views - hide and show what's needed
-                showSightings(sightingAdapter); // shared between the START, SAVE, BACK and DELETE buttons
-            }
-        });
-
-        // saving is done inside the animal adapter and inside the sighting adapter
-        fabSave.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                // read the seedAnimals that have just been changed by the AnimalAdapter
-                int numberOfSeenSpecies = 0;
-                // stop when you've found quantities different from zero at 2 different species
-                // or stop at the end, when you've found zero quantities different from zero from all the species
-                Animal animalToInsertInSighting = null;
-
-                for (Animal seedAnimal : seedAnimals) {
-                    if (seedAnimal.getStartQuantity() != 0) {
-                        // if it found an animal with the quantity different from 0, assign it to our animal
-                        animalToInsertInSighting = seedAnimal;
-                        numberOfSeenSpecies++;
-                        if (numberOfSeenSpecies > 1) { break; }
-                    }
-                }
-
-                if (numberOfSeenSpecies == 0) {
-                    // no animal had the quantity different from 0 (in this case our animal to be inserted is still null)
-                    Toast.makeText(
-                            MainActivity.this,
-                            R.string.no_animals_to_save_message,
-                            Toast.LENGTH_LONG
-                    ).show();
-                } else {
-                    // more than one animal had the quantity different from 0 (our animal to be inserted is the second animal found)
-                    if (numberOfSeenSpecies == 2) {
-                        Toast.makeText(
-                                MainActivity.this,
-                                R.string.only_one_animal_message,
-                                Toast.LENGTH_LONG
-                        ).show();
-                    } else { // everything OK, only one animal was selected
-
-                        // TODO: maybe move SAVE logic here? See below why not:
-                        // ADD adds time and gps data after having been pressed.
-                        // I would have to use a temp sighting, that would complicate things even further:
-                        //I just added time and gps (in ADD) to the temp sighting. so it has them.
-                        //If temp has time (gps might take a while), that means I just came from ADD.
-                        //Now, when saving, I want to add a new sighting to the trip - a clone of
-                        //seed, if coming from ADD, of course...temp sighting needs to be global
-                        // and final (array hack again).
-                        //add sighting (new sighting(seedSighting))
-                        //Clear all data from temp sighting on SAVE and BACK. Null animal and all zero.
-                        //I was in ADD, I added time and gps to the temp sighting
-                        //otherwise (opened sighting is not the temp sighting), here (in save) just
-                        //save the opened sighting - coming from click on a sighting
-
-                        stopFastStartSlowGps(); // shared between the BACK and SAVE buttons
-
-                        // insert animal into opened Sighting, setAnimal() calls new Animal
-                        openedSightings[0].setAnimal(animalToInsertInSighting);
-
-                        // SAVE no longer works on the sighting, so openedSighting does not need to connect to it anymore
-                        // SAVE and BACK share this
-                        disconnectOpenedSighting();
-
-                        // saved successfully message
-                        Toast.makeText(MainActivity.this,
-                                R.string.sighting_saved_confirmation_message, Toast.LENGTH_SHORT).show();
-//                        Toast.makeText(activity,
-//                                R.string.sighting_saved_instructions_message, Toast.LENGTH_LONG).show();
-
-                        // show and hide the appropriate views
-                        showSightings(sightingAdapter); // shared among the START, SAVE, BACK and DELETE buttons
-                    }
-                }
-            }
-        });
-        // Step 3 ends here
-
-        //Step 4 starts here:
-        // ADD + button logic
-        fabAdd.setOnClickListener(new View.OnClickListener() {
+    public void addButtonLogic() {
+        // uses the animal adapter
+        findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
@@ -330,16 +478,14 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                 // Alex: this is hiding the animals list view
                 openSighting(
                         getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
-                        trip.getLastCreatedSighting(),
-                        animalAdapter
+                        trip.getLastCreatedSighting()
                 );
             }
         });
-        //Step 4 ends here
+    }
 
-        //Step 5 starts here:
-        // SEND button logic
-        fabSend.setOnClickListener(new View.OnClickListener() {
+    public void sendButtonLogic() {
+        findViewById(R.id.fab_send).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
@@ -380,7 +526,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                     comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            sendButtonLogic();
+                            // TODO: Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
+                            //trip.setEndLatitude();
+                            //trip.setEndLongitude()
+                            trip.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                            sendSightings();
                         }
                     });
 
@@ -389,66 +539,33 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
                 }
             }
         });
-        //Step 5 ends here
-        // Alex - initViews() up to here
     }
 
-    public void buildSeedAnimalsFromResources() {
-
-        // get the resources (specie_names, descriptions, photos)
-        String[] specie_names = getResources().getStringArray(R.array.speciesArray);
-        // TODO: implement getting the photo ids and description data later
-        String[] photos = new String[30];
-        String[] descriptions = new String[30]; // all descriptions can be in one single text file
-        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
-        Arrays.fill(descriptions, "description");
-
-        // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
-        int sizeOfArrays = specie_names.length;
-
-        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
-            Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
-        }
-
-        for (int i = 0; i < sizeOfArrays; i++ ) {
-            Specie specie = new Specie(specie_names[i], photos[i], descriptions[i]);
-            seedAnimals.add(new Animal(specie));
-        }
-
-    }
-
-    // method called by the BACK and SAVE buttons - I will probably get rid of this (just use SLOW and FAST gps)
-    public void stopFastStartSlowGps() {
-        // stop the fast gps mode and start the slow one
-        if (trip.getGpsMode() != GpsMode.CONTINUOUS) {
-            // not too slow, it's still needed by the SEND button, when saving the trip
-            trip.setGpsMode(GpsMode.SLOW);//TODO: this actually needs to change the sampling rate
-        }
-    }
-
-    // method called by BACK and SAVE
-    public void disconnectOpenedSighting() {
-        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
-        openedSightings[0] = null;
-    }
-
-    public void sendButtonLogic() {
-        // TODO: step I - Sample GPS, Date, Time and save Trip instance end_gps, end_date/time
-        //trip.setEndLatitude();
-        //trip.setEndLongitude()
-        trip.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-        // step I ends here
-
+    public void sendSightings() {
         // Alex: android:installLocation is internalOnly
+        // TODO: create that server page (page will display all sightings for the trip, and also create a kml with the csv)
+
+        saveSightingsToFile();
+        //restartSendingMechanisms();//Alex - uncomment this
+
+        // TODO: Then turn off the GPS service
+        trip.setGpsMode(GpsMode.OFF);// or, if it was on continuous...switch to SLOW
+        // also, actually turn the gps off - make sure that onPause, when it tries to turn it off, too, works without error
+
+        // and finish
+        // Final point - Then stop the application. *make sure you finish it off. Test the order.
+        // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
+        // returning to this app from Gmail ?
+        // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
+        // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
+        // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
+        // There should be a button for starting a trip and a button for adding a sighting
+    }
+
+    public void saveSightingsToFile() {
         // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
         // TODO: write the json and csv files internally
-        // TODO: try to send them via a http post request to a server... if successful, delete the files, if not don't delete the files
-        // TODO: maybe just create the files and leave all the rest to the service (so that the 2 don't step on each other's toes)
-        // TODO: create that server page (page will display all non-empty sightings for the trip, and also create a kml with the csv)
-        // TODO: create that service that runs continuously, goes to the Monicet folder and sends all the json and csv files to the server (if successful, deletes them)
-        // TODO: be careful so that both the service and the send button try to send the data to the same place (DRY)
 
-        // step II - create the files to be sent
         try {
 
             // test external storage version
@@ -541,271 +658,180 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
             e.printStackTrace();
             Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
         }
-        // step II ends here
+    }
 
-        // step III - enable and start mechanisms designed to send (and delete if sent)
+    public void restartSendingMechanisms() {
+        // enable and (re)start mechanisms designed to send (and delete if sent)
         // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
         // which first checks for a live Internet connection)
         // This is the right moment (after SEND) for enabling them, because they've disabled
         // themselves by now (if folder doesn't contain json or csv files aka empty...
         // although it always has one instant-run file)
 
+        // first, use GCM
+        useGcmNetworkManager();
+
+        // send message to receivers to try to send the files now
+        // Alarm receiver and the dynamic receiver will get this message
+        Intent startIntent = new Intent(Utils.START_ACTION);
+        this.sendBroadcast(startIntent);//Alex MainActivity.this
+
+        // secondly, use AlarmManager, hooked up to a receiver
+        useAlarmManager();
+
+        //thirdly, use static receiver
+        useStaticReceiver();
+
+        // Fourthly, a dynamically created broadcast receiver to listen to the network change.
+        // It also listens to START_ACTION
+        // It was already registered at the beginning of onCreate.
+        // Fire it, so that it tries to send the files now (before a connection
+        // change occurs, in case the phone is already connected):
+        // it's fired above (the alarm and this dynamic receiver are both fired by START_ACTION)
+    }
+
+    public void useGcmNetworkManager() {
         // first - use GCM Network Manager. I updates itself and stops when folder is empty
         // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
         // maybe pass it the application context - it only uses it for the path anyways
         // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
         // TODO: new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            SendFilesTaskService.scheduleOneOff(MainActivity.this);//maybe the thread needs to be inside scheduleOneOff
-//                        }
-//                    });
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //maybe the thread needs to be inside scheduleOneOff
+                SendFilesTaskService.scheduleOneOff(MainActivity.this);
+            }
+        });
+    }
 
-        // secondly, use broadcast receivers
-        // a) Alarm Manager receiver: starts an hourly alarm after BOOT COMPLETED or START_ACTION
-        // which starts the receiver, which sends and deletes files.
+    public void useAlarmManager() {
+        // Alarm Manager starts an hourly alarm after BOOT COMPLETED or START_ACTION
+        // which starts the AlarmReceiver, which sends and deletes files.
         // It disables itself if folder is empty. It doesn't listen to the network
-        // i) enable it
-//                Utils.setComponentState(
-//                        MainActivity.this,
-//                        FilesAndBootReceiver.class,
-//                        true
-//                );
-//                // ii) fire it:
-//                Intent startIntent = new Intent(Utils.START_ACTION);
-//                MainActivity.this.sendBroadcast(startIntent);
+        // enable it
+        Utils.setComponentState(
+                this,//Alex MainActivity.this
+                FilesAndBootReceiver.class,
+                true
+        );
+    }
 
-        // b) dynamicReceiver: a dynamically created broadcast receiver to listen to the network change
-        // i) enable it: don't touch. It's an error prone mechanism. It was already registered.
-        // ii) fire it, so that it tries to send the files now (before a connection
-        // change occurs, in case the phone is already connected)
-        // it's fired above (the alarm and this dynamic receiver are both fired by START_ACTION)
-
-        // c) a static receiver (defined in xml, only working pre API 24 - Nougat)
+    public void useStaticReceiver() {
+        // A static receiver (defined in xml, only working pre API 24 - Nougat)
         // is deployed to listen to the network. It disables itself if the folder is empty
-        // i) enable it
-//                Utils.setComponentState(
-//                        MainActivity.this,
-//                        StaticNetworkStateReceiver.class,
-//                        true
-//                );
-        // ii) fire it: no need to fire this one right know, because
-        // the dynamic receiver deals with the present moment
-
-        //step III ends here
-
-        // TODO: Then turn off the GPS service
-        trip.setGpsMode(GpsMode.OFF);
-        // also, actually turn the gps off
-
-        // Final point - Then stop the application. *make sure you finish it off. Test the order.
-        // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
-        // returning to this app from Gmail ?
-        // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
-        // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
-        // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
-        // There should be a button for starting a trip and a button for adding a sighting
-
-        //        if (files.length < 1 || files[0] == null) {//AsyncTask
-        //            return null;
-        //        }
+        // enable it
+        Utils.setComponentState(
+                this,//Alex MainActivity.this
+                StaticNetworkStateReceiver.class,
+                true
+        );
     }
 
-    @Override
-    public void openSighting(String label, Sighting sighting, AnimalAdapter animalAdapter) {
-        // set openedSighting - to be later used by SAVE
-        openedSightings[0] = sighting; // TODO: issues here?
+    public void backButtonLogic() {
 
-        // set label
-        setTitle(label);
-
-        Animal animal = sighting.getAnimal();
-        String specieName = null;
-        if (animal != null) {
-            specieName = animal.getSpecie().getName();
-        }
-
-        // Insert the sighting's animal quantity within the seed animals for displaying in the animal adapter
-        // it might not have an animal, it might return null
-        for (Animal seedAnimal: seedAnimals) {
-
-            if (specieName != null && specieName.equals(seedAnimal.getSpecie().getName())) {
-                // this is the same animal (with the same specie as this sighting's animal)
-                // set its quantity so that the animal adapter displays it
-                seedAnimal.setStartQuantity(sighting.getAnimal().getStartQuantity());
-            } else {
-                // we are going through the seed animals which are different from this sighting's animal
-                // and clear (set to 0) whatever was there from before
-                seedAnimal.setStartQuantity(0);
-            }
-        }
-
-        // let the adapter know that the seedAnimals changed
-        animalAdapter.notifyDataSetChanged();
-
-        // make sighting list view invisible
-        findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
-        // make "no sightings message" invisible
-        findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
-
-        // make animal list view visible
-        findViewById(R.id.list_view_animals).setVisibility(View.VISIBLE);
-
-        findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
-        findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
-        findViewById(R.id.fab_save).setVisibility(View.VISIBLE);
-        findViewById(R.id.fab_back).setVisibility(View.VISIBLE);
-    }
-
-    // method called by START, BACK, SAVE, DELETE, STOP/END and Comments buttons
-    @Override
-    public void showSightings(SightingAdapter sightingAdapter) {
-        // set label
-        setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));
-
-        // hide START button
-        findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
-        // hide GPS mode checkbox
-        findViewById(R.id.checkBox_tracking_gpsmode).setVisibility(View.INVISIBLE);
-        // hide BACK button
-        findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
-        // hide SAVE button
-        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
-        // hide animals list view
-        findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE); // it was already INVISIBLE, when coming from START
-
-        // show ADD button
-        findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
-        // show SEND button
-        findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
-
-        if (trip.getNumberOfSightings() == 0) {
-            // show the no sightings message (its text is set in XML), if the trip is empty
-            findViewById(R.id.no_sightings_text_view).setVisibility(View.VISIBLE);
-            findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
-        } else {
-            // show sightings list view, if the trip has any sightings
-            findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
-            findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
-        }
-
-        // update sighting adapter
-        sightingAdapter.clear();
-        sightingAdapter.addAll(trip.getSightings());
-        sightingAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void showSightingCommentsDialog(final Sighting sighting,
-                                           final SightingAdapter sightingAdapter) {
-        // TODO: take other smartphone gps reading (from trip, sighting, animal)
-        // and compare the sign (if near the 0 degree point, don't do this check)
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-
-        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
-        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
-        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
-        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
-        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
-
-        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
-        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
-        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
-        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
-
-        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
-        comments.setText(sighting.getUserComments());
-
-        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
-
-        comAlertDialogBuilder.setTitle(R.string.comments_message_title);
-
-        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+        findViewById(R.id.fab_back).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
+            public void onClick(View v) {
+                // maybe move ADD logic to SAVE logic, so here, we do nothing,
+                // like we should, see SAVE button logic for more info
 
-                // take and set the user's latitude
-                double gpsDegrees = Utils.parseGpsToDouble(
-                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
-                );
-                double gpsMinutes = Utils.parseGpsToDouble(
-                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                double gpsSeconds = Utils.parseGpsToDouble(
-                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLatitude(
-                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-                );
+                // openedSighting should no longer point to our unsaved (if coming from ADD)
+                // or opened sighting (if coming from CLICK on sight)
+                // shared by the SAVE and BACK button
+                // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
+                // hopefully, the unsaved sighting will be GC-ed soon
+                disconnectOpenedSighting();
 
-                // take and set the user's longitude
-                gpsDegrees = Utils.parseGpsToDouble(
-                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
-                );
-                gpsMinutes = Utils.parseGpsToDouble(
-                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                gpsSeconds = Utils.parseGpsToDouble(
-                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLongitude(
-                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-                );
+                // check that the most recent sighting has an Animal
+                // we are here after ADD or CLICK on a sighting logic, therefore at least a sighting exists
+                if (trip.getLastCreatedSighting().getAnimal() == null) {
+                    // in this case, we arrived here after ADD (newly created, animal-less sighting
+                    // so, remove this sighting from this trip
+                    trip.getSightings().remove(trip.getLastCreatedSighting());
+                }
+                // else - we're coming here from CLICK on Sight, we are not touching that already existing sighting
 
-                // take the system's time
-                // this is giving me the time when they edited the comments the last time
-                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-
-                // take and set the user's comments
-                sighting.setUserComments(comments.getText().toString());
-
-                // refresh the views (maybe the final quantity was changed)
-                showSightings(sightingAdapter);
+                stopFastStartSlowGps(); // shared between the BACK and SAVE buttons
+                // prepare views - hide and show what's needed
+                showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
             }
         });
-        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // dialog.dismiss();
-            }
-        });
-
-        comAlertDialogBuilder.setView(rootView);
-        comAlertDialogBuilder.create();
-        comAlertDialogBuilder.show();
     }
 
-    @Override
-    public void deleteSightingCommentsDialog(final Sighting sighting,
-                                             final SightingAdapter sightingAdapter) {
-        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
-
-        comAlertDialogBuilder.setTitle(R.string.delete_sighting_title);
-        comAlertDialogBuilder.setMessage(R.string.delete_sighting_message);
-
-        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+    public void saveButtonLogic() {
+        // saving is done inside the animal adapter and inside the sighting adapter
+        findViewById(R.id.fab_save).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
-                trip.getSightings().remove(sighting);
-                // refresh the views
-                showSightings(sightingAdapter);
+            public void onClick(View v) {
+
+                // read the seedAnimals that have just been changed by the AnimalAdapter
+                int numberOfSeenSpecies = 0;
+                // stop when you've found quantities different from zero at 2 different species
+                // or stop at the end, when you've found zero quantities different from zero from all the species
+                Animal animalToInsertInSighting = null;
+
+                for (Animal seedAnimal : seedAnimals) {
+                    if (seedAnimal.getStartQuantity() != 0) {
+                        // if it found an animal with the quantity different from 0, assign it to our animal
+                        animalToInsertInSighting = seedAnimal;
+                        numberOfSeenSpecies++;
+                        if (numberOfSeenSpecies > 1) { break; }
+                    }
+                }
+
+                if (numberOfSeenSpecies == 0) {
+                    // no animal had the quantity different from 0 (in this case our animal to be inserted is still null)
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.no_animals_to_save_message,
+                            Toast.LENGTH_LONG
+                    ).show();
+                } else {
+                    // more than one animal had the quantity different from 0 (our animal to be inserted is the second animal found)
+                    if (numberOfSeenSpecies == 2) {
+                        Toast.makeText(
+                                MainActivity.this,
+                                R.string.only_one_animal_message,
+                                Toast.LENGTH_LONG
+                        ).show();
+                    } else { // everything OK, only one animal was selected
+
+                        // TODO: maybe move SAVE logic here? See below why not:
+                        // ADD adds time and gps data after having been pressed.
+                        // I would have to use a temp sighting, that would complicate things even further:
+                        //I just added time and gps (in ADD) to the temp sighting. so it has them.
+                        //If temp has time (gps might take a while), that means I just came from ADD.
+                        //Now, when saving, I want to add a new sighting to the trip - a clone of
+                        //seed, if coming from ADD, of course...temp sighting needs to be global
+                        // and final (array hack again).
+                        //add sighting (new sighting(seedSighting))
+                        //Clear all data from temp sighting on SAVE and BACK. Null animal and all zero.
+                        //I was in ADD, I added time and gps to the temp sighting
+                        //otherwise (opened sighting is not the temp sighting), here (in save) just
+                        //save the opened sighting - coming from click on a sighting
+
+                        stopFastStartSlowGps(); // shared between the BACK and SAVE buttons
+
+                        // insert animal into opened Sighting, setAnimal() calls new Animal
+                        openedSightings[0].setAnimal(animalToInsertInSighting);
+
+                        // SAVE no longer works on the sighting, so openedSighting does not need to connect to it anymore
+                        // SAVE and BACK share this
+                        disconnectOpenedSighting();
+
+                        // saved successfully message
+                        Toast.makeText(MainActivity.this,
+                                R.string.sighting_saved_confirmation_message, Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(activity,
+//                                R.string.sighting_saved_instructions_message, Toast.LENGTH_LONG).show();
+
+                        // show and hide the appropriate views
+                        showSightings(); // shared among the START, SAVE, BACK and DELETE buttons
+                    }
+                }
             }
         });
-        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // dialog.dismiss();
-            }
-        });
-
-        comAlertDialogBuilder.create();
-        comAlertDialogBuilder.show();
-    }
-
-    @Override
-    public Activity getMyActivity() {
-        return this;
     }
 
     // no argument for this one, trip is a class variable
@@ -813,6 +839,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityInter
     // to the json file... for reopening...do you really want to reopen the big trip on the phone?
 //    public void trimTrip() {
 //
+    //        if (files.length < 1 || files[0] == null) {//AsyncTask
+    //            return null;
+    //        }
+
 //        for (int i = 0; i < trip.getNumberOfSightings(); i++) {
 //            Iterator<Animal> iter = trip.getSightingAtIndex(i).getAnimal().iterator();
 //
