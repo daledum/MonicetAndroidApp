@@ -25,7 +25,7 @@ public class Trip implements Serializable {
     // This will not be added to the JSON file.
     // A file with the appropriate extension (TRK, GPX, KML, KMZ, PLT) will be created/saved/sent
     // and its name will be assigned to to the routeFileName variable, which will appear in the JSON file.
-    private transient HashMap<Long,double[]> mContinuousData;//or use a map instead of double[]
+    private transient HashMap<Long,double[]> mRouteData;//or use a map instead of double[]
 
     public Trip() {
         mSightingsArray = new ArrayList<Sighting>();
@@ -35,7 +35,7 @@ public class Trip implements Serializable {
         gpsMode = GpsMode.DEFAULT_SLOW;
         mTripFileName = "";
         mRouteFileName = "";
-        mContinuousData = new HashMap<Long,double[]>();
+        mRouteData = new HashMap<Long,double[]>();
 
 //        mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
     }
@@ -77,9 +77,9 @@ public class Trip implements Serializable {
         mRouteFileName = vRouteFileName; //only if in Tracking mode
     }
 
-    public HashMap<Long,double[]> getContinuousData() { return mContinuousData; }
-    public void addContinuousData(long vTimeInMilliseconds, double vLatitude, double vLongitude ) {
-        mContinuousData.put(vTimeInMilliseconds, new double[]{vLatitude,vLongitude});
+    public HashMap<Long,double[]> getRouteData() { return mRouteData; }
+    public void addRouteData(long vTimeInMilliseconds, double vLatitude, double vLongitude ) {
+        mRouteData.put(vTimeInMilliseconds, new double[]{vLatitude,vLongitude});
     }
 
 }

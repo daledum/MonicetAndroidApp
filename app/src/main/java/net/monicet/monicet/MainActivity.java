@@ -1,6 +1,8 @@
 package net.monicet.monicet;
 
 import android.Manifest;
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
@@ -17,6 +19,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.DateFormat;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -43,6 +46,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
@@ -80,6 +84,8 @@ public class MainActivity extends AppCompatActivity implements
             finish();
         } else {
             // if google play services are OK
+            getUserCredentials();
+
             buildGoogleApiClient();
             createLocationRequest();
 
@@ -352,12 +358,13 @@ public class MainActivity extends AppCompatActivity implements
         boolean tryDifferentApproach = false;
         if (trip.getGpsMode() == GpsMode.CONTINUOUS && timeAndPlace != null && tryDifferentApproach) {
 
+            // TODO: or maybe use now, because when the captureCoord was called no good coords were taken
             long searchedTime = timeAndPlace.getTimeInMillis();
             long closestTime = 0; // redundant assignment
             long difference = Long.MAX_VALUE;
 
             // go through the keys (times) of the continuous data hashmap (we could have used a linked hash map - but that would be more heavy on memory)
-            for (long registeredTime: trip.getContinuousData().keySet()) {
+            for (long registeredTime: trip.getRouteData().keySet()) {
                 // get the difference between the time when we want to save the gps coords and the time when location changed
                 // if it's smaller than the difference registered before, make it the new difference
                 if (abs(searchedTime - registeredTime) < difference) {
@@ -366,8 +373,11 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
 
-            if (trip.getContinuousData().containsKey(closestTime)) { // redundant check
-                double[] coordinates = trip.getContinuousData().get(closestTime);
+            // TODO: NOW or - easier approach would be to have onLocationChanged to assign the last location to a global variable
+            // and read that (volatile) variable here - maybe have Location l = globalVolatileLocation;
+            // make sure in onLocationChanged that the global variable is set only if Location is not null
+            if (trip.getRouteData().containsKey(closestTime)) { // redundant check
+                double[] coordinates = trip.getRouteData().get(closestTime);
                 timeAndPlace.setLatitude(coordinates[0]);
                 timeAndPlace.setLongitude(coordinates[1]);
             }
@@ -392,6 +402,8 @@ public class MainActivity extends AppCompatActivity implements
                 // sample
                 if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                         PackageManager.PERMISSION_GRANTED) {
+                    // TODO: maybe use data saved in onConnectionChanged (from route/continuousData) instead of getLastLocation
+                    // see tryDifferentApproach on how to do it OR just read a global volatile variable set in onLocationChanged
                     Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
                     // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
@@ -494,10 +506,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onLocationChanged(Location location) {
-        if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
-            trip.getContinuousData().put(System.currentTimeMillis(),
-                    new double[]{location.getLatitude(), location.getLongitude()});
-        }
+        trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
     }
 
     protected void startLocationUpdates() {
@@ -534,6 +543,18 @@ public class MainActivity extends AppCompatActivity implements
 //            return;
 //        }
         return true;
+    }
+
+    protected void getUserCredentials() {
+        String emailAddresses = "";
+        Pattern emailPattern = Patterns.EMAIL_ADDRESS;
+        Account[] accounts = AccountManager.get(this).getAccounts();
+        for (Account account : accounts) {
+            if (emailPattern.matcher(account.name).matches()) {
+                emailAddresses += account.name + ",";
+            }
+        }
+        trip.setUserName(emailAddresses.substring(0, emailAddresses.length() - 1));
     }
 
     // google sample - why synchronized - only the main UI thread calls it
@@ -738,9 +759,6 @@ public class MainActivity extends AppCompatActivity implements
                 // and gps coords
                 captureCoordinates(trip.getStartTimeAndPlace());
 
-                // c) TODO: get username and set it (should this be in init data - trip will exist)
-                // trip.setUserName();
-
                 // deal with the views
                 showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
             }
@@ -894,35 +912,33 @@ public class MainActivity extends AppCompatActivity implements
             String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
             trip.setTripFileName(tripFileName);
 
-            if (trip.getGpsMode() == GpsMode.CONTINUOUS) {
+            String routeFileTitle = routePrefix + System.currentTimeMillis();
+            String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
+            trip.setRouteFileName(routeFileName); // this will be written to the JSON file
 
-                String routeFileTitle = routePrefix + System.currentTimeMillis();
-                String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
-                trip.setRouteFileName(routeFileName); // this will be written to the JSON file
-                File routeFile = new File(directory, routeFileTitle);
-                FileWriter routeWriter = new FileWriter(routeFile);
-                routeWriter.append(trip.getUserName());
+            File routeFile = new File(directory, routeFileTitle);
+            FileWriter routeWriter = new FileWriter(routeFile);
+            routeWriter.append(trip.getUserName());
+            routeWriter.append(",");
+            routeWriter.append(tripFileName);
+            routeWriter.append(",");
+            routeWriter.append(routeFileName);
+            routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+
+            for (Map.Entry<Long, double[]> entry : trip.getRouteData().entrySet()) {
+                double[] coords = entry.getValue();
+                routeWriter.append(entry.getKey().toString());
                 routeWriter.append(",");
-                routeWriter.append(tripFileName);
+                routeWriter.append("" + coords[0]);
                 routeWriter.append(",");
-                routeWriter.append(routeFileName);
+                routeWriter.append("" + coords[1]);
                 routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
-
-                for (Map.Entry<Long, double[]> entry : trip.getContinuousData().entrySet()) {
-                    double[] coords = entry.getValue();
-                    routeWriter.append(entry.getKey().toString());
-                    routeWriter.append(",");
-                    routeWriter.append("" + coords[0]);
-                    routeWriter.append(",");
-                    routeWriter.append("" + coords[1]);
-                    routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
-                }
-                routeWriter.flush(); // Alex: redundant?
-                routeWriter.close();
-                // add the extension at the end, so that the broadcast receiver doesn't
-                // try to sent it before we're finished with the file
-                routeFile.renameTo(new File(directory, routeFileName));
             }
+            routeWriter.flush(); // Alex: redundant?
+            routeWriter.close();
+            // add the extension at the end, so that the broadcast receiver doesn't
+            // try to sent it before we're finished with the file
+            routeFile.renameTo(new File(directory, routeFileName));
 
             Gson gson = new GsonBuilder().create();
             File tripFile = new File(directory, tripFileTitle);
