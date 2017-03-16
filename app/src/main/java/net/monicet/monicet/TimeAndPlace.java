@@ -10,9 +10,9 @@ public class TimeAndPlace {
     private double longitude;
 
     public TimeAndPlace() {
-        timeInMillis = Utils.INITIAL_VALUE;//was 0 initially
-        latitude = 0;
-        longitude = 0;
+        timeInMillis = Utils.INITIAL_VALUE;//all 3 were 0 initially
+        latitude = Utils.INITIAL_VALUE;
+        longitude = Utils.INITIAL_VALUE;
     }
 
     public long getTimeInMillis() { return timeInMillis; }

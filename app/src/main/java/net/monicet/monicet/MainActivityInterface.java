@@ -20,5 +20,7 @@ public interface MainActivityInterface {
 
     void deleteSightingCommentsDialog(Sighting sighting);
 
+    void captureCoordinates(TimeAndPlace timeAndPlace);
+
     Activity getMyActivity();
 }

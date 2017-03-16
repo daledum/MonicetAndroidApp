@@ -19,10 +19,19 @@ import java.util.ArrayList;
 public final class Utils {
     private Utils() {}
 
+    public static final float DEFAULT_SMALLEST_DISPLACEMENT_IN_M = 0;
+    public static final float SMALLEST_DISPLACEMENT_IN_M = 10;
+    // 5 seconds (also used with a min distance of 10m, to build the route)
+    public static final long ROUTE_BUILDING_INTERVAL_IN_MILLIS = 5 * 1000;
+    // 10 minutes, saving battery life
+    public static final long BATTERY_SAVING_INTERVAL_IN_MILLIS = 600 * 1000;
+    // 1 second, used for sampling (saving to gps variables)
+    public static final long SAMPLING_INTERVAL_IN_MILLIS = 1000;
+
     // this is used for dealing with views in the SightingAdapter (when working with Animal end quantity and TimeAndPlace)
     // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
     // running on ui thread...
-    public static final int INITIAL_VALUE = -1;
+    public static final int INITIAL_VALUE = 0; // was -1
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";

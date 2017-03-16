@@ -5,8 +5,20 @@ package net.monicet.monicet;
  */
 
 public enum GpsMode {
-    OFF,
-    SLOW,
-    FAST,
-    CONTINUOUS
+    OFF(Long.MAX_VALUE, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),//its values are never used
+    DEFAULT_SLOW(Utils.BATTERY_SAVING_INTERVAL_IN_MILLIS, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),
+    SAMPLING_FAST(Utils.SAMPLING_INTERVAL_IN_MILLIS, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),
+    CONTINUOUS(Utils.ROUTE_BUILDING_INTERVAL_IN_MILLIS, Utils.SMALLEST_DISPLACEMENT_IN_M);
+
+    private final long intervalInMillis;
+    private final float smallestDisplacementInMeters;
+
+    GpsMode(long vIntervalInMillis, float vSmallestDisplacementInMeters) {
+        intervalInMillis = vIntervalInMillis;
+        smallestDisplacementInMeters = vSmallestDisplacementInMeters;
+    }
+
+    public long getIntervalInMillis() { return intervalInMillis; }
+
+    public float getSmallestDisplacementInMeters() { return smallestDisplacementInMeters; }
 }

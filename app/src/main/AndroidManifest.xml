@@ -30,6 +30,9 @@
             <!--</intent-filter>-->
         <!--</receiver>-->
         <!--<receiver android:name=".AlarmReceiver"/>-->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <activity
             android:name=".MainActivity"
             android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">

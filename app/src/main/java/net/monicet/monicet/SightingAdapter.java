@@ -12,8 +12,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
-import static android.drm.DrmStore.Playback.STOP;
-
 /**
  * Created by ubuntu on 28-02-2017.
  */
@@ -41,7 +39,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
         if (currentSighting != null) {
 
             // I want to reinflate the view ? every time? There will only be 5 or 6 sightings at most
-            convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_sighting, parent, false);
+            //convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_sighting, parent, false);//TODO: Alex test this
 
             // show the STOP/END/FINISH image button
             ImageButton endImgBtn =
@@ -52,17 +50,16 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     // TODO: new rule - end quantity can be set only on long sightings in comments only
                     // after the end button was pressed, after that, in comments you can change anything and the
                     // comments listener will update the views (via runonuithread?)
-                    // also end quantity, when you change it by clicking on sighting (when you change start quantity)
-                    // will be the new start quantity - you can change it inside comments
+                    // the end quantity: when you click on a sighting and you change it, the end quantity
+                    // will not be changed - you can change it inside comments
+                    // pressing on a sighting only allows you to change the specie and the start quantity
                     currentSighting.getAnimal().
                             setEndQuantity(currentSighting.getAnimal().getStartQuantity());
 
-                    //sets and saves the end time and gps for the current sighting
+                    // set time
                     currentSighting.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-
-                    // TODO: maybe set the gps sampling rate to something quick enough to sample on such a short notice
-                    //currentSighting.getEndTimeAndPlace().setLatitude();
-                    //currentSighting.getEndTimeAndPlace().setLongitude();
+                    // and gps coordinates
+                    mainActivity.captureCoordinates(currentSighting.getEndTimeAndPlace());
 
                     // refresh views
                     mainActivity.showSightings();

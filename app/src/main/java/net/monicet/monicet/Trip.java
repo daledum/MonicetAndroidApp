@@ -1,7 +1,5 @@
 package net.monicet.monicet;
 
-import android.util.Log;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +32,7 @@ public class Trip implements Serializable {
         mUserName = "";
         startTimeAndPlace = new TimeAndPlace();
         endTimeAndPlace = new TimeAndPlace();
-        gpsMode = GpsMode.OFF;
+        gpsMode = GpsMode.DEFAULT_SLOW;
         mTripFileName = "";
         mRouteFileName = "";
         mContinuousData = new HashMap<Long,double[]>();

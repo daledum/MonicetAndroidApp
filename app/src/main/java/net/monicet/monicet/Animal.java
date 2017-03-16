@@ -17,13 +17,13 @@ public class Animal implements Serializable {
     public Animal(Specie vSpecie) {
         specie = vSpecie;
         startQuantity = 0;
-        endQuantity = 0;//Utils.INITIAL_VALUE;//was -1, or 99 so that I can use it in the Number Picker?
+        endQuantity = 0;//Utils.INITIAL_VALUE; was -1, or 99 so that I can use it in the Number Picker?
     }
 
     public Animal(Animal vAnimal) {
         this(vAnimal.getSpecie());
         startQuantity = vAnimal.getStartQuantity();
-        endQuantity = startQuantity;
+        endQuantity = vAnimal.getEndQuantity();
     }
 
     public Specie getSpecie() { return specie; }
