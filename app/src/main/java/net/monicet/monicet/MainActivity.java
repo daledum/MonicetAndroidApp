@@ -66,6 +66,14 @@ public class MainActivity extends AppCompatActivity implements
 
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
+    private volatile Location mostRecentLocation;
+
+    {
+        mostRecentLocation = new Location("dummyprovider");
+        mostRecentLocation.setLatitude(Utils.INITIAL_VALUE);
+        mostRecentLocation.setLongitude(Utils.INITIAL_VALUE);
+    }
+
     private final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     // single thread executor for capturing gps coordinates
     ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -76,13 +84,7 @@ public class MainActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_main);
 
         // TODO: if coming back from a config change - I should first check if the views are visible?
-
-        if (areGooglePlayServicesInstalled() != true) {
-            //dialog
-            // trip is by default on SLOW, no Google Play Services, so switch to OFF
-            trip.setGpsMode(GpsMode.OFF);
-            finish();
-        } else {
+        if (areGooglePlayServicesInstalled()) {
             // if google play services are OK
             getUserCredentials();
 
@@ -105,22 +107,28 @@ public class MainActivity extends AppCompatActivity implements
             // TODO: should I use this or MainActivity.this
             // initialize and show the views (with their logic)... list views, buttons, labels
             initViews();
+        } else {
+            //dialog
+            // trip is by default on SLOW, no Google Play Services, so switch to OFF
+            trip.setGpsMode(GpsMode.OFF);
+            finish();
         }
-
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        mGoogleApiClient.connect();
 
         // If executor service has been made null (I'm coming here after onStop())
         // make a new one
         if (executorService == null) {
             executorService = Executors.newSingleThreadExecutor();
             // Finish off any tasks that might have been interrupted in onStop()
+            // Call this before re-connecting the google api client (the client will set mostRecentLocation again)
             finishTimeAndPlaces(getUnfinishedTimeAndPlaces());
         }
+
+        mGoogleApiClient.connect();
     }
 
     @Override
@@ -347,43 +355,6 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void captureCoordinates(final TimeAndPlace timeAndPlace) {
 
-        // alternative to tasks - use the continuous data and the time saved in it
-//        MORE SIMPLE - take time snapshots and use the continuous data
-//        let'say I create a sighting at 15:03.. I write this to its start time, I then want its gps, so I look at continuous data saved
-// in onLocationChanged, which saves time, too..I look at a time a little smaller (or larger) than my time and take its gps reading
-//                -take the set of keys (hasmap uses a set for keys, find the value closes to the present time) min (abs setVale - myTime)
-//        are keys in a hashmap (or members of a set stored in the order they're introduced?). If yes, iterate until the first number larger than my number and compare the difference betwenn it and my number with the difference between my number and the number before the first number which is bigger than my number
-//                -linked hash map - extra work double linked list. Iterate through values via keys. Stop and get lat and log
-//        -hashmap - get its keys, then sort them, then find first larger number than my number. Then use that (or the one before) key and retrieve the lat and long
-        boolean tryDifferentApproach = false;
-        if (trip.getGpsMode() == GpsMode.CONTINUOUS && timeAndPlace != null && tryDifferentApproach) {
-
-            // TODO: or maybe use now, because when the captureCoord was called no good coords were taken
-            long searchedTime = timeAndPlace.getTimeInMillis();
-            long closestTime = 0; // redundant assignment
-            long difference = Long.MAX_VALUE;
-
-            // go through the keys (times) of the continuous data hashmap (we could have used a linked hash map - but that would be more heavy on memory)
-            for (long registeredTime: trip.getRouteData().keySet()) {
-                // get the difference between the time when we want to save the gps coords and the time when location changed
-                // if it's smaller than the difference registered before, make it the new difference
-                if (abs(searchedTime - registeredTime) < difference) {
-                    difference = abs(searchedTime - registeredTime);
-                    closestTime = registeredTime;
-                }
-            }
-
-            // TODO: NOW or - easier approach would be to have onLocationChanged to assign the last location to a global variable
-            // and read that (volatile) variable here - maybe have Location l = globalVolatileLocation;
-            // make sure in onLocationChanged that the global variable is set only if Location is not null
-            if (trip.getRouteData().containsKey(closestTime)) { // redundant check
-                double[] coordinates = trip.getRouteData().get(closestTime);
-                timeAndPlace.setLatitude(coordinates[0]);
-                timeAndPlace.setLongitude(coordinates[1]);
-            }
-            return;
-        }
-
         executorService.execute(new Runnable() {
             @Override
             public void run() {
@@ -399,25 +370,12 @@ public class MainActivity extends AppCompatActivity implements
                 } catch(InterruptedException e) {
                     e.printStackTrace();
                 }
-                // sample
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                        PackageManager.PERMISSION_GRANTED) {
-                    // TODO: maybe use data saved in onConnectionChanged (from route/continuousData) instead of getLastLocation
-                    // see tryDifferentApproach on how to do it OR just read a global volatile variable set in onLocationChanged
-                    Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-                    // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
-                    if (mLastLocation != null && timeAndPlace != null) {
-                        // if we're just redoing a task we started before (but which was interrupted)
-                        // the task might have set one of the two values
-                        if (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE) {
-                            timeAndPlace.setLatitude(mLastLocation.getLatitude());
-                        }
-                        if (timeAndPlace.getLongitude() == Utils.INITIAL_VALUE) {
-                            timeAndPlace.setLongitude(mLastLocation.getLongitude());
-                        }
-                    }
-                }// else here, TODO: no permission, so ask for the permission again
+                // sample GPS coordinates
+                // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
+                if (timeAndPlace != null) {
+                    timeAndPlace.setLatitude(mostRecentLocation.getLatitude());
+                    timeAndPlace.setLongitude(mostRecentLocation.getLongitude());
+                }
 
                 // when done sampling, go back to the original sampling interval and smallest displacement
                 setIntervalAndSmallestDisplacement(originalGpsMode);
@@ -432,14 +390,15 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        // to capture last loc for my trip, just use
-        // Location l= LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
 
         // I check every time the Google API client connects - because user can revoke permission on newer Android APIs
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED) {
 
+            // permission had already been granted
+            startLocationUpdates();
+
+        } else { // permission had not been granted
             // Should we show an explanation?
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -457,9 +416,8 @@ public class MainActivity extends AppCompatActivity implements
                         MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
                 // app-defined int constant. The callback method gets the result of the request.
             }
-        } else { // permission had already been granted
-            startLocationUpdates();
         }
+
     }
 
     @Override
@@ -496,7 +454,8 @@ public class MainActivity extends AppCompatActivity implements
         //TODO: get rid of this
         Log.i("MainActivity", "GoogleApiClient connection has been suspend");
         // attempt to re-establish the connection.
-        mGoogleApiClient.connect();
+        //stopLocationUpdates();
+        //mGoogleApiClient.connect();
     }
 
     @Override
@@ -506,6 +465,10 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onLocationChanged(Location location) {
+        // TODO: do I need to check Location is null ?
+        mostRecentLocation.setLatitude(location.getLatitude());
+        mostRecentLocation.setLongitude(location.getLongitude());
+
         trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
     }
 
@@ -575,8 +538,16 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected void finishTimeAndPlaces(List<TimeAndPlace> timeAndPlaceList) {
+
+        // onStop happened, thread was interrupted (did not capture lat or long or neither), then onStart came and
+        // this method was called. To finish up the coordinates, use mostRecentLocation (it will be the one from just before the interruption).
         for (TimeAndPlace timeAndPlace: timeAndPlaceList) {
-            captureCoordinates(timeAndPlace);
+            if (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE) {
+                timeAndPlace.setLatitude(mostRecentLocation.getLatitude());
+            }
+            if (timeAndPlace.getLongitude() == Utils.INITIAL_VALUE) {
+                timeAndPlace.setLongitude(mostRecentLocation.getLongitude());
+            }
         }
     }
 
