@@ -15,6 +15,7 @@
     <string name="checkbox_tracking_text">
         Select this checkbox, if you\'d like to start the continuous GPS sampling mode, which uses a lot of battery.
     </string>
+    <string name="gps_fix_message">Please, press again after the GPS signal has fixed.</string>
     <string name="comments_message_title">Additional information</string>
     <string name="user_gps_message">You can insert here the GPS coordinates from your own, separate GPS device.</string>
     <string name="comments_message">You can also add comments.</string>

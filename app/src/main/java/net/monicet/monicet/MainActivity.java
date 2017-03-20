@@ -30,6 +30,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -49,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static android.R.string.no;
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 import static java.lang.Math.abs;
 
 public class MainActivity extends AppCompatActivity implements
@@ -375,6 +377,15 @@ public class MainActivity extends AppCompatActivity implements
                 if (timeAndPlace != null) {
                     timeAndPlace.setLatitude(mostRecentLocation.getLatitude());
                     timeAndPlace.setLongitude(mostRecentLocation.getLongitude());
+//                    try {
+//                        timeAndPlace.setLatitude(LocationServices.FusedLocationApi.getLastLocation(
+//                                mGoogleApiClient).getLatitude());
+//                        timeAndPlace.setLongitude(LocationServices.FusedLocationApi.getLastLocation(
+//                              mGoogleApiClient).getLongitude());
+//                    } catch (SecurityException e) {
+//
+//                    }
+
                 }
 
                 // when done sampling, go back to the original sampling interval and smallest displacement
@@ -741,29 +752,36 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mGoogleApiClient.isConnected()) {
+                    // create a sighting here and now
+                    // TODO: This is needed because we want to save time and gps to it from when ADD was pressed
+                    trip.getSightings().add(new Sighting());
 
-                // create a sighting here and now
-                // TODO: This is needed because we want to save time and gps to it from when ADD was pressed
-                trip.getSightings().add(new Sighting());
+                    // a sighting was created above, so the trip will have at least one
 
-                // a sighting was created above, so the trip will have at least one
+                    // TODO: this is connected only to the initial value?.. it should be ok, a reference? enum ..TEST
+                    // TODO: give it a few seconds for the gps to start up?
+                    // TODO: sample (and save Sighting instance start GPS, date and time)
+                    // TODO: what if I press BACK and it's still sampling ... where is it sampling to?
+                    //set time
+                    trip.getLastCreatedSighting().
+                            getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                    //set coordinates (place)
+                    captureCoordinates(trip.getLastCreatedSighting().getStartTimeAndPlace());
 
-                // TODO: this is connected only to the initial value?.. it should be ok, a reference? enum ..TEST
-                // TODO: give it a few seconds for the gps to start up?
-                // TODO: sample (and save Sighting instance start GPS, date and time)
-                // TODO: what if I press BACK and it's still sampling ... where is it sampling to?
-                //set time
-                trip.getLastCreatedSighting().
-                        getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                //set coordinates (place)
-                captureCoordinates(trip.getLastCreatedSighting().getStartTimeAndPlace());
-
-                // and link the openedSighting to it (most recently added sighting),
-                // so that the save button knows where to save
-                openSighting(
-                        getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
-                        trip.getLastCreatedSighting()
-                );
+                    // and link the openedSighting to it (most recently added sighting),
+                    // so that the save button knows where to save
+                    openSighting(
+                            getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
+                            trip.getLastCreatedSighting()
+                    );
+                } else {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.gps_fix_message,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
             }
         });
     }

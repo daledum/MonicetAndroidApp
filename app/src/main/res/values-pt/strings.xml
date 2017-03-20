@@ -53,4 +53,5 @@
     <string name="delete_sighting_message">Você tem certeza que deseja apagar este avistamento?</string>
     <string name="double_quote"></string>
     <string name="send_sightings_title_message">Você tem certeza que deseja enviar esses avistamentos?</string>
+    <string name="gps_fix_message">Por favor, pressione novamente após que o sinal GPS se ter fixado.</string>
 </resources>
