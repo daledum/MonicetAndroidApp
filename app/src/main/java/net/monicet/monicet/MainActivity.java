@@ -30,7 +30,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -44,14 +43,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 import static android.R.string.no;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 import static java.lang.Math.abs;
+import static java.lang.Math.log;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
@@ -67,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
     private GoogleApiClient mGoogleApiClient;
-    private LocationRequest mLocationRequest;
+    private volatile LocationRequest mLocationRequest;
     private volatile Location mostRecentLocation;
 
     {
@@ -80,6 +83,11 @@ public class MainActivity extends AppCompatActivity implements
     // single thread executor for capturing gps coordinates
     ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    protected boolean gpsSignalIsFixed() {
+        return (mostRecentLocation.getLatitude() != Utils.INITIAL_VALUE &&
+                mostRecentLocation.getLongitude() != Utils.INITIAL_VALUE);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,8 +98,9 @@ public class MainActivity extends AppCompatActivity implements
             // if google play services are OK
             getUserCredentials();
 
-            buildGoogleApiClient();
+            // create loc request so that when google api client connects - shouldn't matter, it's ready (does it onStart)
             createLocationRequest();
+            buildGoogleApiClient();
 
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
@@ -124,7 +133,8 @@ public class MainActivity extends AppCompatActivity implements
         // If executor service has been made null (I'm coming here after onStop())
         // make a new one
         if (executorService == null) {
-            executorService = Executors.newSingleThreadExecutor();
+            executorService = Executors.newSingleThreadExecutor(); // this is for future coordinate capturing tasks
+
             // Finish off any tasks that might have been interrupted in onStop()
             // Call this before re-connecting the google api client (the client will set mostRecentLocation again)
             finishTimeAndPlaces(getUnfinishedTimeAndPlaces());
@@ -138,12 +148,11 @@ public class MainActivity extends AppCompatActivity implements
 
         executorService.shutdownNow(); // this might come after .shutdown() on the same object
         executorService = null;
-        // if threads were interrupted - they might have left the interval in FAST mode
-        // turn it back to its original state (so that when we come back, our location request doesn't work too fast)
-        setIntervalAndSmallestDisplacement(trip.getGpsMode());
-        // in onStart(), in case threads haven't finished writing the gps values to the variables, FAST interval will set again
 
+        // if threads were interrupted - they might have left the interval in FAST mode
+        // interval and distance get turned back on to their original state in onStart (when google api client connects..in onConnected)
         stopLocationUpdates();
+
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
@@ -361,16 +370,29 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void run() {
 
-                GpsMode originalGpsMode = trip.getGpsMode();
-                // here, changing the interval and smallest distance, for fast sampling
-                setIntervalAndSmallestDisplacement(GpsMode.SAMPLING_FAST);
+                // here, changing the interval and smallest distance, for fast sampling.
+                // It must be called on thread which registered the location request
+                RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
+                    @Override
+                    public void run() {
+                        startLocationUpdates(GpsMode.SAMPLING_FAST);
+                    }
+                }, null);
+
+                runOnUiThread(task);
+                // wait for the task to finish (wait between 0 and 10 seconds)
+                try {
+                    task.get(10, TimeUnit.SECONDS);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    task.cancel(false);
+                }
 
                 // wait for the location to capture something (2 seconds)
-                // what if user was stationary throughout... then mLastLocation will be null?
+                // what if user was stationary throughout
                 try {
                     Thread.sleep(2 * GpsMode.SAMPLING_FAST.getIntervalInMillis());
                 } catch(InterruptedException e) {
-                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
                 }
                 // sample GPS coordinates
                 // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
@@ -389,7 +411,18 @@ public class MainActivity extends AppCompatActivity implements
                 }
 
                 // when done sampling, go back to the original sampling interval and smallest displacement
-                setIntervalAndSmallestDisplacement(originalGpsMode);
+                // no need to wait for the interval to be set again, only this method, onStart and changes of GPS mode -  all do it on the same thread?
+                // and if another capture coordinate runnable is started, the new runOnUiThread will pass the runnable to the MainActivity looper,
+                // and the looper will run it after the old runOnUiThread runnable has finished
+                // onStart sets the gps mode interval and distance to the trip's values, when calling googleapiclient.connect()
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // this mode might be changed while this runnable is running by the UI thread, runnable is run on the UI thread, but
+                        // just to be on the safe side GpsMode is volatile
+                        startLocationUpdates(trip.getGpsMode());
+                    }
+                });
             }
         });
     }
@@ -406,8 +439,8 @@ public class MainActivity extends AppCompatActivity implements
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED) {
 
-            // permission had already been granted
-            startLocationUpdates();
+            // permission had already been granted, start requestLocationUpdates with interval and distance from the trip's gps mode (its normal mode)
+            startLocationUpdates(trip.getGpsMode());
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -444,7 +477,7 @@ public class MainActivity extends AppCompatActivity implements
 
                     // permission was granted, yay! Do the
                     // location-related task you need to do.
-                    startLocationUpdates();
+                    startLocationUpdates(trip.getGpsMode());
 
                 } else {
                     // permission denied, boo! Disable the
@@ -476,23 +509,51 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onLocationChanged(Location location) {
+
         // TODO: do I need to check Location is null ?
         mostRecentLocation.setLatitude(location.getLatitude());
         mostRecentLocation.setLongitude(location.getLongitude());
 
         trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
+        //test - get rid of this
+        trip.addRouteData(System.currentTimeMillis()+(long)(2550-300+400/300*89*log(3.14)),
+                1, mLocationRequest.getInterval());
+        //test ends here
+
+        // we are here - therefore signal has fixed - use igpsfixed in addbuttonlogic or if view is invisible
+        //TODO: when this text disappears, the gps signal is fixed - make this view invisible, if visible
+        // 1 - make View invisible
+        // 2 - set the sampling to the trip's gps mode value
+        // if not within captureCoordinates/SAMPLING_FAST mode (whose interval is different to the gps fixing one)
+        // is this ok - runs on UI thread ?
+        if (mLocationRequest.getInterval() == Utils.GPS_FIXING_INTERVAL_IN_MILLIS) {
+            startLocationUpdates(trip.getGpsMode());
+        }// else - inside captureCoord - which calls the same method as above (set the interval and distance to the trip's ones)
     }
 
-    protected void startLocationUpdates() {
+    protected void startLocationUpdates(GpsMode gpsMode) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED) {// redundant check - android studio complains otherwise
+                PackageManager.PERMISSION_GRANTED && // redundant check - android studio complains otherwise
+                mGoogleApiClient.isConnected()) {// Doc:  It must be connected at the time of this call
+
+            // set the values
+            mLocationRequest.setSmallestDisplacement(gpsMode.getSmallestDisplacementInMeters());
+            mLocationRequest.setInterval(gpsMode.getIntervalInMillis());
+
+            // re/start location updates
+            // this interval set here could be changed while inside the captureCoord method, if a late connection, if a change of GpsMode, in onConnected
+            // Doc: This method is suited for the foreground use cases, more specifically for requesting locations while being connected to GoogleApiClient.
+            // Doc: Any previous LocationRequests registered on this LocationListener will be replaced
+
             LocationServices.FusedLocationApi.
                     requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
         }
     }
 
     protected void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+        if (mGoogleApiClient.isConnected()) { // Doc:  It must be connected at the time of this call
+            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+        }
     }
 
     public boolean areGooglePlayServicesInstalled() {
@@ -583,9 +644,10 @@ public class MainActivity extends AppCompatActivity implements
     protected void finishAllCaptureCoordsTasks() {
         // shutdown executor service dealing with capturing gps coordinates
         executorService.shutdown();
-        // loops until it terminates all tasks - test this
+        // loops until it terminates all tasks - test this TODO: replace this with an AsyncTask - user gets notified when finished and app is finished then
+        // double tap on OK crashed the app
         boolean hasTerminated = false;
-        while (hasTerminated == false) {
+        while (!hasTerminated) {
             try {
                 // true if this executor terminated and false if the timeout elapsed before termination
                 hasTerminated = executorService.awaitTermination(1, TimeUnit.SECONDS);
@@ -606,11 +668,6 @@ public class MainActivity extends AppCompatActivity implements
             return true;
         }
         return false;
-    }
-
-    protected void setIntervalAndSmallestDisplacement(GpsMode gpsMode) {
-        mLocationRequest.setSmallestDisplacement(gpsMode.getSmallestDisplacementInMeters());
-        mLocationRequest.setInterval(gpsMode.getIntervalInMillis());
     }
 
     public void setDataDirectory() {
@@ -731,9 +788,7 @@ public class MainActivity extends AppCompatActivity implements
                 // normally we should not get to this point if no Google Play Services
                 if (((CheckBox) findViewById(R.id.checkBox_tracking_gpsmode)).isChecked()
                         && trip.getGpsMode() != GpsMode.OFF) {
-
                     trip.setGpsMode(GpsMode.CONTINUOUS);
-                    setIntervalAndSmallestDisplacement(trip.getGpsMode());
                 }
 
                 // b) - time
@@ -752,7 +807,8 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mGoogleApiClient.isConnected()) {
+                // if GPS has connected and fixed on a location - capture coordinate
+                if (mGoogleApiClient.isConnected() && gpsSignalIsFixed()) {
                     // create a sighting here and now
                     // TODO: This is needed because we want to save time and gps to it from when ADD was pressed
                     trip.getSightings().add(new Sighting());
@@ -866,6 +922,7 @@ public class MainActivity extends AppCompatActivity implements
         // returning to this app from Gmail ?
         // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
         // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
+        finish();
         // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
         // There should be a button for starting a trip and a button for adding a sighting
     }
@@ -896,12 +953,13 @@ public class MainActivity extends AppCompatActivity implements
 
             String routePrefix = "route";
             String tripPrefix = "trip";
+            long timeNowInMillis = System.currentTimeMillis();
 
-            String tripFileTitle = tripPrefix + System.currentTimeMillis();
+            String tripFileTitle = tripPrefix + timeNowInMillis;
             String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
             trip.setTripFileName(tripFileName);
 
-            String routeFileTitle = routePrefix + System.currentTimeMillis();
+            String routeFileTitle = routePrefix + timeNowInMillis;
             String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
             trip.setRouteFileName(routeFileName); // this will be written to the JSON file
 
