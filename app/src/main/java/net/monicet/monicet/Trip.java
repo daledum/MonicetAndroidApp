@@ -12,9 +12,6 @@ import static android.media.CamcorderProfile.get;
 
 public class Trip implements Serializable {
 
-    //private UserInput<GpsMode> mGpsModeUserInput;
-    private volatile GpsMode gpsMode; // volatile because different threads read it (only the UI thread writes it) - get rid of these
-
     private ArrayList<Sighting> mSightingsArray;
     private String mUserName;
     private TimeAndPlace startTimeAndPlace;
@@ -33,7 +30,6 @@ public class Trip implements Serializable {
         mUserName = "";
         startTimeAndPlace = new TimeAndPlace();
         endTimeAndPlace = new TimeAndPlace();
-        gpsMode = GpsMode.GPS_FIXING_FAST;//get rid
         mTripFileName = "";
         mRouteFileName = "";
         mRouteData = new HashMap<Long,double[]>();
@@ -58,16 +54,6 @@ public class Trip implements Serializable {
     public void setEndTimeAndPlace(TimeAndPlace vTimeAndPlace) {
         endTimeAndPlace = vTimeAndPlace;
     }
-
-    //    public UserInput<GpsMode> getGpsModeUserInput() { return mGpsModeUserInput; }
-//    public GpsMode getGpsMode() { return mGpsModeUserInput.getContent(); }
-//    public void setGpsMode(GpsMode vGpsMode) {
-//        mGpsModeUserInput.setContent(vGpsMode);
-//    }
-
-    //get rid
-    public GpsMode getGpsMode() { return gpsMode; }
-    public void setGpsMode(GpsMode vGpsMode) { gpsMode = vGpsMode; } // synchronized - NO, only one thread (main UI thread sets it)
 
     public String getTripFileName() { return mTripFileName; }
     public void setTripFileName(String vTripFileName) { mTripFileName = vTripFileName; }

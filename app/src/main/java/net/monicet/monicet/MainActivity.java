@@ -23,9 +23,9 @@ import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.NumberPicker;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -41,6 +41,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -52,7 +53,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import static android.R.attr.value;
 import static android.R.string.no;
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
+import static android.os.Build.VERSION_CODES.N;
 import static java.lang.Math.abs;
 import static java.lang.Math.log;
 
@@ -71,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private final GpsModeState gpsModeState = new GpsModeState();
     private GoogleApiClient mGoogleApiClient;
-    private volatile LocationRequest mLocationRequest;//TODO: no point for volatile here - get rid later
+    private LocationRequest mLocationRequest;//TODO: no point for volatile here - get rid later
 //    Volatile only has relevance to modifications of the variable itself, not the object it refers to.
 //    A volatile field gives you guarantees as what happens when you change it. (Not an object which it might be a reference to)
 
@@ -90,6 +94,40 @@ public class MainActivity extends AppCompatActivity implements
     protected boolean gpsSignalIsFixed() {
         return (mostRecentLocation.getLatitude() != Utils.INITIAL_VALUE &&
                 mostRecentLocation.getLongitude() != Utils.INITIAL_VALUE);
+    }
+
+    protected void gpsUserIntervalLogic() {
+
+        List<Long> intervalValues = new ArrayList<Long>(GpsMode.values().length);
+
+        for (GpsMode gpsMode: GpsMode.values()) {
+            // take only the intervals equal or larger than one minute
+            if (gpsMode.getIntervalInMillis() >= Utils.ONE_MINUTE_IN_MILLIS) {
+                intervalValues.add(gpsMode.getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS);
+            }
+        }
+        Collections.sort(intervalValues);
+
+        int i = 0;
+        int size = intervalValues.size();
+        String[] displayedValues = new String[size];
+        for (i = 0; i < size; i++) {
+            displayedValues[i] = String.valueOf(intervalValues.get(i));
+        }
+
+        for (i = 0; i < displayedValues.length; i++) {
+            if (displayedValues[i].equals(String.valueOf(gpsModeState.getUserParentGpsMode().
+                    getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS))) {
+                break;
+            }
+        }
+
+        NumberPicker interval = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+        interval.setMinValue(0);
+        interval.setMaxValue(displayedValues.length - 1);
+        interval.setDisplayedValues(displayedValues);
+        // set the default value (see constructor of gpsmodestate)
+        interval.setValue(i);
     }
 
     @Override
@@ -125,7 +163,6 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             //dialog
             // trip is by default on SLOW, no Google Play Services, so switch to OFF
-            trip.setGpsMode(GpsMode.OFF);// TODO: now - maybe the user_interval should become -1 here (or 0)
             gpsModeState.setUserParentGpsMode(null);
             finish();
         }
@@ -224,8 +261,8 @@ public class MainActivity extends AppCompatActivity implements
 
         // hide START button
         findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
-        // hide GPS mode checkbox
-        findViewById(R.id.checkBox_tracking_gpsmode).setVisibility(View.INVISIBLE);
+        // hide user GPS interval box
+        findViewById(R.id.gps_user_interval_box).setVisibility(View.INVISIBLE);
         // hide BACK button
         findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
         // hide SAVE button
@@ -246,6 +283,11 @@ public class MainActivity extends AppCompatActivity implements
             // show sightings list view, if the trip has any sightings
             findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
             findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+        }
+
+        // show the "wait for gps signal to fix" message, if gps signal hasn't fixed
+        if (!gpsSignalIsFixed()) {
+            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.VISIBLE);
         }
 
         // update sighting adapter
@@ -380,11 +422,10 @@ public class MainActivity extends AppCompatActivity implements
                 RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
                     @Override
                     public void run() {
-                        // TODO: now - maybe I should gpsMode = .SAMPLING, then call startLocationUpdates, which uses the gpsModes getInterval
-                        startLocationUpdates(GpsMode.SAMPLING_FAST);
-                        //gpsModeState.setSamplingGpsMode(GpsModeX.SAMPLING);
-                        // no argument for startLocationUpdates()...always uses .getSamplingGpsMode
-                        //startLocationUpdates(gpsModeState.getSamplingGpsMode());//should this set the currentGpsMode, too
+
+                        //startLocationUpdates(.SAMPLING_FAST);//get rid
+                        gpsModeState.setSamplingGpsMode(GpsMode.SAMPLING);
+                        startLocationUpdates();
                     }
                 }, null);
 
@@ -399,8 +440,7 @@ public class MainActivity extends AppCompatActivity implements
                 // wait for the location to capture something (2 seconds)
                 // what if user was stationary throughout
                 try {
-                    Thread.sleep(2 * GpsMode.SAMPLING_FAST.getIntervalInMillis());//TODO:
-                    //Thread.sleep(2 * GpsModeX.SAMPLING.getIntervalInMillis());
+                    Thread.sleep(2 * GpsMode.SAMPLING.getIntervalInMillis());
                 } catch(InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -440,9 +480,9 @@ public class MainActivity extends AppCompatActivity implements
                         // a - If not, that means the gps mode was changed while I was doing my thing. It could have only gone into user mode from
                         // the fixing mode, or the user interval value could have changed
                         // b - if it's still the sampling mode, go back into the original mode
-                        startLocationUpdates(trip.getGpsMode());
-                        //gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
-                        //startLocationUpdates();// start loc always works with sampling mode
+                        //startLocationUpdates(was trip get gps mode);//get rid
+                        gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
+                        startLocationUpdates();
                     }
                 });
             }
@@ -462,7 +502,8 @@ public class MainActivity extends AppCompatActivity implements
                 PackageManager.PERMISSION_GRANTED) {
 
             // permission had already been granted, start requestLocationUpdates with interval and distance from the trip's gps mode (its normal mode)
-            startLocationUpdates(trip.getGpsMode());// no argument needed here
+            // was trip get gps mode
+            startLocationUpdates();
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -497,15 +538,13 @@ public class MainActivity extends AppCompatActivity implements
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-                    // permission was granted, yay! Do the
-                    // location-related task you need to do.
-                    startLocationUpdates(trip.getGpsMode());// remove argument
+                    // permission was granted, yay! Do the location-related task you need to do.
+                    startLocationUpdates();
 
                 } else {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
-                    trip.setGpsMode(GpsMode.OFF);
-                    //gpsModeState.setUserParentGpsMode(null);
+                    gpsModeState.setUserParentGpsMode(null);
                     finish();
                 }
                 return;
@@ -534,20 +573,23 @@ public class MainActivity extends AppCompatActivity implements
     public void onLocationChanged(Location location) {
 
         // this means that I'm in fixing...which ends here, the first time coordinates are captured
+        // so, get rid of the "wait for gps to fix" text
+        findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
+
         // captureCoords works with currentParentGpsMode - when it does its job, it puts the sampling mode back into
         // the currentParentGpsMode
-        if (gpsModeState.getCurrentParentGpsMode() == GpsModeX.FIXING) {//if (!gpsSignalIsFixed())
-            // so, switch to the user mode (which might have been changed in the meantime)
+        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) {//if (!gpsSignalIsFixed())
+            // so, switch to the latest user mode (which might have been changed during UI operations)
             gpsModeState.setCurrentParentGpsMode(gpsModeState.getUserParentGpsMode());
 
             // also, if I'm not currently in the fast sampling mode (inside captureCoords)
-            if (gpsModeState.getSamplingGpsMode() != GpsModeX.SAMPLING) {
+            if (gpsModeState.getSamplingGpsMode() != GpsMode.SAMPLING) {
                 // make sampling mode be the parent mode and re-start sampling
-                //gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
-                //startLocationUpdates();
+                gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
+                startLocationUpdates();
             }//else - captureCoord sets the sampling mode as the currentParentMode and restarts startLocUpdates anyway
         } // else - I was not in fixing, that means I was in user mode, so captureCoords will deal with this, if it's running now
-        // - otherwise, I changed the mode and restared loc updates the when user changed the interval
+        // - otherwise, I changed the mode and restarted loc updates the when user changed the interval
 
         // TODO: do I need to check Location is null ?
         mostRecentLocation.setLatitude(location.getLatitude());
@@ -559,32 +601,15 @@ public class MainActivity extends AppCompatActivity implements
                 1, mLocationRequest.getInterval());
         //test ends here
 
-        // we are here - therefore signal has fixed - use igpsfixed in addbuttonlogic or if view is invisible
-        //TODO: when this text disappears, the gps signal is fixed - make this view invisible, if visible
-        // 1 - make View invisible
-        // 2 - set the sampling to the trip's gps mode value
-        // if not within captureCoordinates/SAMPLING_FAST mode (whose interval is different to the gps fixing one)
-        // is this ok - runs on UI thread ?
-        // TODO: if this is the first time I'm here, that means that I'm either in FIXING or in SAMPLING...
-        // if I am in sampling, no worries...sampling will change the trip's mode to what it should be
-        // but, if I am in FIXING mode, I should stop fixing and go into user mode
-
-        // get rid
-        if (mLocationRequest.getInterval() == GpsMode.GPS_FIXING_FAST.getIntervalInMillis()) {// I might be in sampling mode....
-            startLocationUpdates(trip.getGpsMode());
-        }// else - inside captureCoord - which calls the same method as above (set the interval and distance to the trip's ones)
-        // up to here
     }
 
-    protected void startLocationUpdates(GpsMode gpsMode) {// no argument, just use samplingGpsMode.getI
+    protected void startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED && // redundant check - android studio complains otherwise
                 mGoogleApiClient.isConnected()) {// Doc:  It must be connected at the time of this call
 
             // set the values
-            mLocationRequest.setSmallestDisplacement(gpsMode.getSmallestDisplacementInMeters());//get rid
-            mLocationRequest.setInterval(gpsMode.getIntervalInMillis());// get rid
-            //mLocationRequest.setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis());
+            mLocationRequest.setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis());
 
             // re/start location updates
             // this interval set here could be changed while inside the captureCoord method, if a late connection, if a change of GpsMode, in onConnected
@@ -651,8 +676,8 @@ public class MainActivity extends AppCompatActivity implements
         // default location request - SLOW
         mLocationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(trip.getGpsMode().getIntervalInMillis())//TODO: now change this to sampling mode.getinterval
-                //.setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis())
+                //.setInterval(trip.getGpsMode().getIntervalInMillis())// get rid was trip get gps mode get interval
+                .setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis())
                 .setFastestInterval(1000); // 1 second
     }
 
@@ -796,6 +821,9 @@ public class MainActivity extends AppCompatActivity implements
         // set label to MONICET - START TRIP
         setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
 
+        // TODO: gps user interval view here
+        gpsUserIntervalLogic();
+
         // set animal adapter to custom list view
         ((ListView) findViewById(R.id.list_view_animals)).setAdapter(arrayAdapters[0]);
 
@@ -829,27 +857,38 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(View v) {
 
-                // a) when pressed takes the value from the tracking gpsmode checkbox
+                // a) when pressed takes the value from the gps mode interval number picker
                 // (if selected set gpsmode to continuous, trip is on SLOW by default)
                 // start of onCreate - Google Play Services might not be installed or no permission for GPS usage
                 // normally we should not get to this point if no Google Play Services
-                if (((CheckBox) findViewById(R.id.checkBox_tracking_gpsmode)).isChecked()
-                        && trip.getGpsMode() != GpsMode.OFF) {
-                    trip.setGpsMode(GpsMode.CONTINUOUS);
-                    //TODO: here check if I'm still fixing the gps, and if not startLocationUpdates(continuous)
-                }
+
                 //here get the user interval
-                // and set it userGpsMode = ...
-                // if I'm not in fixing parent mode now
-                if (gpsModeState.getCurrentParentGpsMode() != GpsModeX.FIXING) {
-                    // and I am not in sampling mode
-                    if (gpsModeState.getSamplingGpsMode() != GpsModeX.SAMPLING) {
-                        //then ... make sampling mode the current parent mode
-                        //gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
-                        // and restart location updates (which run with the sampling mode interval
-                        //startLocationUpdates();
-                    }//else, I am in sampling mode - captureCoord will make the sampling mode be the parent mode when it finishes
-                }//else, if I am in fixing mode - onLocationChanged will get the mode into user mode
+                NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                int indexOfInterval = np.getValue();
+                long intervalToCompareWith = (indexOfInterval == 0) ?
+                        Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+
+                for (GpsMode gpsMode: GpsMode.values()) {
+                    if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
+                        // set the user mode with the newly selected user mode
+                        gpsModeState.setUserParentGpsMode(gpsMode);
+                        break;
+                    }
+                }
+
+                // TODO: now DRY with onLocationChanged
+                // if I'm not in fixing parent mode now, meaning that I am in one of the user modes (the one selected most recently by the user)
+                if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
+                    // the current mode should be the new user mode
+                    gpsModeState.setCurrentParentGpsMode(gpsModeState.getUserParentGpsMode());
+
+                    if (gpsModeState.getSamplingGpsMode() != GpsMode.SAMPLING) {// and I am not in the sampling mode
+                        // make sampling mode the current parent mode
+                        gpsModeState.setSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
+                        // and restart location updates (which run on the sampling mode interval)
+                        startLocationUpdates();
+                    }// else, if in the sampling mode, captureCoordinates method (at the end) will make the sampling mode be the current mode
+                }//else, if I am in fixing mode - onLocationChanged (end of fixing mode) will get the mode into the new user mode
 
                 // b) - time
                 trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());

@@ -54,4 +54,6 @@
     <string name="double_quote"></string>
     <string name="send_sightings_title_message">Você tem certeza que deseja enviar esses avistamentos?</string>
     <string name="gps_fix_message">Por favor, pressione novamente após que o sinal GPS se ter fixado.</string>
+    <string name="gps_user_interval_text">Selecione a frequência com que deseja amostrar as coordenadas GPS. Por padrão, o dispositivo é amostrado a cada 5 minutos. A bateria é salva quando um número grande é selecionado.</string>
+    <string name="gps_fix_wait_message">O sinal de GPS está corrigindo agora. Quando este texto desaparece, você pode adicionar avistamentos.</string>
 </resources>

@@ -1,25 +1,26 @@
 package net.monicet.monicet;
 
 /**
- * Created by ubuntu on 30-01-2017.
+ * Created by ubuntu on 24-03-2017.
  */
 
 public enum GpsMode {
-    OFF(Long.MAX_VALUE, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),//its values are never used
-    GPS_FIXING_FAST(Utils.GPS_FIXING_INTERVAL_IN_MILLIS, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),
-    DEFAULT_SLOW(Utils.BATTERY_SAVING_INTERVAL_IN_MILLIS, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),
-    SAMPLING_FAST(Utils.SAMPLING_INTERVAL_IN_MILLIS, Utils.DEFAULT_SMALLEST_DISPLACEMENT_IN_M),
-    CONTINUOUS(Utils.ROUTE_BUILDING_INTERVAL_IN_MILLIS, Utils.SMALLEST_DISPLACEMENT_IN_M);
+    FIXING(2 * Utils.ONE_SECOND_IN_MILLIS),// 2 seconds for fixing the gps signal
+    SAMPLING(Utils.ONE_SECOND_IN_MILLIS),// 1 second for capturing coordinates
+    USER_1_MIN(Utils.ONE_MINUTE_IN_MILLIS), // 1 minute - this should be the default for the number picker
+    USER_5_MIN(Utils.FIVE_MINUTES_IN_MILLIS), // 5 minutes
+    USER_10_MIN(2 * Utils.FIVE_MINUTES_IN_MILLIS), // 10 minutes
+    USER_15_MIN(3 * Utils.FIVE_MINUTES_IN_MILLIS),
+    USER_20_MIN(4 * Utils.FIVE_MINUTES_IN_MILLIS),
+    USER_25_MIN(5 * Utils.FIVE_MINUTES_IN_MILLIS),
+    USER_30_MIN(6 * Utils.FIVE_MINUTES_IN_MILLIS);
+    // remember to iterate through this for your number picker, larger>60000
 
     private final long intervalInMillis;
-    private final float smallestDisplacementInMeters;
 
-    GpsMode(long vIntervalInMillis, float vSmallestDisplacementInMeters) {
+    GpsMode(long vIntervalInMillis) {
         intervalInMillis = vIntervalInMillis;
-        smallestDisplacementInMeters = vSmallestDisplacementInMeters;
     }
 
     public long getIntervalInMillis() { return intervalInMillis; }
-
-    public float getSmallestDisplacementInMeters() { return smallestDisplacementInMeters; }
 }
