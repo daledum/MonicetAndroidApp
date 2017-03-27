@@ -13,7 +13,8 @@ import static android.media.CamcorderProfile.get;
 public class Trip implements Serializable {
 
     //private UserInput<GpsMode> mGpsModeUserInput;
-    private volatile GpsMode gpsMode; // volatile because different threads read it (only the UI thread writes it)
+    private volatile GpsMode gpsMode; // volatile because different threads read it (only the UI thread writes it) - get rid of these
+
     private ArrayList<Sighting> mSightingsArray;
     private String mUserName;
     private TimeAndPlace startTimeAndPlace;
@@ -32,12 +33,10 @@ public class Trip implements Serializable {
         mUserName = "";
         startTimeAndPlace = new TimeAndPlace();
         endTimeAndPlace = new TimeAndPlace();
-        gpsMode = GpsMode.GPS_FIXING_FAST;
+        gpsMode = GpsMode.GPS_FIXING_FAST;//get rid
         mTripFileName = "";
         mRouteFileName = "";
         mRouteData = new HashMap<Long,double[]>();
-
-//        mGpsModeUserInput = new UserInput<GpsMode>(GpsMode.OFF, true);
     }
 
     public ArrayList<Sighting> getSightings() { return mSightingsArray; }
@@ -66,6 +65,7 @@ public class Trip implements Serializable {
 //        mGpsModeUserInput.setContent(vGpsMode);
 //    }
 
+    //get rid
     public GpsMode getGpsMode() { return gpsMode; }
     public void setGpsMode(GpsMode vGpsMode) { gpsMode = vGpsMode; } // synchronized - NO, only one thread (main UI thread sets it)
 
