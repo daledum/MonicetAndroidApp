@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -53,10 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
-import static android.R.attr.value;
 import static android.R.string.no;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
-import static android.os.Build.VERSION_CODES.N;
 import static java.lang.Math.abs;
 import static java.lang.Math.log;
 
@@ -89,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     // single thread executor for capturing gps coordinates
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -149,7 +147,10 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onStop() {
 
-        executorService.shutdownNow(); // this might come after .shutdown() on the same object
+        // this might come after .shutdown() or shutdownNow() on the same object
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
         executorService = null;
 
         // if threads were interrupted - they might have left the interval in FAST mode
@@ -667,20 +668,38 @@ public class MainActivity extends AppCompatActivity implements
         return timeAndPlaceList;
     }
 
-    protected void finishAllCaptureCoordsTasks() {
-        // shutdown executor service dealing with capturing gps coordinates
-        executorService.shutdown();
-        // loops until it terminates all tasks - test this TODO: replace this with an AsyncTask - user gets notified when finished and app is finished then
-        // double tap on OK crashed the app
-        boolean hasTerminated = false;
-        while (!hasTerminated) {
-            try {
-                // true if this executor terminated and false if the timeout elapsed before termination
-                hasTerminated = executorService.awaitTermination(1, TimeUnit.SECONDS);
-            } catch(InterruptedException e) {
-                e.printStackTrace();
-                hasTerminated = true; // If tasks were running or waiting, I'll deal with them in onResume
+//    protected void finishAllCaptureCoordsTasks() {
+//        // shutdown executor service dealing with capturing gps coordinates
+//        executorService.shutdown();
+//        int numberOfSeconds = 0;
+//        // loops for 20 seconds or until it terminates all tasks, whichever comes first
+//        boolean isTerminated = executorService.isTerminated();
+//        while (!isTerminated && numberOfSeconds < 20) {
+//
+//            try {
+//                // true if this executor terminated and false if the timeout elapsed before termination
+//                isTerminated = executorService.awaitTermination(1, TimeUnit.SECONDS);
+//            } catch(InterruptedException e) {
+//                e.printStackTrace();
+//                isTerminated = true; // If tasks were running or waiting, I'll deal with them in onResume
+//            }
+//
+//            numberOfSeconds++;
+//        }
+//    }
+
+    void shutdownAndAwaitTerminationOfExecutorService() {
+        executorService.shutdown(); // Disable new tasks from being submitted
+        try {
+            // Wait a while for existing tasks to terminate
+            if (!executorService.awaitTermination(20, TimeUnit.SECONDS)) {
+                executorService.shutdownNow(); // Cancel currently executing tasks
             }
+        } catch (InterruptedException ie) {
+            // (Re-)Cancel if current thread also interrupted
+            executorService.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -943,6 +962,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     public void sendButtonLogic() {
+
         findViewById(R.id.fab_send).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -955,6 +975,37 @@ public class MainActivity extends AppCompatActivity implements
                     ).show();
 
                 } else {
+
+                    final Thread sendSightingsAndShutdownTask = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
+                                    findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
+
+                                    Toast.makeText(
+                                            MainActivity.this,
+                                            R.string.send_wait_message,
+                                            Toast.LENGTH_LONG
+                                    ).show();
+                                }
+                            });
+
+                            shutdownAndAwaitTerminationOfExecutorService();
+
+                            // make sure you stop the location updates - which write
+                            // to the hashmap which is being read inside sendSightings()
+                            // stopLocationUpdates() is called in onStop(), but that's fine.
+                            // You can call it multiple times in a row.
+                            stopLocationUpdates();
+                            sendSightings();
+                            finish();
+                        }
+                    });
+
                     AlertDialog.Builder comAlertDialogBuilder =
                             new AlertDialog.Builder(MainActivity.this);
 
@@ -989,14 +1040,7 @@ public class MainActivity extends AppCompatActivity implements
                             // set the coordinates
                             captureCoordinates(trip.getEndTimeAndPlace());
 
-                            // TODO: AsyncTask which waits for all threads to finish and for sendSightings to finish
-                            // maybe progress bar?
-                            // then message OK and turn off gps, and finish()
-                            // the send sightings to file + restartMecs in an async task (user can see status and message at the end)
-                            // on result - stop gps and finish()
-                            // call capturecoordi inside asynctask so I know it's done the last thread
-                            finishAllCaptureCoordsTasks();
-                            sendSightings();
+                            sendSightingsAndShutdownTask.start();
                         }
                     });
 
@@ -1005,6 +1049,7 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
         });
+
     }
 
     public void sendSightings() {
@@ -1023,7 +1068,6 @@ public class MainActivity extends AppCompatActivity implements
         // returning to this app from Gmail ?
         // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
         // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
-        finish();
         // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
         // There should be a button for starting a trip and a button for adding a sighting
     }
@@ -1100,7 +1144,6 @@ public class MainActivity extends AppCompatActivity implements
             Gson gson = new GsonBuilder().create();
             File tripFile = new File(directory, tripFileTitle);
             FileWriter tripWriter = new FileWriter(tripFile);
-            // get rid of the empty animals ?? TODO: change this
             // jasonize the trip
             tripWriter.append(gson.toJson(trip));
             tripWriter.flush(); // Alex: redundant?

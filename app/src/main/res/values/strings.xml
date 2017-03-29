@@ -22,6 +22,7 @@
     <string name="gps_fix_wait_message">
         The GPS signal is fixing now. When this text disappears, you can add sightings.
     </string>
+    <string name="send_wait_message">Please, wait. The application will close when the data is saved.</string>
     <string name="comments_message_title">Additional information</string>
     <string name="user_gps_message">You can insert here the GPS coordinates from your own, separate GPS device.</string>
     <string name="comments_message">You can also add comments.</string>
