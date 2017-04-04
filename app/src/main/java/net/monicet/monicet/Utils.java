@@ -7,9 +7,22 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
 
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 
 /**
@@ -167,23 +180,93 @@ public final class Utils {
                     sending:
                     for (int i = 0; i < files.length; i++) {
                         wasSentOk = false;
+
                         // Establish a connection
                         // an error can appear here
-                        // TODO: check if (files[i].exists()) { }, in case it was already deleted by the receiver
-                        //then send the files via http post...one by one
-                        // an error can appear here
+                        HttpURLConnection connection = null;
+                        URL url = null;
+                        int result = 0;//was Integer
 
-                        // if response is 200 ..meaning it was sent fine // TODO: uncomment this
-                        // OR files[i] doesn't exist (it was sent and deleted by another mechanism)
-//                        if (!files[i].exists() || response == 200) {
-//                            wasSentOk = true;
-//                            if (files[i].exists()) { namesOfFilesToDelete.add(files[i].getName()); }
-//                        } else {
-//                            break sending; // exit the loop if response is not 200 and the file still exists, wasSentOk is false, so the outer while will stop
-//                        }
+                        //DataOutputStream outputStream = null;//TODO: get rid
+                        //String lineEnd = "\r\n";
+                        //String twoHyphens = "--";
+                        //String boundary =  "*****";
 
-                        if (System.currentTimeMillis() != 1111111111) {//true TODO: successfully sent (connection established etc):
-                            namesOfFilesToDelete.add(files[i].getName());//check it exists
+                        int bytesRead, bytesAvailable, bufferSize;
+                        byte[] buffer;
+                        int maxBufferSize = 1*1024*1024;
+
+                        try {
+                            url = new URL("http://infohive.org.uk/monicet/send/");
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
+
+                        if (url != null) {
+                            try {
+                                connection = (HttpURLConnection) url.openConnection();
+                                connection.setDoInput (true); // setdoinput is true by default
+                                connection.setDoOutput (true);// set it for output
+                                connection.setUseCaches (false);
+                                connection.setInstanceFollowRedirects(false);
+                                connection.setRequestMethod("POST");
+                                connection.setRequestProperty("Connection", "Keep-Alive");
+
+                                //connection.setRequestProperty("Content-Type", "multipart/formdata;boundary=" + boundary);
+
+                                // check that the file still exists - check this as late as possible
+                                if (files[i].exists()) {
+                                    DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+
+                                    //outputStream.writeBytes(twoHyphens + boundary + lineEnd);
+                                    //outputStream.writeBytes("Content-Disposition: form-data;name=\"uploadedfile\";filename=\""
+                                            ////+ dir//dir + files[i].getName()//TODO: maybe put a toast what getpath shows (with extension or not?)
+                                            //+ files[i].getPath()
+                                            //+"\""
+                                            //+ lineEnd);
+                                    //outputStream.writeBytes(lineEnd);
+
+                                    FileInputStream fileInputStream = new FileInputStream(files[i]);
+                                    bytesAvailable = fileInputStream.available();
+                                    bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                                    buffer = new byte[bufferSize];
+
+                                    // Read file
+                                    bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+                                    while (bytesRead > 0)
+                                    {
+                                        outputStream.write(buffer, 0, bufferSize);
+                                        bytesAvailable = fileInputStream.available();
+                                        bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                                        bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+                                    }
+
+                                    //outputStream.writeBytes(lineEnd);
+                                    //outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+                                    // TODO: does it really need a line end
+
+                                    // get the result
+                                    result = connection.getResponseCode();//int responseCode = connection.getResponseCode();
+
+                                    fileInputStream.close();
+                                    outputStream.flush();
+                                    outputStream.close();
+                                }
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } finally {
+                                if (connection != null) {
+                                    connection.disconnect();
+                                }
+                            }
+                        }
+
+                        if (result == HttpURLConnection.HTTP_OK) {
+                            if (files[i].exists()) {
+                                namesOfFilesToDelete.add(files[i].getName());
+                            }
                             wasSentOk = true;
                         } else {
                             break sending; // exit the loop if there are problems, wasSentOk is false, so the outer while will stop
@@ -194,7 +277,7 @@ public final class Utils {
                         // or deleteFile("filename");//myContext.deleteFile(fileName);
                         if (namesOfFilesToDelete.contains(files[i].getName())) {
 
-                            namesOfFilesToDelete.remove(files[i]);
+                            namesOfFilesToDelete.remove(files[i].getName());
                             if (files[i].exists()) {
                                 files[i].delete();
                             }

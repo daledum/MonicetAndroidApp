@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
 
-            //registerDynamicReceiver();
+            registerDynamicReceiver();//TODO: now comment when testing
 
             // create seed animals from resources,containing specie names, photos and description
             // (to feed the custom ListView ArrayAdapter)
@@ -425,25 +425,9 @@ public class MainActivity extends AppCompatActivity implements
 
                 }
 
-                // when done sampling, go back to the original sampling interval and smallest displacement
-                // no need to wait for the interval to be set again, only this method, onStart and changes of GPS mode -  all do it on the same thread?
-                // and if another capture coordinate runnable is started, the new runOnUiThread will pass the runnable to the MainActivity looper,
-                // and the looper will run it after the old runOnUiThread runnable has finished
-                // onStart sets the gps mode interval and distance to the trip's values, when calling googleapiclient.connect()
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        // this mode might be changed while this runnable is running by the UI thread, runnable is run on the UI thread, but
-                        // just to be on the safe side GpsMode is volatile
-                        // TODO: now - get back to ....1 either the user mode or 2 the fixing mode...how do I know which one is active now?
-                        // if main thread changed the mode while I was here, I should just get back to it?
-                        // let's say I interrupted the fixing mode, I went into sampling mode...no other changes were made to the mode
-
-                        // Here check if the current mode is the sampling mode... (new object)
-                        // a - If not, that means the gps mode was changed while I was doing my thing. It could have only gone into user mode from
-                        // the fixing mode, or the user interval value could have changed
-                        // b - if it's still the sampling mode, go back into the original mode
-
                         // go back into the current parent mode and restart location updates with the new interval
                         updateSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
                     }
@@ -551,10 +535,6 @@ public class MainActivity extends AppCompatActivity implements
         mostRecentLocation.setLongitude(location.getLongitude());
 
         trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
-        //test - get rid of this
-        trip.addRouteData(System.currentTimeMillis()+(long)(2550-300+400/300*89*log(3.14)),
-                1, mLocationRequest.getInterval());
-        //test ends here
 
     }
 
@@ -916,7 +896,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 // b) - time
                 trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                // and gps coords
+                // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
                 captureCoordinates(trip.getStartTimeAndPlace());
 
                 // deal with the views
@@ -1057,7 +1037,7 @@ public class MainActivity extends AppCompatActivity implements
         // TODO: create that server page (page will display all sightings for the trip, and also create a kml with the csv)
 
         saveSightingsToFile();
-        //restartSendingMechanisms();//Alex - uncomment this
+        restartSendingMechanisms();//Alex - uncomment this
 
         // TODO: Then turn off the GPS service
         // also, actually turn the gps off - make sure that onPause, when it tries to turn it off, too, works without error
@@ -1186,7 +1166,7 @@ public class MainActivity extends AppCompatActivity implements
         // although it always has one instant-run file)
 
         // first, use GCM
-        useGcmNetworkManager();
+        useGcmNetworkManager();//TODO: reinstate this
 
         // send message to receivers to try to send the files now
         // Alarm receiver and the dynamic receiver will get this message
@@ -1194,7 +1174,7 @@ public class MainActivity extends AppCompatActivity implements
         this.sendBroadcast(startIntent);//Alex MainActivity.this
 
         // secondly, use AlarmManager, hooked up to a receiver
-        useAlarmManager();
+        //useAlarmManager();//TODO: reinstate this
 
         //thirdly, use static receiver
         useStaticReceiver();
@@ -1213,13 +1193,16 @@ public class MainActivity extends AppCompatActivity implements
         // maybe pass it the application context - it only uses it for the path anyways
         // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
         // TODO: new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //maybe the thread needs to be inside scheduleOneOff
-                SendFilesTaskService.scheduleOneOff(MainActivity.this);
-            }
-        }).start();
+        // TODO: now 29 get rid of new Thread - it's already called inside a new thread
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                //maybe the thread needs to be inside scheduleOneOff
+//                SendFilesTaskService.scheduleOneOff(MainActivity.this);
+//            }
+//        }).start();
+
+        SendFilesTaskService.scheduleOneOff(MainActivity.this);
     }
 
     public void useAlarmManager() {
