@@ -27,6 +27,12 @@
     <string name="user_gps_message">You can insert here the GPS coordinates from your own, separate GPS device.</string>
     <string name="comments_message">You can also add comments.</string>
     <string name="double_quote">\"</string>
+    <string name="start_animal_quantity_message">
+        How many did you see in the beginning of the sighting?
+    </string>
+    <string name="end_animal_quantity_message">
+        How many did you see at the end of the sighting?
+    </string>
     <string name="only_one_animal_message">
         Please, select only one specie.\nOnly one number can be different from zero.
     </string>

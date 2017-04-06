@@ -277,6 +277,35 @@ public class MainActivity extends AppCompatActivity implements
         final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
         final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
 
+        final NumberPicker startQuantity = (NumberPicker)rootView.
+                findViewById(R.id.start_animal_quantity_number_picker);
+        startQuantity.setMinValue(0);
+        startQuantity.setMaxValue(99);
+        startQuantity.setValue(sighting.getAnimal().getStartQuantity());
+
+        startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                sighting.getAnimal().setStartQuantity(startQuantity.getValue());
+            }
+        });
+
+        final NumberPicker endQuantity = (NumberPicker)rootView.
+                findViewById(R.id.end_animal_quantity_number_picker);
+        endQuantity.setMinValue(0);
+        endQuantity.setMaxValue(99);
+        endQuantity.setValue(sighting.getAnimal().getEndQuantity());
+        if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
+            endQuantity.setVisibility(View.VISIBLE);
+        }
+
+        endQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                sighting.getAnimal().setEndQuantity(endQuantity.getValue());
+            }
+        });
+
         final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
         comments.setText(sighting.getUserComments());
 
@@ -1174,7 +1203,7 @@ public class MainActivity extends AppCompatActivity implements
         this.sendBroadcast(startIntent);//Alex MainActivity.this
 
         // secondly, use AlarmManager, hooked up to a receiver
-        //useAlarmManager();//TODO: reinstate this
+        useAlarmManager();//TODO: reinstate this
 
         //thirdly, use static receiver
         useStaticReceiver();
