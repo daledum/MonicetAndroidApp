@@ -13,7 +13,7 @@
 
     <LinearLayout
         android:id="@+id/gps_user_interval_box"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
@@ -21,14 +21,16 @@
 
         <TextView
             android:id="@+id/gps_user_interval_textview"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
+            android:layout_weight="4"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/gps_user_interval_text"/>
 
         <NumberPicker
             android:id="@+id/gps_user_interval_number_picker"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_gravity="center"/>
 
@@ -49,8 +51,7 @@
         android:layout_centerHorizontal="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/gps_fix_wait_message"
-        android:visibility="invisible"/>
+        android:text="@string/gps_fix_wait_message" />
 
     <LinearLayout
         android:orientation="vertical"

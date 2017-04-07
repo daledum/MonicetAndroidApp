@@ -27,6 +27,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.NumberPicker;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -73,17 +74,12 @@ public class MainActivity extends AppCompatActivity implements
 
     private final GpsModeState gpsModeState = new GpsModeState();
     private GoogleApiClient mGoogleApiClient;
-    private LocationRequest mLocationRequest;//TODO: no point for volatile here - get rid later
+    private LocationRequest mLocationRequest;
 //    Volatile only has relevance to modifications of the variable itself, not the object it refers to.
 //    A volatile field gives you guarantees as what happens when you change it. (Not an object which it might be a reference to)
 
-    private volatile Location mostRecentLocation;// TODO: no need for volatile here, either, I'm only changing it's lat and long values
-
-    {
-        mostRecentLocation = new Location("dummyprovider");
-        mostRecentLocation.setLatitude(Utils.INITIAL_VALUE);
-        mostRecentLocation.setLongitude(Utils.INITIAL_VALUE);
-    }
+    private volatile double mostRecentLocationLatitude = Utils.INITIAL_VALUE;
+    private volatile double mostRecentLocationLongitude = Utils.INITIAL_VALUE;
 
     private final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     // single thread executor for capturing gps coordinates
@@ -106,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
 
-            registerDynamicReceiver();//TODO: now comment when testing
+            registerDynamicReceiver();
 
             // create seed animals from resources,containing specie names, photos and description
             // (to feed the custom ListView ArrayAdapter)
@@ -250,13 +246,13 @@ public class MainActivity extends AppCompatActivity implements
         // show the "wait for gps signal to fix" message, if gps signal hasn't fixed (we're still in fixing mode)
         // gps signal has fixed if onLocationChanged has fired at least once (changing
         // the mostRecentLocation's lat and long to the location's lat and long..they're no longer on INITIAL_VALUE)
-        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) {
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.VISIBLE);
-        }
+//        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) {
+//            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.VISIBLE);
+//        }//get rid
 
         // update sighting adapter
         arrayAdapters[1].clear();
-        arrayAdapters[1].addAll(trip.getSightings());
+        arrayAdapters[1].addAll(trip.getSightings());//no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
         arrayAdapters[1].notifyDataSetChanged();
     }
 
@@ -432,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements
                 // wait for the location to capture something (2 seconds)
                 // what if user was stationary throughout
                 try {
-                    Thread.sleep(2 * GpsMode.SAMPLING.getIntervalInMillis());
+                    Thread.sleep(2 * GpsMode.SAMPLING.getIntervalInMillis());//TODO: tested with 2 *, it was not accurate
                 } catch(InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -441,8 +437,9 @@ public class MainActivity extends AppCompatActivity implements
                 // onStart, if unfinished TimeAndPlaces...they are filled in before starting new captureCoordinates threads
                 // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
                 if (timeAndPlace != null) {
-                    timeAndPlace.setLatitude(mostRecentLocation.getLatitude());
-                    timeAndPlace.setLongitude(mostRecentLocation.getLongitude());
+                    timeAndPlace.setLatitude(mostRecentLocationLatitude);
+                    timeAndPlace.setLongitude(mostRecentLocationLongitude);
+
 //                    try {
 //                        timeAndPlace.setLatitude(LocationServices.FusedLocationApi.getLastLocation(
 //                                mGoogleApiClient).getLatitude());
@@ -533,7 +530,6 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onConnectionSuspended(int i) {
-        //TODO: get rid of this
         Log.i("MainActivity", "GoogleApiClient connection has been suspend");
         // attempt to re-establish the connection.
         //stopLocationUpdates();
@@ -550,7 +546,13 @@ public class MainActivity extends AppCompatActivity implements
 
         // this means that I'm in fixing...which ends here, the first time coordinates are captured
         // so, get rid of the "wait for gps to fix" text
+//        TextView waitForGpsFix = (TextView) findViewById(R.id.wait_for_gps_fix_textview);
+//        if (waitForGpsFix.getVisibility() == View.VISIBLE) {
+//            waitForGpsFix.setVisibility(View.INVISIBLE);
+//        }
+        // shorter
         findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
+
 
         // gps has been fixed if this method fired, so get off the fixing mode (and if not sampling, update the interval right now)
         if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) { updateGpsModeState(); }
@@ -560,8 +562,8 @@ public class MainActivity extends AppCompatActivity implements
         // the currentParentGpsMode
 
         // TODO: do I need to check Location is null ?
-        mostRecentLocation.setLatitude(location.getLatitude());
-        mostRecentLocation.setLongitude(location.getLongitude());
+        mostRecentLocationLatitude = location.getLatitude();
+        mostRecentLocationLongitude = location.getLongitude();
 
         trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
 
@@ -651,10 +653,10 @@ public class MainActivity extends AppCompatActivity implements
         // this method was called. To finish up the coordinates, use mostRecentLocation (it will be the one from just before the interruption).
         for (TimeAndPlace timeAndPlace: timeAndPlaceList) {
             if (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE) {
-                timeAndPlace.setLatitude(mostRecentLocation.getLatitude());
+                timeAndPlace.setLatitude(mostRecentLocationLatitude);
             }
             if (timeAndPlace.getLongitude() == Utils.INITIAL_VALUE) {
-                timeAndPlace.setLongitude(mostRecentLocation.getLongitude());
+                timeAndPlace.setLongitude(mostRecentLocationLongitude);
             }
         }
     }
@@ -861,7 +863,6 @@ public class MainActivity extends AppCompatActivity implements
         // set label to MONICET - START TRIP
         setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
 
-        // TODO: gps user interval view here
         gpsUserIntervalLogic();
 
         // set animal adapter to custom list view
@@ -902,34 +903,47 @@ public class MainActivity extends AppCompatActivity implements
                 // start of onCreate - Google Play Services might not be installed or no permission for GPS usage
                 // normally we should not get to this point if no Google Play Services
 
-                //here get the user interval
-                NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
-                int indexOfInterval = np.getValue();
-                long intervalToCompareWith = (indexOfInterval == 0) ?
-                        Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+                // if GPS has connected and fixed on a location - capture coordinate
+                if (mGoogleApiClient.isConnected() &&
+                        gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
+                    //here get the user interval
+                    NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                    int indexOfInterval = np.getValue();
+                    long intervalToCompareWith = (indexOfInterval == 0) ?
+                            Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
 
-                for (GpsMode gpsMode: GpsMode.values()) {
-                    if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
-                        // set the user mode with the newly selected user mode
-                        gpsModeState.setUserParentGpsMode(gpsMode);
-                        break;
+                    for (GpsMode gpsMode: GpsMode.values()) {
+                        if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
+                            // set the user mode with the newly selected user mode
+                            gpsModeState.setUserParentGpsMode(gpsMode);
+                            break;
+                        }
                     }
+
+                    // if I'm not in fixing parent mode now, meaning that I am in one of the user
+                    // modes (the one selected most recently by the user)
+                    // update the parent mode (to the new user mode) and update interval (if not sampling)
+                    // this method can be called now if we are not in the fixing mode (made sure above)
+                    //if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) { updateGpsModeState(); }//was here initially
+                    updateGpsModeState();
+                    //else, if I am in fixing mode - onLocationChanged (end of fixing mode) will
+                    // get the mode into the new user mode
+
+                    // b) - time
+                    trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                    // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
+                    captureCoordinates(trip.getStartTimeAndPlace());
+
+                    // deal with the views
+                    showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
+                } else {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.gps_fix_message,
+                            Toast.LENGTH_LONG
+                    ).show();
                 }
 
-                // if I'm not in fixing parent mode now, meaning that I am in one of the user
-                // modes (the one selected most recently by the user)
-                // update the parent mode (to the new user mode) and update interval (if not sampling)
-                if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) { updateGpsModeState(); }
-                //else, if I am in fixing mode - onLocationChanged (end of fixing mode) will
-                // get the mode into the new user mode
-
-                // b) - time
-                trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
-                captureCoordinates(trip.getStartTimeAndPlace());
-
-                // deal with the views
-                showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
             }
         });
     }
@@ -939,33 +953,23 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // if GPS has connected and fixed on a location - capture coordinate
-                if (mGoogleApiClient.isConnected() &&
-                        gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
-                    // create a sighting here and now
-                    // This is needed because we want to save time and gps to it from when ADD was pressed
-                    trip.getSightings().add(new Sighting());
+                // create a sighting here and now
+                // This is needed because we want to save time and gps to it from when ADD was pressed
+                trip.getSightings().add(new Sighting());
 
-                    // a sighting was created above, so the trip will have at least one
-                    //set time
-                    trip.getLastCreatedSighting().
-                            getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                    //set coordinates (place)
-                    captureCoordinates(trip.getLastCreatedSighting().getStartTimeAndPlace());
+                // a sighting was created above, so the trip will have at least one
+                //set time
+                trip.getLastCreatedSighting().
+                        getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                //set coordinates (place)
+                captureCoordinates(trip.getLastCreatedSighting().getStartTimeAndPlace());
 
-                    // and link the openedSighting to it (most recently added sighting),
-                    // so that the save button knows where to save
-                    openSighting(
-                            getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
-                            trip.getLastCreatedSighting()
-                    );
-                } else {
-                    Toast.makeText(
-                            MainActivity.this,
-                            R.string.gps_fix_message,
-                            Toast.LENGTH_LONG
-                    ).show();
-                }
+                // and link the openedSighting to it (most recently added sighting),
+                // so that the save button knows where to save
+                openSighting(
+                        getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
+                        trip.getLastCreatedSighting()
+                );
             }
         });
     }
@@ -1133,6 +1137,8 @@ public class MainActivity extends AppCompatActivity implements
                         getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS));
                 routeWriter.append(" MIN");
             }
+            //TODO: now get rid testing only
+            routeWriter.append(",PRE-START GPS FIX");
             routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
 
             for (Map.Entry<Long, double[]> entry : trip.getRouteData().entrySet()) {
@@ -1195,7 +1201,7 @@ public class MainActivity extends AppCompatActivity implements
         // although it always has one instant-run file)
 
         // first, use GCM
-        useGcmNetworkManager();//TODO: reinstate this
+        useGcmNetworkManager();
 
         // send message to receivers to try to send the files now
         // Alarm receiver and the dynamic receiver will get this message
@@ -1203,7 +1209,7 @@ public class MainActivity extends AppCompatActivity implements
         this.sendBroadcast(startIntent);//Alex MainActivity.this
 
         // secondly, use AlarmManager, hooked up to a receiver
-        useAlarmManager();//TODO: reinstate this
+        useAlarmManager();
 
         //thirdly, use static receiver
         useStaticReceiver();

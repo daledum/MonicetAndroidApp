@@ -187,7 +187,7 @@ public final class Utils {
                         URL url = null;
                         int result = 0;//was Integer
 
-                        //DataOutputStream outputStream = null;//TODO: get rid
+                        //DataOutputStream outputStream = null;//? get rid
                         //String lineEnd = "\r\n";
                         //String twoHyphens = "--";
                         //String boundary =  "*****";
@@ -220,7 +220,7 @@ public final class Utils {
 
                                     //outputStream.writeBytes(twoHyphens + boundary + lineEnd);
                                     //outputStream.writeBytes("Content-Disposition: form-data;name=\"uploadedfile\";filename=\""
-                                            ////+ dir//dir + files[i].getName()//TODO: maybe put a toast what getpath shows (with extension or not?)
+                                            ////+ dir//dir + files[i].getName()//maybe put a toast what getpath shows (with extension or not?)
                                             //+ files[i].getPath()
                                             //+"\""
                                             //+ lineEnd);
