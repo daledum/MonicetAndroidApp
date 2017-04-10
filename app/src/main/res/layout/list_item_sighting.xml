@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/list_item_sighting_height">
+    android:layout_height="@dimen/smaller_height">
 
     <ImageButton
         android:layout_width="0dp"

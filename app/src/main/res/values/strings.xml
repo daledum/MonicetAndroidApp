@@ -15,12 +15,14 @@
     <string name="checkbox_tracking_text">
         Select this checkbox, if you\'d like to start the continuous GPS sampling mode, which uses a lot of battery.
     </string>
+    <string name="turn_on_gps_dialog_title"> Turn on GPS </string>
+    <string name="turn_on_gps_dialog_message">Please, turn on the GPS.</string>
     <string name="gps_user_interval_text">
         Please, select how often you want to sample GPS coordinates. By default, it samples every 5 minutes. Battery is saved when a large number is selected.
     </string>
     <string name="gps_fix_message">Please, press again after the GPS signal has fixed.</string>
     <string name="gps_fix_wait_message">
-        The GPS signal is fixing now. When this text disappears, you can add sightings.
+        Please, make sure that your GPS is turned on and set to use all available sources. When this text disappears, the GPS signal has fixed and you can start your trip.
     </string>
     <string name="send_wait_message">Please, wait. The application will close when the data is saved.</string>
     <string name="comments_message_title">Additional information</string>

@@ -5,12 +5,14 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.AsyncTask;
+import android.location.LocationManager;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -27,7 +29,6 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.NumberPicker;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -57,7 +58,6 @@ import java.util.regex.Pattern;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
-import static java.lang.Math.log;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
@@ -98,6 +98,9 @@ public class MainActivity extends AppCompatActivity implements
             // create loc request so that when google api client connects - shouldn't matter, it's ready (does it onStart)
             createLocationRequest();
             buildGoogleApiClient();
+
+            // TODO: now gps
+            if (!isGpsProviderEnabled()) { showTurnOnGpsProviderDialog(); }//testing
 
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
@@ -784,6 +787,36 @@ public class MainActivity extends AppCompatActivity implements
         interval.setValue(i);
     }
 
+    private boolean isGpsProviderEnabled() {
+        LocationManager lm = (LocationManager) MainActivity.this.
+                getSystemService(Context.LOCATION_SERVICE);
+        return lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+    }
+
+    private void showTurnOnGpsProviderDialog() {
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.turn_on_gps_dialog_title);
+        comAlertDialogBuilder.setMessage(R.string.turn_on_gps_dialog_message);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent myIntent = new Intent( Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                MainActivity.this.startActivity(myIntent);
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // dialog.dismiss();
+            }
+        });
+
+        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
     public void setDataDirectory() {
         // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
         // set directory here for the SendAndDeleteFiles Utils method
@@ -902,48 +935,49 @@ public class MainActivity extends AppCompatActivity implements
                 // (if selected set gpsmode to continuous, trip is on SLOW by default)
                 // start of onCreate - Google Play Services might not be installed or no permission for GPS usage
                 // normally we should not get to this point if no Google Play Services
+                if (isGpsProviderEnabled()) {
+                    // if GPS has connected and fixed on a location - capture coordinate
+                    if (mGoogleApiClient.isConnected() &&
+                            gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
+                        //here get the user interval
+                        NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                        int indexOfInterval = np.getValue();
+                        long intervalToCompareWith = (indexOfInterval == 0) ?
+                                Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
 
-                // if GPS has connected and fixed on a location - capture coordinate
-                if (mGoogleApiClient.isConnected() &&
-                        gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
-                    //here get the user interval
-                    NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
-                    int indexOfInterval = np.getValue();
-                    long intervalToCompareWith = (indexOfInterval == 0) ?
-                            Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
-
-                    for (GpsMode gpsMode: GpsMode.values()) {
-                        if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
-                            // set the user mode with the newly selected user mode
-                            gpsModeState.setUserParentGpsMode(gpsMode);
-                            break;
+                        for (GpsMode gpsMode: GpsMode.values()) {
+                            if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
+                                // set the user mode with the newly selected user mode
+                                gpsModeState.setUserParentGpsMode(gpsMode);
+                                break;
+                            }
                         }
+
+                        // if I'm not in fixing parent mode now, meaning that I am in one of the user
+                        // modes (the one selected most recently by the user)
+                        // update the parent mode (to the new user mode) and update interval (if not sampling)
+                        // this method can be called now if we are not in the fixing mode (made sure above)
+                        //if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) { updateGpsModeState(); }//was here initially
+                        updateGpsModeState();
+                        //else, if I am in fixing mode - onLocationChanged (end of fixing mode) will
+                        // get the mode into the new user mode
+
+                        // b) - time
+                        trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                        // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
+                        captureCoordinates(trip.getStartTimeAndPlace());
+
+                        // deal with the views
+                        showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
+                    } else {
+                        Toast.makeText(
+                                MainActivity.this,
+                                R.string.gps_fix_message,
+                                Toast.LENGTH_LONG
+                        ).show();
                     }
 
-                    // if I'm not in fixing parent mode now, meaning that I am in one of the user
-                    // modes (the one selected most recently by the user)
-                    // update the parent mode (to the new user mode) and update interval (if not sampling)
-                    // this method can be called now if we are not in the fixing mode (made sure above)
-                    //if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) { updateGpsModeState(); }//was here initially
-                    updateGpsModeState();
-                    //else, if I am in fixing mode - onLocationChanged (end of fixing mode) will
-                    // get the mode into the new user mode
-
-                    // b) - time
-                    trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                    // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
-                    captureCoordinates(trip.getStartTimeAndPlace());
-
-                    // deal with the views
-                    showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
-                } else {
-                    Toast.makeText(
-                            MainActivity.this,
-                            R.string.gps_fix_message,
-                            Toast.LENGTH_LONG
-                    ).show();
-                }
-
+                } else { showTurnOnGpsProviderDialog(); }
             }
         });
     }

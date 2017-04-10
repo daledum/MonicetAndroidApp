@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/list_item_animal_height">
+    android:layout_height="@dimen/larger_height">
 
     <NumberPicker
         android:id="@+id/animal_quantity_number_picker"

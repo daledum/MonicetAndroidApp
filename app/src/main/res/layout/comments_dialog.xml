@@ -144,7 +144,7 @@
             <NumberPicker
                 android:id="@+id/start_animal_quantity_number_picker"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/list_item_animal_height"
+                android:layout_height="@dimen/larger_height"
                 android:layout_weight="1" />
 
             <TextView
@@ -158,7 +158,7 @@
             <NumberPicker
                 android:id="@+id/end_animal_quantity_number_picker"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/list_item_animal_height"
+                android:layout_height="@dimen/larger_height"
                 android:visibility="invisible"
                 android:layout_weight="1" />
 
