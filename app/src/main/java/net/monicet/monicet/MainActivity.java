@@ -61,9 +61,9 @@ import static java.lang.Math.abs;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
+        LocationListener,//TODO: now try LocationCallback and use setmaxwaittime for batching
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        GoogleApiClient.OnConnectionFailedListener {
 
     final Trip trip = new Trip();
     final Sighting[] openedSightings = new Sighting[1]; // artifact/hack so I can use it inside anonymous classes
@@ -99,8 +99,11 @@ public class MainActivity extends AppCompatActivity implements
             createLocationRequest();
             buildGoogleApiClient();
 
-            // TODO: now gps
+            // TODO: now gps, maybe use SettingsAPI
             if (!isGpsProviderEnabled()) { showTurnOnGpsProviderDialog(); }//testing
+
+            //TODO: now remove after testing, gps, add start moment of trip
+            trip.addRouteData(System.currentTimeMillis(), 9.9, 9.9);
 
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
@@ -430,11 +433,13 @@ public class MainActivity extends AppCompatActivity implements
 
                 // wait for the location to capture something (2 seconds)
                 // what if user was stationary throughout
+                // TODO: onLocationChanged was firing 2 or 4 seconds after time of sighting, as if waiting for this period to finish
                 try {
-                    Thread.sleep(2 * GpsMode.SAMPLING.getIntervalInMillis());//TODO: tested with 2 *, it was not accurate
+                    Thread.sleep(120 * GpsMode.SAMPLING.getIntervalInMillis());//TODO: tested with 2 *, it was not accurate
                 } catch(InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+
                 // sample GPS coordinates
                 // no need to make it volatile, timeAndPlace is written only by this thread and only one of these threads can run at the same time
                 // onStart, if unfinished TimeAndPlaces...they are filled in before starting new captureCoordinates threads
@@ -556,20 +561,23 @@ public class MainActivity extends AppCompatActivity implements
         // shorter
         findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
 
+        // TODO: do I need to check Location is null ?
+        mostRecentLocationLatitude = location.getLatitude();
+        mostRecentLocationLongitude = location.getLongitude();
 
+        trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
+        //TEST TODO: now remove
+        trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(),
+                (double) gpsModeState.getSamplingGpsMode().getIntervalInMillis());
+        //remove up to here
+
+        // updateing gpsModeState was before working with the location
         // gps has been fixed if this method fired, so get off the fixing mode (and if not sampling, update the interval right now)
         if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) { updateGpsModeState(); }
         // else - I was not in fixing, that means I was in user mode, so captureCoords will deal with this, if it's running now
         // and if not I changed the mode and restarted loc updates when user changed the interval
         // captureCoord works with currentParentGpsMode - when it does its job, it puts the sampling mode back into
         // the currentParentGpsMode
-
-        // TODO: do I need to check Location is null ?
-        mostRecentLocationLatitude = location.getLatitude();
-        mostRecentLocationLongitude = location.getLongitude();
-
-        trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
-
     }
 
     protected void startLocationUpdates() {
@@ -577,6 +585,8 @@ public class MainActivity extends AppCompatActivity implements
                 PackageManager.PERMISSION_GRANTED && // redundant check - android studio complains otherwise
                 mGoogleApiClient.isConnected()) {// Doc:  It must be connected at the time of this call
 
+            // TODO: RED FLAG now, not clear (when going through onStop(), waiting for current sampling method to finish, if samplingmode is set back to
+            // current parent gps mode (yes, if executor service waits for threads to finish (if they're short)
             // set the values
             mLocationRequest.setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis());
 
@@ -1048,6 +1058,12 @@ public class MainActivity extends AppCompatActivity implements
                             // stopLocationUpdates() is called in onStop(), but that's fine.
                             // You can call it multiple times in a row.
                             stopLocationUpdates();
+                            // wait for 1 second for the above method to finish its work
+                            try {
+                                Thread.sleep(Utils.ONE_SECOND_IN_MILLIS);
+                            } catch(InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
                             sendSightings();
                             finish();
                         }
@@ -1172,7 +1188,7 @@ public class MainActivity extends AppCompatActivity implements
                 routeWriter.append(" MIN");
             }
             //TODO: now get rid testing only
-            routeWriter.append(",PRE-START GPS FIX");
+            routeWriter.append(",120 SEC SLEEP & INTERVAL");
             routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
 
             for (Map.Entry<Long, double[]> entry : trip.getRouteData().entrySet()) {
