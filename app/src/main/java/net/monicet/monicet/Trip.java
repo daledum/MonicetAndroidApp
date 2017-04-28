@@ -18,6 +18,7 @@ public class Trip implements Serializable {
     private TimeAndPlace endTimeAndPlace;
     private String mTripFileName;
     private String mRouteFileName;
+    private volatile GpsMode gpsMode;
     // continuousGpsSamples, continuousDateTime (Set): these will be empty by default.
     // If in Continuous Tracking Mode (DialogFragment Tracking YES), a lot of data will be added to the sets very often.
     // This will not be added to the JSON file.
@@ -33,6 +34,7 @@ public class Trip implements Serializable {
         mTripFileName = "";
         mRouteFileName = "";
         mRouteData = new HashMap<Long,double[]>();
+        gpsMode = GpsMode.USER_5_MIN;
     }
 
     public ArrayList<Sighting> getSightings() { return mSightingsArray; }
@@ -62,6 +64,9 @@ public class Trip implements Serializable {
     public void setRouteFileName(String vRouteFileName) {
         mRouteFileName = vRouteFileName; //only if in Tracking mode
     }
+
+    public GpsMode getGpsMode() { return gpsMode; }
+    public synchronized void setGpsMode(GpsMode vGpsMode) { gpsMode = vGpsMode; }
 
     public HashMap<Long,double[]> getRouteData() { return mRouteData; }
     public void addRouteData(long vTimeInMilliseconds, double vLatitude, double vLongitude ) {

@@ -47,6 +47,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,7 +73,6 @@ public class MainActivity extends AppCompatActivity implements
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
-    private final GpsModeState gpsModeState = new GpsModeState();
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
 //    Volatile only has relevance to modifications of the variable itself, not the object it refers to.
@@ -86,7 +86,11 @@ public class MainActivity extends AppCompatActivity implements
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private volatile int onLocationChangedNumberOfCalls = 0;
-    private volatile long timeWhenApplicationStartedInMillis = 0;
+    private volatile long timeWhenApplicationStartedInMillis = System.currentTimeMillis();
+    private volatile long timeWhenLastRunningThreadEndedInMillis = 0;
+    private volatile boolean wasMinimumAmountOfGpsFixingDone = false;
+    private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
+            new CopyOnWriteArrayList<TimeAndPlace>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,9 +110,8 @@ public class MainActivity extends AppCompatActivity implements
             if (!isGpsProviderEnabled()) { showTurnOnGpsProviderDialog(); }//testing
 
             //TODO: now remove after testing, gps, add start moment of trip
-            timeWhenApplicationStartedInMillis = System.currentTimeMillis();
             trip.addRouteData(timeWhenApplicationStartedInMillis, 9.9, 9.9);
-
+            //up to here
 
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
@@ -128,8 +131,8 @@ public class MainActivity extends AppCompatActivity implements
             initViews();
         } else {
             //dialog
-            // trip is by default on SLOW, no Google Play Services, so switch to OFF
-            gpsModeState.setUserParentGpsMode(null);
+            // trip is by default on Fixing, no Google Play Services, so switch to OFF
+            trip.setGpsMode(null);
             finish();
         }
     }
@@ -142,10 +145,6 @@ public class MainActivity extends AppCompatActivity implements
         // make a new one
         if (executorService == null) {
             executorService = Executors.newSingleThreadExecutor(); // this is for future coordinate capturing tasks
-
-            // Finish off any tasks that might have been interrupted in onStop()
-            // Call this before re-connecting the google api client (the client will set mostRecentLocation again)
-            finishTimeAndPlaces(getUnfinishedTimeAndPlaces());
         }
 
         mGoogleApiClient.connect();
@@ -160,13 +159,19 @@ public class MainActivity extends AppCompatActivity implements
         }
         executorService = null;
 
-        // if threads were interrupted - they might have left the interval in FAST mode
-        // interval and distance get turned back on to their original state in onStart (when google api client connects..in onConnected)
+        // if threads were interrupted - they might have left the interval in Sampling mode
+        // interval (and distance) get turned back on to their original state in onStart (when
+        // google api client connects..in onConnected)
         stopLocationUpdates();
 
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
+
+        // Finish off any timeAndPlaces left without coordinates when threads were interrupted (exec shutdown)
+        // this will finish up objects in timeAndPlacesWhichNeedCoordinates, too
+        finishTimeAndPlaces(getAllTimeAndPlaces());
+
         super.onStop();
     }
 
@@ -253,13 +258,6 @@ public class MainActivity extends AppCompatActivity implements
             findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
             findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
         }
-
-        // show the "wait for gps signal to fix" message, if gps signal hasn't fixed (we're still in fixing mode)
-        // gps signal has fixed if onLocationChanged has fired at least once (changing
-        // the mostRecentLocation's lat and long to the location's lat and long..they're no longer on INITIAL_VALUE)
-//        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) {
-//            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.VISIBLE);
-//        }//get rid
 
         // update sighting adapter
         arrayAdapters[1].clear();
@@ -413,77 +411,77 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void captureCoordinates(final TimeAndPlace timeAndPlace) {
 
+        timeAndPlacesWhichNeedCoordinates.add(timeAndPlace);
+
         executorService.execute(new Runnable() {
             @Override
             public void run() {
 
-                // here, changing the interval and smallest distance, for fast sampling.
-                // It must be called on thread which registered the location request
-                RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
-                    @Override
-                    public void run() {
+                // When you iterate over a CopyOnWriteArrayList,
+                // the iterator uses a snapshot of the underlying list (or set)
+                // and does not reflect any changes to the list or set after the snapshot was created.
 
-                        // go into sampling mode and restart location updates with the sampling interval
-                        updateSamplingGpsMode(GpsMode.SAMPLING);
+                // If less than 10 seconds elapsed since the most recent thread finished,
+                // therefore mostRecentLocation has fresh coordinates
+                if (System.currentTimeMillis() - timeWhenLastRunningThreadEndedInMillis <
+                        10 * Utils.ONE_SECOND_IN_MILLIS) {
+                    finishTimeAndPlaces(timeAndPlacesWhichNeedCoordinates);
+                    // Don't empty the list, you might delete stuff which was just added
+                    // Also, in this case, the thread did not change the interval (getting into the fast, SAMPLING mode), so,
+                    // don't set the endTime here (it did not freshen up mostRecentLocation)
+                } else {
+
+                    // here, changing the interval (and, if appropriate smallest distance), for fast sampling.
+                    // It must be called on thread which registered the location request
+                    RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            // go into sampling mode and restart location updates with the sampling interval
+                            startLocationUpdates(GpsMode.SAMPLING);
+                        }
+                    }, null);
+
+                    runOnUiThread(task);
+                    // wait for the task to finish (wait between 0 and 10 seconds)
+                    try {
+                        task.get(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                        task.cancel(false);
                     }
-                }, null);
 
-                runOnUiThread(task);
-                // wait for the task to finish (wait between 0 and 10 seconds)
-                try {
-                    task.get(10, TimeUnit.SECONDS);
-                } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                    task.cancel(false);
-                }
+                    // Wait for 2 minutes, so that the GPS coordinates stabilize
+                    // TODO: onLocationChanged was firing 2 or 4 seconds after time of sighting, as if waiting for that period to finish
+                    try {
+                        Thread.sleep(2 * Utils.ONE_MINUTE_IN_MILLIS);
+                    } catch(InterruptedException e) {
+                        // if this thread is for the END of the trip and is interrupted (onStop, followed by onStart, onCreate makes it 0),
+                        // the view will be the same, the end of the trip will be finished
+                        Thread.currentThread().interrupt();
+                    }
 
-                // wait for the location to capture something (2 seconds)
-                // what if user was stationary throughout
-                // TODO: onLocationChanged was firing 2 or 4 seconds after time of sighting, as if waiting for this period to finish
-                // it's not doing this for a 120 secs interval
-                // OLD starts here
-
-//                try {
-//                    Thread.sleep(120 * GpsMode.SAMPLING.getIntervalInMillis());//TODO: tested with 2 *, it was not accurate
-//                } catch(InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                }
-                // OLD ends here
-
-                // issue with 2 or 4 seconds (onLocCh was firing only after the sleep period)
-                onLocationChangedNumberOfCalls = 0;
-                // I want this thread to wait for the counter (onLocCh calls) to be 4, then I want to
-                // sample (onLocationChanged writes to mostRec in the main thread)
-                while (onLocationChangedNumberOfCalls != 5) {
-                    //do nothing
-                }
-                //onLocationChangedNumberOfCalls = 0;//new captureCoords thread makes it 0, so this is redundant
-
-                // sample GPS coordinates
-                // no need to make it volatile, timeAndPlace is written only by this thread and only one of these threads can run at the same time
-                // onStart, if unfinished TimeAndPlaces...they are filled in before starting new captureCoordinates threads
-                // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
-                if (timeAndPlace != null) {
-                    timeAndPlace.setLatitude(mostRecentLocationLatitude);
-                    timeAndPlace.setLongitude(mostRecentLocationLongitude);
-
-//                    try {
-//                        timeAndPlace.setLatitude(LocationServices.FusedLocationApi.getLastLocation(
-//                                mGoogleApiClient).getLatitude());
-//                        timeAndPlace.setLongitude(LocationServices.FusedLocationApi.getLastLocation(
-//                              mGoogleApiClient).getLongitude());
-//                    } catch (SecurityException e) {
-//
+                    // Or, as an alternative, wait for a certain number of onLocationChanged calls
+//                    onLocationChangedNumberOfCalls = 0;
+//                    while (onLocationChangedNumberOfCalls < 5) {
+//                        //do nothing
 //                    }
 
-                }
+                    // sample GPS coordinates
+                    // no need to make it volatile, timeAndPlace is written only by this thread and only one of these threads can run at the same time
+                    // TODO: onStart: if unfinished TimeAndPlaces...they are filled in before starting new captureCoordinates threads
+                    finishTimeAndPlaces(timeAndPlacesWhichNeedCoordinates);
+                    // Set the approximate (instruction below this one will add some time to this, too)
+                    // time when this thread finished
+                    timeWhenLastRunningThreadEndedInMillis = System.currentTimeMillis();
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // go back into the current parent mode and restart location updates with the new interval
-                        updateSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
-                    }
-                });
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // go back to the user gps mode and restart location updates with the new interval
+                            startLocationUpdates(trip.getGpsMode());
+                        }
+                    });
+                }
             }
         });
     }
@@ -500,9 +498,19 @@ public class MainActivity extends AppCompatActivity implements
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED) {
 
-            // permission had already been granted, start requestLocationUpdates with interval and distance from the trip's gps mode (its normal mode)
-            // was trip get gps mode
-            startLocationUpdates();
+            // permission had already been granted
+            // onStop kills threads. If it killed the doInitialGpsFix thread before the 5
+            // onLocationChanged calls, then the app was called, so it did not return to onStart (where onConnected is called)
+            // Therefore I am here (in onStart) and this means that the fixing was not done, so, do it
+            // But if onStop killed other threads after the Gps fixing was done (boolean true), I don't want to refix in onStart
+            // If app was killed, I want it to refix (boolean will be false by default)
+            // If app was not killed and it's just coming back from a break, don't refix (boolean is true)
+            startLocationUpdates(trip.getGpsMode());
+            if (!wasMinimumAmountOfGpsFixingDone) {
+                // here start a thread which gets into fast, fixing mode (short interval),
+                // waits for X number of onLocationChanged calls and after that, Y number of minutes
+                doInitialGpsFix(5, 3);
+            }
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -538,12 +546,17 @@ public class MainActivity extends AppCompatActivity implements
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                     // permission was granted, yay! Do the location-related task you need to do.
-                    startLocationUpdates();
+                    startLocationUpdates(trip.getGpsMode());//was empty
+                    if (!wasMinimumAmountOfGpsFixingDone) {
+                        // here start a thread which gets into fast, fixing mode (short interval),
+                        // waits for X number of onLocationChanged calls and after that, Y number of minutes
+                        doInitialGpsFix(5, 3);
+                    }
 
                 } else {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
-                    gpsModeState.setUserParentGpsMode(null);
+                    trip.setGpsMode(null);
                     finish();
                 }
                 return;
@@ -578,48 +591,16 @@ public class MainActivity extends AppCompatActivity implements
         trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
         //TEST TODO: now remove
         trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(),
-                (double) gpsModeState.getSamplingGpsMode().getIntervalInMillis());
+                (double) mLocationRequest.getInterval());
         //remove up to here
-
-        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING &&
-                onLocationChangedNumberOfCalls == 5) {//was System.currentTimeMillis() - timeWhenApplicationStartedInMillis > 180000
-            //onLocationChangedNumberOfCalls = 0;//captureCoordinates sets it to 0, so, this is redundant
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
-            updateGpsModeState();
-        }
-
-        //TODO: OLD starts here
-        // updating gpsModeState was before working with the location
-        // gps has been fixed if this method fired, so get off the fixing mode (and if not sampling, update the interval right now)
-//        if (gpsModeState.getCurrentParentGpsMode() == GpsMode.FIXING) {
-//            // this means that I'm in fixing...which ends here, the first time coordinates are captured
-//            // so, get rid of the "wait for gps to fix" text
-////        TextView waitForGpsFix = (TextView) findViewById(R.id.wait_for_gps_fix_textview);
-////        if (waitForGpsFix.getVisibility() == View.VISIBLE) {
-////            waitForGpsFix.setVisibility(View.INVISIBLE);
-////        }
-//            // shorter
-//            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
-//
-//            updateGpsModeState();
-//        }
-//        // else - I was not in fixing, that means I was in user mode, so captureCoords will deal with this, if it's running now
-//        // and if not I changed the mode and restarted loc updates when user changed the interval
-//        // captureCoord works with currentParentGpsMode - when it does its job, it puts the sampling mode back into
-//        // the currentParentGpsMode
-        //OLD ends here
-
     }
 
-    protected void startLocationUpdates() {
+    protected void startLocationUpdates(GpsMode gpsMode) {// was empty
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED && // redundant check - android studio complains otherwise
                 mGoogleApiClient.isConnected()) {// Doc:  It must be connected at the time of this call
 
-            // TODO: RED FLAG now, not clear (when going through onStop(), waiting for current sampling method to finish, if samplingmode is set back to
-            // current parent gps mode (yes, if executor service waits for threads to finish (if they're short)
-            // set the values
-            mLocationRequest.setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis());
+            mLocationRequest.setInterval(gpsMode.getIntervalInMillis());
 
             // re/start location updates
             // this interval set here could be changed while inside the captureCoord method, if a late connection, if a change of GpsMode, in onConnected
@@ -632,6 +613,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected void stopLocationUpdates() {
+
         if (mGoogleApiClient.isConnected()) { // Doc:  It must be connected at the time of this call
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
         }
@@ -683,71 +665,56 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected void createLocationRequest() {
-        // default location request - SLOW
         mLocationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                //.setInterval(trip.getGpsMode().getIntervalInMillis())// get rid was trip get gps mode get interval
-                .setInterval(gpsModeState.getSamplingGpsMode().getIntervalInMillis())
+                .setInterval(trip.getGpsMode().getIntervalInMillis())
                 .setFastestInterval(1000); // 1 second
+    }
+
+    // TODO: this requires knowledge about the trip object and about the sighting object
+    // should be changed so that I get an array with all timeandplaces from trip and one from each sighting
+    protected List<TimeAndPlace> getAllTimeAndPlaces() {
+
+        List<TimeAndPlace> timeAndPlaceList = new ArrayList<TimeAndPlace>();
+
+        timeAndPlaceList.add(trip.getStartTimeAndPlace());
+
+        for (Sighting sighting: trip.getSightings()) {
+            timeAndPlaceList.add(sighting.getStartTimeAndPlace());
+            timeAndPlaceList.add(sighting.getEndTimeAndPlace());
+        }
+
+        timeAndPlaceList.add(trip.getEndTimeAndPlace());
+
+        return timeAndPlaceList;
     }
 
     protected void finishTimeAndPlaces(List<TimeAndPlace> timeAndPlaceList) {
 
         // onStop happened, thread was interrupted (did not capture lat or long or neither), then onStart came and
         // this method was called. To finish up the coordinates, use mostRecentLocation (it will be the one from just before the interruption).
+
+        // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
+        // and if it is unfinished (time check is redundant for the capture threads, it definitely has a time)
         for (TimeAndPlace timeAndPlace: timeAndPlaceList) {
-            if (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE) {
-                timeAndPlace.setLatitude(mostRecentLocationLatitude);
-            }
-            if (timeAndPlace.getLongitude() == Utils.INITIAL_VALUE) {
-                timeAndPlace.setLongitude(mostRecentLocationLongitude);
+
+            // If it has a time, it means it was set (captured, activated)
+            if (timeAndPlace != null && timeAndPlace.getTimeInMillis() != Utils.INITIAL_VALUE) {
+                if (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE) {
+                    timeAndPlace.setLatitude(mostRecentLocationLatitude);
+                }
+                if (timeAndPlace.getLongitude() == Utils.INITIAL_VALUE) {
+                    timeAndPlace.setLongitude(mostRecentLocationLongitude);
+                }
             }
         }
     }
-
-    protected List<TimeAndPlace> getUnfinishedTimeAndPlaces() {
-        List<TimeAndPlace> timeAndPlaceList = new ArrayList<TimeAndPlace>();
-        // meaning that the time was set
-        if (isTimeAndPlaceUnfinished(trip.getStartTimeAndPlace())) {
-            timeAndPlaceList.add(trip.getStartTimeAndPlace());
-        }
-        for (Sighting sighting: trip.getSightings()) {
-            if (isTimeAndPlaceUnfinished(sighting.getStartTimeAndPlace())) {
-                timeAndPlaceList.add(sighting.getStartTimeAndPlace());
-            }
-            if (isTimeAndPlaceUnfinished(sighting.getEndTimeAndPlace())) {
-                timeAndPlaceList.add(sighting.getEndTimeAndPlace());
-            }
-        }
-
-        return timeAndPlaceList;
-    }
-
-//    protected void finishAllCaptureCoordsTasks() {
-//        // shutdown executor service dealing with capturing gps coordinates
-//        executorService.shutdown();
-//        int numberOfSeconds = 0;
-//        // loops for 20 seconds or until it terminates all tasks, whichever comes first
-//        boolean isTerminated = executorService.isTerminated();
-//        while (!isTerminated && numberOfSeconds < 20) {
-//
-//            try {
-//                // true if this executor terminated and false if the timeout elapsed before termination
-//                isTerminated = executorService.awaitTermination(1, TimeUnit.SECONDS);
-//            } catch(InterruptedException e) {
-//                e.printStackTrace();
-//                isTerminated = true; // If tasks were running or waiting, I'll deal with them in onResume
-//            }
-//
-//            numberOfSeconds++;
-//        }
-//    }
 
     void shutdownAndAwaitTerminationOfExecutorService() {
         executorService.shutdown(); // Disable new tasks from being submitted
         try {
             // Wait a while for existing tasks to terminate
-            if (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {//TODO: now was 20
+            if (!executorService.awaitTermination(20, TimeUnit.SECONDS)) {
                 executorService.shutdownNow(); // Cancel currently executing tasks
             }
         } catch (InterruptedException ie) {
@@ -756,42 +723,6 @@ public class MainActivity extends AppCompatActivity implements
             // Preserve interrupt status
             Thread.currentThread().interrupt();
         }
-    }
-
-    protected boolean isTimeAndPlaceUnfinished(TimeAndPlace timeAndPlace) {
-        // a task hasn't finished writing the gps coordinates to a timeAndPlace (NB the time is written immediately,
-        // on the spot, in the main UI thread and not inside the task) if the time has been set, but at least one (lat or long)
-        // hasn't been set (it's still on INITIAL_VALUE)
-        if (timeAndPlace.getTimeInMillis() != Utils.INITIAL_VALUE &&
-                (timeAndPlace.getLatitude() == Utils.INITIAL_VALUE ||
-                        timeAndPlace.getLongitude() == Utils.INITIAL_VALUE)) {
-            return true;
-        }
-        return false;
-    }
-
-//    protected boolean gpsSignalIsFixed() {
-//        return (mostRecentLocation.getLatitude() != Utils.INITIAL_VALUE &&
-//                mostRecentLocation.getLongitude() != Utils.INITIAL_VALUE);
-//    }
-
-    protected synchronized void updateGpsModeState() {
-        // the current mode should be the new user mode
-        gpsModeState.setCurrentParentGpsMode(gpsModeState.getUserParentGpsMode());
-
-        if (gpsModeState.getSamplingGpsMode() != GpsMode.SAMPLING) { // if not in the sampling mode
-            // make sampling mode the current parent mode
-            // and restart location updates (which run in with the sampling interval)
-            updateSamplingGpsMode(gpsModeState.getCurrentParentGpsMode());
-        } // else, if in the sampling mode, captureCoordinates
-        // method (at the end) will make the sampling mode be the current mode
-    }
-
-    protected synchronized void updateSamplingGpsMode(GpsMode gpsMode) {
-        // update the sampling mode
-        gpsModeState.setSamplingGpsMode(gpsMode);
-        // and restart location updates (which run on the sampling mode interval)
-        startLocationUpdates();
     }
 
     protected void gpsUserIntervalLogic() {
@@ -814,7 +745,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         for (i = 0; i < displayedValues.length; i++) {
-            if (displayedValues[i].equals(String.valueOf(gpsModeState.getUserParentGpsMode().
+            if (displayedValues[i].equals(String.valueOf(trip.getGpsMode().
                     getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS))) {
                 break;
             }
@@ -824,7 +755,7 @@ public class MainActivity extends AppCompatActivity implements
         interval.setMinValue(0);
         interval.setMaxValue(displayedValues.length - 1);
         interval.setDisplayedValues(displayedValues);
-        // set the default value (see constructor of gpsmodestate)
+        // set the default value (see constructor of gpsmodestate)//TODO: what did I mean :( TEST this
         interval.setValue(i);
     }
 
@@ -856,6 +787,72 @@ public class MainActivity extends AppCompatActivity implements
 
         comAlertDialogBuilder.create();
         comAlertDialogBuilder.show();
+    }
+
+    protected void doInitialGpsFix(final int numberOfCalls, final int numberOfMinutes) {
+
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+
+                RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        // go into fixing mode and restart location updates with the sampling interval
+                        startLocationUpdates(GpsMode.FIXING);
+                    }
+                }, null);
+
+                runOnUiThread(task);
+                // wait for the task to finish (wait between 0 and 10 seconds)
+                try {
+                    task.get(10, TimeUnit.SECONDS);
+                } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                    finish();
+                }
+
+                while (onLocationChangedNumberOfCalls < numberOfCalls) {
+                    // Wait for onLocationChanged to be called 5 times... if it's interrupted now, kill the app
+                    if (Thread.currentThread().isInterrupted()) { finish(); }
+                }
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
+                    }
+                });
+                // Allow START button to be pressed
+                wasMinimumAmountOfGpsFixingDone = true;
+
+                long timeFromAppLaunchUntilNowInMillis = System.currentTimeMillis() -
+                        timeWhenApplicationStartedInMillis;
+                // if there's less than 3 minutes since app was launched
+                if (timeFromAppLaunchUntilNowInMillis < numberOfMinutes * Utils.ONE_MINUTE_IN_MILLIS) {
+                    try {
+                        // wait for the 3 minutes to elapse
+                        Thread.sleep(numberOfMinutes * Utils.ONE_MINUTE_IN_MILLIS
+                                - timeFromAppLaunchUntilNowInMillis);
+                    } catch (InterruptedException e) {
+                        // TODO: stuff to do if interrupted
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                // Set the approximate (instruction below this one will add some time to this, too)
+                // time when this thread finished
+                timeWhenLastRunningThreadEndedInMillis = System.currentTimeMillis();
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // go back to the user gps mode and restart location updates with the new interval
+                        startLocationUpdates(trip.getGpsMode());
+                    }
+                });
+            }
+        });
     }
 
     public void setDataDirectory() {
@@ -978,8 +975,7 @@ public class MainActivity extends AppCompatActivity implements
                 // normally we should not get to this point if no Google Play Services
                 if (isGpsProviderEnabled()) {
                     // if GPS has connected and fixed on a location - capture coordinate
-                    if (mGoogleApiClient.isConnected() &&
-                            gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) {
+                    if (mGoogleApiClient.isConnected() && wasMinimumAmountOfGpsFixingDone) {
                         //here get the user interval
                         NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
                         int indexOfInterval = np.getValue();
@@ -989,22 +985,23 @@ public class MainActivity extends AppCompatActivity implements
                         for (GpsMode gpsMode: GpsMode.values()) {
                             if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
                                 // set the user mode with the newly selected user mode
-                                gpsModeState.setUserParentGpsMode(gpsMode);
+                                trip.setGpsMode(gpsMode);
                                 break;
                             }
                         }
 
-                        // if I'm not in fixing parent mode now, meaning that I am in one of the user
+                        // if I'm not in fixing or sampling modes, meaning that I am in one of the user
                         // modes (the one selected most recently by the user)
-                        // update the parent mode (to the new user mode) and update interval (if not sampling)
-                        // this method can be called now if we are not in the fixing mode (made sure above)
+                        // update the location request interval
                         //TODO: if I pressed START while in fixing: give START here mostRecentLoc's coords (5 calls did take place),
                         // if not add to list and start sampling mode
-                        //TODO: uncomment if below if working with 5 calls
-                        //if (gpsModeState.getCurrentParentGpsMode() != GpsMode.FIXING) { updateGpsModeState(); }//was here initially
-                        updateGpsModeState();
-                        //else, if I am in fixing mode - onLocationChanged (end of fixing mode) will
-                        // get the mode into the new user mode
+                        // I could not have pressed start while in SAMPLING (START and sightings only use SAMPLING)
+                        if (mLocationRequest.getInterval() != GpsMode.FIXING.getIntervalInMillis() &&
+                                mLocationRequest.getInterval() != GpsMode.SAMPLING.getIntervalInMillis()) {//TODO: move this in the for above
+                            startLocationUpdates(trip.getGpsMode());
+                        }
+                        //else, if I am in fixing or sampling mode (doInitialFix and captureCoordinates
+                        // will get the mode into the new user mode at the end
 
                         // b) - time
                         trip.getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
@@ -1098,6 +1095,7 @@ public class MainActivity extends AppCompatActivity implements
                             } catch(InterruptedException e) {
                                 Thread.currentThread().interrupt();
                             }
+                            finishTimeAndPlaces(getAllTimeAndPlaces());
                             sendSightings();
                             finish();
                         }
@@ -1212,17 +1210,17 @@ public class MainActivity extends AppCompatActivity implements
             routeWriter.append(tripFileName);
             routeWriter.append(",");
             routeWriter.append(routeFileName);
-            if (gpsModeState.getUserParentGpsMode() == null) {
+            if (trip.getGpsMode() == null) {
                 routeWriter.append(",");
                 routeWriter.append("GPS OFF");
             } else {
                 routeWriter.append(",");
-                routeWriter.append(String.valueOf(gpsModeState.getUserParentGpsMode().
+                routeWriter.append(String.valueOf(trip.getGpsMode().
                         getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS));
                 routeWriter.append(" MIN");
             }
             //TODO: now get rid testing only
-            routeWriter.append(",5 onLocCh fix & 5 onLocCh calls for capturing");
+            routeWriter.append(",5 onLocCh + 3 min for fix & 2 min for capturing");
             routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
 
             for (Map.Entry<Long, double[]> entry : trip.getRouteData().entrySet()) {
@@ -1311,16 +1309,6 @@ public class MainActivity extends AppCompatActivity implements
         // (setPersisted and updateCurrent are true). Sends the files within a minute when connected.
         // maybe pass it the application context - it only uses it for the path anyways
         // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
-        // TODO: new Thread here or try retrofit inside the sendAndDeleteFiles method ? uses a different thread?
-        // TODO: now 29 get rid of new Thread - it's already called inside a new thread
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                //maybe the thread needs to be inside scheduleOneOff
-//                SendFilesTaskService.scheduleOneOff(MainActivity.this);
-//            }
-//        }).start();
-
         SendFilesTaskService.scheduleOneOff(MainActivity.this);
     }
 
