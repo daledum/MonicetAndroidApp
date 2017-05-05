@@ -22,6 +22,7 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/user_gps_north"
                 android:layout_height="match_parent"
                 android:layout_marginTop="@dimen/activity_vertical_margin"
                 android:layout_width="0dp"
@@ -37,6 +38,7 @@
                 android:id="@+id/lat_degrees_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_degree_sign_north"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -51,6 +53,7 @@
                 android:id="@+id/lat_minutes_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_minute_sign_north"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -65,6 +68,7 @@
                 android:id="@+id/lat_seconds_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_second_sign_north"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -78,6 +82,7 @@
             android:layout_height="wrap_content">
 
             <TextView
+                android:id="@+id/user_gps_west"
                 android:layout_height="match_parent"
                 android:layout_width="0dp"
                 android:layout_weight="1"
@@ -93,6 +98,7 @@
                 android:id="@+id/long_degrees_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_degree_sign_west"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -107,6 +113,7 @@
                 android:id="@+id/long_minutes_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_minute_sign_west"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
@@ -121,6 +128,7 @@
                 android:id="@+id/long_seconds_edit_text" />
 
             <TextView
+                android:id="@+id/user_gps_second_sign_west"
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="wrap_content"

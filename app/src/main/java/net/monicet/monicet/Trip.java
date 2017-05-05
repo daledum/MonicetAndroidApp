@@ -13,28 +13,44 @@ import static android.media.CamcorderProfile.get;
 public class Trip implements Serializable {
 
     private ArrayList<Sighting> mSightingsArray;
+    private long mId;
     private String mUserName;
     private TimeAndPlace startTimeAndPlace;
     private TimeAndPlace endTimeAndPlace;
-    private String mTripFileName;
-    private String mRouteFileName;
     private volatile GpsMode gpsMode;
-    // continuousGpsSamples, continuousDateTime (Set): these will be empty by default.
-    // If in Continuous Tracking Mode (DialogFragment Tracking YES), a lot of data will be added to the sets very often.
-    // This will not be added to the JSON file.
-    // A file with the appropriate extension (TRK, GPX, KML, KMZ, PLT) will be created/saved/sent
-    // and its name will be assigned to to the routeFileName variable, which will appear in the JSON file.
-    private transient HashMap<Long,double[]> mRouteData;//or use a map instead of double[]
+
+    public class MyFile {
+        private String fileTitle;
+        private AllowedFileExtension fileExtension;
+
+        private MyFile() {
+            fileTitle = "";
+            fileExtension = AllowedFileExtension.JSON;
+        }
+
+        public String getFileTitle() { return fileTitle; }
+        public void setFileTitle(String vFileTitle) { fileTitle = vFileTitle; }
+
+        public AllowedFileExtension getFileExtension() { return fileExtension; }
+        public void setFileExtension(AllowedFileExtension vFileExtension) {
+            fileExtension = vFileExtension;
+        }
+    }
+
+    final private MyFile tripFile;
+    final private MyFile routeFile;
 
     public Trip() {
         mSightingsArray = new ArrayList<Sighting>();
+        mId = 0;
         mUserName = "";
         startTimeAndPlace = new TimeAndPlace();
         endTimeAndPlace = new TimeAndPlace();
-        mTripFileName = "";
-        mRouteFileName = "";
-        mRouteData = new HashMap<Long,double[]>();
+        //mRouteData = new HashMap<Long,double[]>();// get rid
         gpsMode = GpsMode.USER_5_MIN;
+
+        tripFile = new MyFile();
+        routeFile = new MyFile();
     }
 
     public ArrayList<Sighting> getSightings() { return mSightingsArray; }
@@ -43,6 +59,9 @@ public class Trip implements Serializable {
         //if (mSightingsArray.size() == 0) { return null; }//TODO: should I uncomment this?
         return mSightingsArray.get(mSightingsArray.size() - 1);
     }
+
+    public long getId() { return mId; }
+    public void setId(long vId) { mId = vId; }
 
     public String getUserName() { return mUserName; }
     public void setUserName(String vUserName) { mUserName = vUserName; }
@@ -57,20 +76,10 @@ public class Trip implements Serializable {
         endTimeAndPlace = vTimeAndPlace;
     }
 
-    public String getTripFileName() { return mTripFileName; }
-    public void setTripFileName(String vTripFileName) { mTripFileName = vTripFileName; }
-
-    public String getRouteFileName() { return mRouteFileName; }
-    public void setRouteFileName(String vRouteFileName) {
-        mRouteFileName = vRouteFileName; //only if in Tracking mode
-    }
-
     public GpsMode getGpsMode() { return gpsMode; }
     public synchronized void setGpsMode(GpsMode vGpsMode) { gpsMode = vGpsMode; }
 
-    public HashMap<Long,double[]> getRouteData() { return mRouteData; }
-    public void addRouteData(long vTimeInMilliseconds, double vLatitude, double vLongitude ) {
-        mRouteData.put(vTimeInMilliseconds, new double[]{vLatitude,vLongitude});
-    }
+    public MyFile getTripFile() { return tripFile; }
+    public MyFile getRouteFile() { return routeFile; }
 
 }

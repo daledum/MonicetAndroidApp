@@ -40,11 +40,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -57,8 +59,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import static android.R.attr.path;
+import static android.R.attr.type;
 import static android.R.string.no;
 import static java.lang.Math.abs;
+import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
@@ -67,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements
         GoogleApiClient.OnConnectionFailedListener {
 
     final Trip trip = new Trip();
+    final HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();// To create TRK, GPX, KML, KMZ, PLT files on the server
     final Sighting[] openedSightings = new Sighting[1]; // artifact/hack so I can use it inside anonymous classes
     final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();
     final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];
@@ -89,6 +95,8 @@ public class MainActivity extends AppCompatActivity implements
     private volatile long timeWhenApplicationStartedInMillis = System.currentTimeMillis();
     private volatile long timeWhenLastRunningThreadEndedInMillis = 0;
     private volatile boolean wasMinimumAmountOfGpsFixingDone = false;
+    private volatile boolean wasSendButtonPressed = false; // Get rid of volatile, if not using a separate thread
+    private volatile boolean wereSendingMechanismsStarted = false; // Get rid of volatile, if not using a separate thread
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
 
@@ -110,11 +118,14 @@ public class MainActivity extends AppCompatActivity implements
             if (!isGpsProviderEnabled()) { showTurnOnGpsProviderDialog(); }//testing
 
             //TODO: now remove after testing, gps, add start moment of trip
-            trip.addRouteData(timeWhenApplicationStartedInMillis, 9.9, 9.9);
+            //trip.addRouteData(timeWhenApplicationStartedInMillis, 9.9, 9.9);// get rid
+            routeData.put(timeWhenApplicationStartedInMillis, new double[]{9.9, 9.9});
             //up to here
 
             // set data directory, where files exist - used by the SEND button logic, by receivers, alarm and GCM
             setDataDirectory();
+
+            setTripIdAndFileNamesAndExtensions();
 
             registerDynamicReceiver();
 
@@ -137,6 +148,32 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // no real need for anything here...it starts fresh every time...just use onCreate
+        //if temp file exists, open trip..then delete temp file...this should take place in onCreate
+        //mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // 1 - You arrived here because you're app was interrupted (no one called finish), then run
+        // the saveAndFinish method which calls finish at the end
+        // or 2 - You are here (it is likely) because you called finish(), therefore isFinishing()
+        // returns true. SaveAndFinish() will not run (thus avoiding ANR... it calls finish() at the end)
+
+        // Check to see whether this activity is in the process of finishing, either because you
+        // called finish() on it or someone else has requested that it finished.
+
+        if (!isFinishing()) {
+            saveAndFinish();
+        }
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -147,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements
             executorService = Executors.newSingleThreadExecutor(); // this is for future coordinate capturing tasks
         }
 
-        mGoogleApiClient.connect();
+        mGoogleApiClient.connect();//TODO: move this to onCreate or onResume
     }
 
     @Override
@@ -503,14 +540,13 @@ public class MainActivity extends AppCompatActivity implements
             // onLocationChanged calls, then the app was called, so it did not return to onStart (where onConnected is called)
             // Therefore I am here (in onStart) and this means that the fixing was not done, so, do it
             // But if onStop killed other threads after the Gps fixing was done (boolean true), I don't want to refix in onStart
-            // If app was killed, I want it to refix (boolean will be false by default)
-            // If app was not killed and it's just coming back from a break, don't refix (boolean is true)
+            // If app was killed, I want it to re-fix (boolean will be false by default)
+            // If app was not killed and it's just coming back from a break, don't re-fix (boolean is true)//TODO: new change this...save it to file
             startLocationUpdates(trip.getGpsMode());
-            if (!wasMinimumAmountOfGpsFixingDone) {
-                // here start a thread which gets into fast, fixing mode (short interval),
-                // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                doInitialGpsFix(5, 3);
-            }
+            //TODO: change this logic now. If temp file exists mimimum = true before googleapi.connect
+            // here start a thread which gets into fast, fixing mode (short interval),
+            // waits for X number of onLocationChanged calls and after that, Y number of minutes
+            fixGpsSignal(5, 2);
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -547,11 +583,9 @@ public class MainActivity extends AppCompatActivity implements
 
                     // permission was granted, yay! Do the location-related task you need to do.
                     startLocationUpdates(trip.getGpsMode());//was empty
-                    if (!wasMinimumAmountOfGpsFixingDone) {
-                        // here start a thread which gets into fast, fixing mode (short interval),
-                        // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                        doInitialGpsFix(5, 3);
-                    }
+                    // here start a thread which gets into fast, fixing mode (short interval),
+                    // waits for X number of onLocationChanged calls and after that, Y number of minutes
+                    fixGpsSignal(5, 2);
 
                 } else {
                     // permission denied, boo! Disable the
@@ -570,14 +604,16 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onConnectionSuspended(int i) {
         Log.i("MainActivity", "GoogleApiClient connection has been suspend");
-        // attempt to re-establish the connection.
-        //stopLocationUpdates();
-        //mGoogleApiClient.connect();
+        // attempt to re-establish the connection?
+        // TODO: Toast informing the user
+        saveAndFinish();
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Log.i("MainActivity", "GoogleApiClient connection has failed");
+        // TODO: Toast informing the user
+        saveAndFinish();
     }
 
     @Override
@@ -588,10 +624,13 @@ public class MainActivity extends AppCompatActivity implements
         mostRecentLocationLatitude = location.getLatitude();
         mostRecentLocationLongitude = location.getLongitude();
 
-        trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());
+        //trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());// get rid
+        routeData.put(System.currentTimeMillis(),
+                new double[]{location.getLatitude(), location.getLongitude()});
         //TEST TODO: now remove
-        trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(),
-                (double) mLocationRequest.getInterval());
+        //trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(), (double) mLocationRequest.getInterval());//get rid
+        routeData.put(System.currentTimeMillis() - 1000,
+                new double[]{location.getLatitude(), (double) mLocationRequest.getInterval()});
         //remove up to here
     }
 
@@ -710,7 +749,7 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    void shutdownAndAwaitTerminationOfExecutorService() {
+    void shutdownAndAwaitTerminationOfExecutorService() {// get rid - will not need this when finishing in onPause
         executorService.shutdown(); // Disable new tasks from being submitted
         try {
             // Wait a while for existing tasks to terminate
@@ -789,7 +828,7 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.show();
     }
 
-    protected void doInitialGpsFix(final int numberOfCalls, final int numberOfMinutes) {
+    protected void fixGpsSignal(final int numberOfCalls, final int numberOfMinutes) {
 
         executorService.execute(new Runnable() {
             @Override
@@ -809,22 +848,33 @@ public class MainActivity extends AppCompatActivity implements
                 try {
                     task.get(10, TimeUnit.SECONDS);
                 } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                    finish();
+                    e.printStackTrace();
                 }
 
-                while (onLocationChangedNumberOfCalls < numberOfCalls) {
-                    // Wait for onLocationChanged to be called 5 times... if it's interrupted now, kill the app
-                    if (Thread.currentThread().isInterrupted()) { finish(); }
+                // in case this is a fresh start (and not a temp file reopened, temp files get saved only after initial GPS fix
+                if (!wasMinimumAmountOfGpsFixingDone) {
+                    while (onLocationChangedNumberOfCalls < numberOfCalls) {
+                        // Wait for onLocationChanged to be called 5 times
+                        if (Thread.currentThread().isInterrupted()) {
+                            //The interruption of threads in Java is a collaborative process (i.e. the
+                            // interrupted code must do something when asked to stop, not the interrupting code).
+                            //TODO: ditch? this will not do onPause logic (which stops googlapi and locations)
+                            // Replace finish with what you do in onPause. onConnectionSuspended/ common method
+                            finish();
+                        }
+                    }
+
+                    // Allow START button to be pressed and, if app interrupted later, allow the saving of temp files
+                    wasMinimumAmountOfGpsFixingDone = true;
                 }
 
+                // Make 'wait for GPS signal to fix' text invisible
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
                     }
                 });
-                // Allow START button to be pressed
-                wasMinimumAmountOfGpsFixingDone = true;
 
                 long timeFromAppLaunchUntilNowInMillis = System.currentTimeMillis() -
                         timeWhenApplicationStartedInMillis;
@@ -835,7 +885,7 @@ public class MainActivity extends AppCompatActivity implements
                         Thread.sleep(numberOfMinutes * Utils.ONE_MINUTE_IN_MILLIS
                                 - timeFromAppLaunchUntilNowInMillis);
                     } catch (InterruptedException e) {
-                        // TODO: stuff to do if interrupted
+                        // TODO: stuff to do if interrupted...maybe let onPause deal with this
                         Thread.currentThread().interrupt();
                     }
                 }
@@ -855,12 +905,341 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
+    protected void saveAndFinish() {
+
+        // stop executor service
+        if (!executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
+
+        // Make sure you stop the location updates - which write to the hashmap which is being read
+        // while writing to file (otherwise, concurrency error)
+        stopLocationUpdates();// This can be called multiple times in a row, without error
+
+        // TODO: get rid of this, but find a way to avoid concurrent modif exception NB TEST THIS
+        // wait for 1 second for the above method to finish its work - will OS really wait 1 sec?
+//        try {
+//            Thread.sleep(Utils.ONE_SECOND_IN_MILLIS);
+//        } catch(InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//        }
+
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+
+        // Finish off any timeAndPlaces left without coordinates when threads were interrupted (exec shutdown)
+        // this will finish up objects in timeAndPlacesWhichNeedCoordinates, too
+        finishTimeAndPlaces(getAllTimeAndPlaces());
+
+        // NB tempTrip files are not kept (deleted in onCreate)
+        // In the case the minimum GPS signal fixing was done (if it wasn't done, don't bother to save temp files)
+        if (wasMinimumAmountOfGpsFixingDone) {
+            // NB Important to keep this order. Save data first and then start sending mechanisms.
+            saveDataToFile();
+
+            // If sending mechanisms are started before the latest files are saved, they look for csv and json files
+            // and if they don't find any, they turn themselves off.
+            if (wasSendButtonPressed && !wereSendingMechanismsStarted) {
+                startSendingMechanisms();
+            }
+        }
+
+        // finish() might call onPause. If it does, isFinishing will be true, so, this method won't be called again.
+        finish();
+        // TODO: finish() stop application from being in the foreground (exit)...kills the activity and? eventually the app
+    }
+
+    protected void saveTripToFile(File finishedTripFileWithoutExtension, String status) {
+        File directory = new File(Utils.getDirectory());
+
+        // There are no temp trip files at this moment (they get deleted in onCreate, after de-jsoninizing)
+        // It makes sense to check if it got to add an extension only in the case of FINISHED files
+        if (status.equals(Utils.FINISHED) && finishedTripFileWithoutExtension != null) {
+            // Delete this file (no need to keep it, we are creating a new one)
+            finishedTripFileWithoutExtension.delete();
+        }
+
+        // file title will be either tempTrip1029282822 or finalTrip10292929292
+        String fileTitle = status + trip.getTripFile().getFileTitle();
+        File tripFile = new File(directory, fileTitle);
+
+        try {
+            FileWriter tripWriter = new FileWriter(tripFile);
+
+            // We are creating a JSON file here (adding the JSON ext at the end of the method), so
+            // make sure that the file's extension is still JSON (maybe the logic was changed)
+            if (trip.getRouteFile().getFileExtension() == AllowedFileExtension.JSON) {
+                // jasonize the trip
+                Gson gson = new GsonBuilder().create();
+                tripWriter.append(gson.toJson(trip));
+            } else {
+                Log.d("MainActivity", "the extension of the trip file is not JSON, so, a JSON file was not saved");
+            }
+
+            tripWriter.flush(); // Alex: redundant?
+            tripWriter.close();
+
+            // Add the extension at the end, so that the broadcast receiver doesn't try to sent it before
+            //  we're finished with the file and also for the saveAndSend method to figure out when interruptions took place
+            if (!status.equals(Utils.TEMP)) {
+                tripFile.renameTo(new File(directory, fileTitle + trip.getTripFile().getFileExtension()));
+            }// else, when saving temp data, no need for extensions
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d("MainActivity", "File exception when saving trip file");
+            tripFile.delete();//TODO: change this logic?
+        }
+
+    }
+
+    protected void saveRouteToFile(File finishedRouteFileWithoutExtension, String status) {
+        File directory = new File(Utils.getDirectory());
+        File routeFile = null;
+
+        // A finishedRoute file and a tempRouteFile cannot be both present in the same directory
+        //TODO: test that it's actually using the finished file without extension. Check
+        // that there aren't two finishedRouteId files
+        if (status.equals(Utils.FINISHED) && finishedRouteFileWithoutExtension != null) {
+            // this is the finished route file without an extension (to which we will try to add data
+            // and the extension later)
+            if (isFileWritable(finishedRouteFileWithoutExtension)) {
+                routeFile = finishedRouteFileWithoutExtension;
+            } else {
+                finishedRouteFileWithoutExtension.delete();
+            }
+
+        } else {// if the status is TEMP, finishedRouteFileWithoutExtension can only be null, therefore here:
+            // status is either TEMP or FINISHED and finishedRouteFileWithoutExtension is null
+            // Let's see if the directory contains a tempRoute file with the trip's ID (there should be 0 or 1, at most)
+            File[] tempRouteFiles = directory.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    String filename = pathname.getName().toLowerCase();
+                    if (filename.contains(Utils.TEMP) &&
+                            filename.contains(trip.getRouteFile().getFileTitle())) {
+                        return true;
+                    }
+                    return false;
+                }
+            });
+
+            if (tempRouteFiles.length > 0) {
+                if (isFileWritable(tempRouteFiles[0])) {
+                    routeFile = tempRouteFiles[0];
+                } else {
+                    tempRouteFiles[0].delete();
+                }
+            }
+            //testing only
+            if (tempRouteFiles.length > 1) {
+                Log.d("MyActivity", "You should not have more than one tempRouteId files in your directory");
+            }
+            //testing up to here
+        }
+
+        String fileTitle = status + trip.getRouteFile().getFileTitle();
+
+        if (routeFile == null) {
+            // this means that there are no openable/writable tempRouteId or finishedRouteId files
+            routeFile = new File(directory, fileTitle);
+        } else {
+            // tempRouteId or finishedRouteId file already exists and it can be opened/written to, so
+            // rename file to the fileTitle it's supposed to have, tempRouteId or finalRouteId
+            routeFile.renameTo(new File(directory, fileTitle));
+        }
+
+        try {
+            FileWriter routeWriter = new FileWriter(routeFile);
+
+            // We are creating a CSV file here (adding the CSV ext at the end of the method), so
+            // make sure that the file's extension is still CSV (maybe the logic was changed)
+            if (trip.getRouteFile().getFileExtension() == AllowedFileExtension.CSV) {
+                routeWriter.append(trip.getUserName());
+                routeWriter.append(",");
+                routeWriter.append(trip.getRouteFile().getFileTitle() +
+                        trip.getRouteFile().getFileExtension());
+                if (trip.getGpsMode() == null) {
+                    routeWriter.append(",");
+                    routeWriter.append("GPS OFF");
+                } else {
+                    routeWriter.append(",");
+                    routeWriter.append(String.valueOf(trip.getGpsMode().
+                            getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS));
+                    routeWriter.append(" MIN");
+                }
+                //TODO: now get rid testing only
+                routeWriter.append(",5 onLocCh + 3 min for fix & 2 min for capturing");
+                routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+
+                for (Map.Entry<Long, double[]> entry : routeData.entrySet()) {
+                    double[] coords = entry.getValue();
+                    routeWriter.append(entry.getKey().toString());
+                    routeWriter.append(",");
+                    routeWriter.append("" + coords[0]);
+                    routeWriter.append(",");
+                    routeWriter.append("" + coords[1]);
+                    routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
+                }
+            } else {
+                Log.d("MainActivity", "the extension of the route file is not CSV, so, a CSV file was not saved");
+            }
+
+            routeWriter.flush(); // Alex: redundant?
+            routeWriter.close();
+
+            // Add the extension at the end, so that the broadcast receiver doesn't try to sent it before we're
+            // finished with the file and also for the saveAndSend method to figure out when interruptions took place
+            if (!status.equals(Utils.TEMP)) {
+                routeFile.renameTo(new File(directory, fileTitle + trip.getRouteFile().getFileExtension()));
+            }// else. When status is temp (we save temporary files in order to reopen them later),
+            // we don't add extensions, so that sending mechanisms don't send and delete them
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d("MainActivity", "File exception when saving route file");
+            routeFile.delete(); //TODO: change this logic, when working with temp route file?
+        }
+    }
+
+    protected boolean isFileWritable(File file) {
+        try {
+            //try to open the file
+            FileWriter testWriter = new FileWriter(file);
+            testWriter.flush();
+            testWriter.close();
+            // if successful
+            return true;
+        } catch(IOException e) {
+            // if unsuccessful
+            e.printStackTrace();
+            //return false;// what if fileWriter will throw other exceptions (in addition or instead
+            // of IOException)? Then, if a different exception is thrown (which I'm obviously not catching),
+            // my method won't return anything. Is that possible?
+        }
+        return false;
+    }
+
+    protected void saveDataToFile() {
+        // TODO:  Give the files better names (XXXX is the time, or user or trip number etc.)
+        // TODO: write the json and csv files internally
+        // android:installLocation is internalOnly
+
+        File dir = new File(Utils.getDirectory());// set directory method in onCreate uses the external directory
+        if (!dir.exists()) {
+            dir.mkdirs();
+        } // only for external, TODO: remove this? (if yes, move dir - new file inside the logic below)
+
+        if (wasSendButtonPressed) {
+            if (!wereSendingMechanismsStarted) {
+                // Meaning it's either the first time this method is started or the SEND button
+                // logic was interrupted before starting the sending mechanisms
+
+                // Array of pathnames (max 2 elements) for files and directories in this directory
+                // which contain the word FINISHED and one of the words TRIP or ROUTE + trip's ID
+                File[] paths = dir.listFiles(new FileFilter() {
+                    @Override
+                    public boolean accept(File pathname) {
+                        String filename = pathname.getName().toLowerCase();
+
+                        if (filename.contains(Utils.FINISHED) &&
+                                (filename.contains(trip.getRouteFile().getFileTitle()) ||
+                                        filename.contains(trip.getTripFile().getFileTitle()))) {
+                            return true;
+                        }
+
+                        return false;
+                    }
+                });
+
+                if (paths.length == 0) { // No finishedTripId or finishedRouteId files in the dir
+                    saveTripToFile(null, Utils.FINISHED);
+                    saveRouteToFile(null, Utils.FINISHED);//save (add and rename for the temp route file, if it exists)
+                } else {
+                    if (paths.length == 1) { // Either a finishedTripId or a finishedRouteId file, not both
+                        String filename = paths[0].getName().toLowerCase();
+
+                        if (filename.contains(trip.getTripFile().getFileTitle())) {// it's a trip file
+                            if (!filename.contains(trip.getTripFile().getFileExtension().toString())) {
+                                // Extension is added to files at the end of the saveXToFile method
+                                // Meaning the finished trip file has no extension (method interrupted before adding the ext)
+
+                                //should delete finished trip file without ext, create new one and add ext to it
+                                saveTripToFile(paths[0], Utils.FINISHED);
+                            }
+
+                            // rename (if tempRoute exists), add route data and add .csv to file
+                            // OR, if it doesn't exist, create finishedRouteFile
+                            saveRouteToFile(null, Utils.FINISHED);
+                        } else { // it's a route file
+                            if (!filename.contains(trip.getRouteFile().getFileExtension().toString())) {
+                                // Add route data (if possible) and add .csv
+                                saveRouteToFile(paths[0], Utils.FINISHED);
+                            }
+
+                            //create a new finished trip file, save it, add json to it (no temp trip files possible)
+                            saveTripToFile(null, Utils.FINISHED);
+                        }
+                    } else { // Both files (route and trip) present in the directory
+                        String filename1 = paths[0].getName().toLowerCase();
+                        String filename2 = paths[1].getName().toLowerCase();
+                        if (filename1.contains(trip.getTripFile().getFileTitle())) {
+                            // this means the first file is the trip file and the second is the route file
+
+                            if (!filename1.contains(trip.getTripFile().getFileExtension().toString())) {
+                                // trip file wasn't finished (left extension-less)
+                                //should delete finished trip file without ext, create new one and add ext to it
+                                saveTripToFile(paths[0], Utils.FINISHED);
+                            }
+
+                            if (!filename2.contains(trip.getRouteFile().getFileExtension().toString())) {
+                                // route file wasn't finished, so add route data (if possible) and add .csv
+                                saveRouteToFile(paths[1], Utils.FINISHED);
+                            }
+                        } else {
+                            // this means the first file is the route file and the second is the trip file
+
+                            if (!filename1.contains(trip.getRouteFile().getFileExtension().toString())) {
+                                //route file wasn't finished, so add route data (if possible) and add .csv
+                                saveRouteToFile(paths[0], Utils.FINISHED);
+                            }
+
+                            if (!filename2.contains(trip.getTripFile().getFileExtension().toString())) {
+                                // trip file wasn't finished (left extension-less)
+                                //should delete finished trip file without ext, create new one and add ext to it
+                                saveTripToFile(paths[1], Utils.FINISHED);
+                            }
+                        }
+                    }
+                }
+            }//else here means sending mechs were started (they are started after this method). Therefore this method finished already.
+        } else {// SEND button was not pressed, we are here due to an interruption or from onConnectionSuspended/Failed
+
+            // Save temporary files to be used when app is restarted
+            saveTripToFile(null, Utils.TEMP);
+            saveRouteToFile(null, Utils.TEMP);// this should add data to tempRouteId if it exists
+        }
+    }
+
     public void setDataDirectory() {
         // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
         // set directory here for the SendAndDeleteFiles Utils method
-        Utils.setDirectory(Utils.EXTERNAL_DIRECTORY); // have this in the initData() method - must be called before registerDynamicReceiver()
+        Utils.setDirectory(EXTERNAL_DIRECTORY); // have this in the initData() method - must be called before registerDynamicReceiver()
         //should be Utils.setDirectory(getFilesDir().toString()); // Alex: was, directory.toString(), toString should be optional
 
+    }
+
+    public void setTripIdAndFileNamesAndExtensions() {
+
+        // set the trip's ID - used when saving files
+        trip.setId(timeWhenApplicationStartedInMillis);
+
+        trip.getTripFile().setFileTitle(Utils.TRIP + trip.getId());
+        trip.getTripFile().setFileExtension(AllowedFileExtension.JSON);
+
+        trip.getRouteFile().setFileTitle(Utils.ROUTE + trip.getId());
+        trip.getRouteFile().setFileExtension(AllowedFileExtension.CSV);// this will be written to the JSON file
     }
 
     public void registerDynamicReceiver() {
@@ -1064,6 +1443,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 } else {
 
+                    // maybe get rid of this from here
                     final Thread sendSightingsAndShutdownTask = new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -1081,25 +1461,9 @@ public class MainActivity extends AppCompatActivity implements
                                     ).show();
                                 }
                             });
-
-                            shutdownAndAwaitTerminationOfExecutorService();
-
-                            // make sure you stop the location updates - which write
-                            // to the hashmap which is being read inside sendSightings()
-                            // stopLocationUpdates() is called in onStop(), but that's fine.
-                            // You can call it multiple times in a row.
-                            stopLocationUpdates();
-                            // wait for 1 second for the above method to finish its work
-                            try {
-                                Thread.sleep(Utils.ONE_SECOND_IN_MILLIS);
-                            } catch(InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                            }
-                            finishTimeAndPlaces(getAllTimeAndPlaces());
-                            sendSightings();
-                            finish();
+                            saveAndFinish();
                         }
-                    });
+                    });//get rid up to here, maybe
 
                     AlertDialog.Builder comAlertDialogBuilder =
                             new AlertDialog.Builder(MainActivity.this);
@@ -1130,12 +1494,16 @@ public class MainActivity extends AppCompatActivity implements
                     comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
+                            wasSendButtonPressed = true;
+
                             // set the time
                             trip.getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
                             // set the coordinates
                             captureCoordinates(trip.getEndTimeAndPlace());
 
-                            sendSightingsAndShutdownTask.start();
+                            //sendSightingsAndShutdownTask.start();//test, uncomment if necessary
+                            //TODO: maybe replace the above with:
+                            saveAndFinish();
                         }
                     });
 
@@ -1146,135 +1514,8 @@ public class MainActivity extends AppCompatActivity implements
         });
 
     }
-
-    public void sendSightings() {
-        // Alex: android:installLocation is internalOnly
-        // TODO: create that server page (page will display all sightings for the trip, and also create a kml with the csv)
-
-        saveSightingsToFile();
-        restartSendingMechanisms();//Alex - uncomment this
-
-        // TODO: Then turn off the GPS service
-        // also, actually turn the gps off - make sure that onPause, when it tries to turn it off, too, works without error
-
-        // and finish
-        // Final point - Then stop the application. *make sure you finish it off. Test the order.
-        // http://stackoverflow.com/questions/10847526/what-exactly-activity-finish-method-is-doing
-        // returning to this app from Gmail ?
-        // http://stackoverflow.com/questions/2197741/how-can-i-send-emails-from-my-android-application
-        // TODO: finish(); send: stop application from being in the foreground (exit)...kills the activity and? eventually the app
-        // but then I want a fresh trip object and initial view (just show them quickly, create object) and exit...
-        // There should be a button for starting a trip and a button for adding a sighting
-    }
-
-    public void saveSightingsToFile() {
-        // TODO:  Give the files good names (XXXX is the time, or user or trip number etc.)
-        // TODO: write the json and csv files internally
-
-        try {
-
-            // test external storage version
-            File directory = new File(Utils.getDirectory());
-            //File directory = new File(Environment.getExternalStorageDirectory(), "Monicet");
-            //File directory = new File(Utils.EXTERNAL_DIRECTORY);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            } // only for external, TODO: remove this?
-            //deployment - use internal storage
-            //File directory = new File(getFilesDir().toString());
-
-            //test - show files in directory
-//                final File d = new File(Utils.INTERNAL_DIRECTORY);
-//                File[] files = d.listFiles();
-//                for (File file: files) {
-//                    Toast.makeText(getApplicationContext(), "After:" + file.getName(), Toast.LENGTH_SHORT).show();
-//                }
-            // end test
-
-            String routePrefix = "route";
-            String tripPrefix = "trip";
-            long timeNowInMillis = System.currentTimeMillis();
-
-            String tripFileTitle = tripPrefix + timeNowInMillis;
-            String tripFileName = tripFileTitle + AllowedFileExtension.JSON;
-            trip.setTripFileName(tripFileName);
-
-            String routeFileTitle = routePrefix + timeNowInMillis;
-            String routeFileName = routeFileTitle + AllowedFileExtension.CSV;
-            trip.setRouteFileName(routeFileName); // this will be written to the JSON file
-
-            File routeFile = new File(directory, routeFileTitle);
-            FileWriter routeWriter = new FileWriter(routeFile);
-            routeWriter.append(trip.getUserName());
-            routeWriter.append(",");
-            routeWriter.append(tripFileName);
-            routeWriter.append(",");
-            routeWriter.append(routeFileName);
-            if (trip.getGpsMode() == null) {
-                routeWriter.append(",");
-                routeWriter.append("GPS OFF");
-            } else {
-                routeWriter.append(",");
-                routeWriter.append(String.valueOf(trip.getGpsMode().
-                        getIntervalInMillis() / Utils.ONE_MINUTE_IN_MILLIS));
-                routeWriter.append(" MIN");
-            }
-            //TODO: now get rid testing only
-            routeWriter.append(",5 onLocCh + 3 min for fix & 2 min for capturing");
-            routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
-
-            for (Map.Entry<Long, double[]> entry : trip.getRouteData().entrySet()) {
-                double[] coords = entry.getValue();
-                routeWriter.append(entry.getKey().toString());
-                routeWriter.append(",");
-                routeWriter.append("" + coords[0]);
-                routeWriter.append(",");
-                routeWriter.append("" + coords[1]);
-                routeWriter.append("\r\n"); //routeWriter.append(System.getProperty("line.separator"));
-            }
-            routeWriter.flush(); // Alex: redundant?
-            routeWriter.close();
-            // add the extension at the end, so that the broadcast receiver doesn't
-            // try to sent it before we're finished with the file
-            routeFile.renameTo(new File(directory, routeFileName));
-
-            Gson gson = new GsonBuilder().create();
-            File tripFile = new File(directory, tripFileTitle);
-            FileWriter tripWriter = new FileWriter(tripFile);
-            // jasonize the trip
-            tripWriter.append(gson.toJson(trip));
-            tripWriter.flush(); // Alex: redundant?
-            tripWriter.close();
-            // add the extension at the end, so that the broadcast receiver doesn't try to
-            // sent it before we've finished with the file
-            tripFile.renameTo(new File(directory, tripFileName));
-
-            // test
-//                    File[] files2 = directory.listFiles();
-//                    for (File file: files2) {
-//                        Toast.makeText(getApplicationContext(), "Before:" + file.getName(), Toast.LENGTH_SHORT).show();
-//                    }
-            //test
-            //test - delete internal dir
-//                    FileFilter fileFilter = new FileFilter() {
-//                        @Override
-//                        public boolean accept(File pathname) {
-//                            return false;
-//                        }
-//                    };
-//                    File[] fs = d.listFiles(fileFilter);
-//                    for (File f: fs) {
-//                        f.delete();
-//                    }
-            //test
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(getApplicationContext(), "file exception", Toast.LENGTH_SHORT).show(); // Alex: remove this
-        }
-    }
-
-    public void restartSendingMechanisms() {
+    
+    public void startSendingMechanisms() {
         // enable and (re)start mechanisms designed to send (and delete if sent)
         // those files via the Internet (they all use the Utils method SendAndDeleteFiles,
         // which first checks for a live Internet connection)
@@ -1282,7 +1523,10 @@ public class MainActivity extends AppCompatActivity implements
         // themselves by now (if folder doesn't contain json or csv files aka empty...
         // although it always has one instant-run file)
 
-        // first, use GCM
+        // If I move it to the end of this method, maybe some are started and other no.. multiple booleans
+        wereSendingMechanismsStarted = true;
+
+        // first, use GCM // TODO: mayne start a new thread inside the method
         useGcmNetworkManager();
 
         // send message to receivers to try to send the files now
@@ -1310,6 +1554,8 @@ public class MainActivity extends AppCompatActivity implements
         // maybe pass it the application context - it only uses it for the path anyways
         // MainActivity.this.getApplicationContext(); //getApplication().getBaseContext();
         SendFilesTaskService.scheduleOneOff(MainActivity.this);
+        // if this method is not called inside a new thread...then maybe create a new runnable here
+        // with scheduleoneoff
     }
 
     public void useAlarmManager() {

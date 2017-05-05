@@ -32,6 +32,10 @@ import java.util.ArrayList;
 public final class Utils {
     private Utils() {}
 
+    public static final String FINISHED = "finished";
+    public static final String TEMP = "temp";
+    public static final String ROUTE = "Route";
+    public static final String TRIP = "Trip";
     public static final int ONE_SECOND_IN_MILLIS = 1000;
     public static final int ONE_MINUTE_IN_MILLIS = 60 * 1000;
     public static final int FIVE_MINUTES_IN_MILLIS = 5 * 60 * 1000;
