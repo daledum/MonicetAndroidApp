@@ -149,7 +149,7 @@ public final class Utils {
             @Override
             public boolean accept(File pathname) {
                 for(AllowedFileExtension fe: AllowedFileExtension.values()) {
-                    if (pathname.getName().toLowerCase().endsWith(fe.toString())) {
+                    if (pathname.getName().toLowerCase().endsWith(fe.toString().toLowerCase())) {
                         return true;
                     }
                 }
