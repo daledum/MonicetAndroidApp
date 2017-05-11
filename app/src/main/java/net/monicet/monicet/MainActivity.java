@@ -67,7 +67,6 @@ import java.util.regex.Pattern;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.R.string.sighting;
 import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
 
 public class MainActivity extends AppCompatActivity implements
@@ -105,6 +104,42 @@ public class MainActivity extends AppCompatActivity implements
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
 
+    @Override
+    public void onBackPressed() {
+        if (wasMinimumAmountOfGpsFixingDone) {
+            backButtonPressedDialog();
+        } else {
+            finishAndSave(false);
+        }
+    }
+
+    protected void backButtonPressedDialog() {
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.save_trip_before_exiting_dialog_title);
+        comAlertDialogBuilder.setMessage(R.string.save_trip_before_exiting_dialog_message);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                finishAndSave(true);
+                //MainActivity.super.onBackPressed();//this probably calls finish
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(R.string.my_no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                finishAndSave(false);
+                //MainActivity.super.onBackPressed();//this probably calls finish
+
+            }
+        });
+
+        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
+
     protected void cloneTimeAndPlace(TimeAndPlace destination, TimeAndPlace source) {
         destination.setTimeInMillis(source.getTimeInMillis());
         destination.setLatitude(source.getLatitude());
@@ -114,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements
     protected void cloneSighting(Sighting destination, Sighting source) {
 
         // here only the fields we modify in the sighting comments dialog
+
         cloneTimeAndPlace(destination.getStartTimeAndPlace(), source.getStartTimeAndPlace());
         cloneTimeAndPlace(destination.getEndTimeAndPlace(), source.getEndTimeAndPlace());
         cloneTimeAndPlace(destination.getUserStartTimeAndPlace(), source.getUserStartTimeAndPlace());
@@ -124,7 +160,6 @@ public class MainActivity extends AppCompatActivity implements
         destination.setAnimal(source.getAnimal());
 
         destination.setUserComments(source.getUserComments());
-        //new String(destination.getUserComments())//TODO: test the string
     }
 
     protected File getTempTripFile() {
@@ -300,7 +335,7 @@ public class MainActivity extends AppCompatActivity implements
         // called finish() on it or someone else has requested that it finished.
 
         if (!isFinishing()) {
-            saveAndFinish();
+            finishAndSave(true);
         }
     }
 
@@ -675,9 +710,9 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
-                //Set the temp sighting to null (If app interrupted, it's not getting nulified.
+                // Set the temp sighting to null (If app interrupted, it's not getting nulified.
                 // This should not cause an issue, app gets killed, anyway)
-                disconnectOpenedSighting(openedSightings[1]);
+                openedSightings[1] = null;
                 // refresh the views (maybe the final quantity was changed)
                 showSightings();
             }
@@ -690,9 +725,7 @@ public class MainActivity extends AppCompatActivity implements
                 // Copy back values from temp sighting into our sighting.
                 cloneSighting(sighting, openedSightings[1]);
 
-                disconnectOpenedSighting(openedSightings[1]);
-
-                // refresh the views (maybe the final quantity was changed)
+                openedSightings[1] = null;
                 showSightings();
             }
         });
@@ -702,136 +735,8 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.show();
     }
 
-    //get rid
-//    @Override
-//    public void showSightingCommentsDialog(final Sighting sighting) {
-//
-//        // Cloning the relevant data into the temporary sighting. It is a snapshot of the way
-//        // the sighting was at the beginning of this method (user for reinstating if CANCEL is pressed).
-//        openedSightings[1] = new Sighting();
-//        cloneSighting(sighting, openedSightings[1]);
-//        // new up to here //TODO: Is it worth nulifying the temp in saveAndFinish - it gets killed anyway
-//
-//        // TODO: take other smartphone gps reading (from trip, sighting, animal)
-//        // and compare the sign (if near the 0 degree point, don't do this check)
-//        LayoutInflater layoutInflater = LayoutInflater.from(this);
-//
-//        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
-//        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
-//        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
-//        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
-//        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
-//
-//        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
-//        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
-//        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
-//        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
-//
-//        final NumberPicker startQuantity = (NumberPicker)rootView.
-//                findViewById(R.id.start_animal_quantity_number_picker);
-//        startQuantity.setMinValue(0);
-//        startQuantity.setMaxValue(99);//Utils.MAX_VALUE
-//        startQuantity.setValue(sighting.getAnimal().getStartQuantity());
-//
-//        startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-//            @Override
-//            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-//                sighting.getAnimal().setStartQuantity(startQuantity.getValue());
-//            }
-//        });
-//
-//        final NumberPicker endQuantity = (NumberPicker)rootView.
-//                findViewById(R.id.end_animal_quantity_number_picker);
-//        endQuantity.setMinValue(0);
-//        endQuantity.setMaxValue(99);//Utils.MAX_VALUE
-//        endQuantity.setValue(sighting.getAnimal().getEndQuantity());
-//        if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
-//            endQuantity.setVisibility(View.VISIBLE);
-//        }
-//
-//        endQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-//            @Override
-//            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-//                sighting.getAnimal().setEndQuantity(endQuantity.getValue());
-//            }
-//        });
-//
-//        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
-//        comments.setText(sighting.getUserComments());
-//
-//        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
-//
-//        comAlertDialogBuilder.setCancelable(false);
-//
-//        comAlertDialogBuilder.setTitle(R.string.comments_message_title);
-//
-//        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-//            @Override
-//            public void onClick(DialogInterface dialog, int which) {
-//
-//                // clicking on YES or NO should stop the thread (when clicking on YES, data should be saved). When on NO, nothing should be saved
-//                // thread should call the methods from here // TODO:
-//                // maybe I should run on UI thread a task which opens the comments dialog (access to inner comments views?). When inter, saves data to sighting
-//
-//                //TODO: clicking on yes should do nothing (maybe set the temp sighting to null)
-//
-//                // take and set the user's latitude
-//                double gpsDegrees = Utils.parseGpsToDouble(
-//                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
-//                );
-//                double gpsMinutes = Utils.parseGpsToDouble(
-//                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-//                );
-//                double gpsSeconds = Utils.parseGpsToDouble(
-//                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-//                );
-//                sighting.getUserEndTimeAndPlace().setLatitude(
-//                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-//                );
-//
-//                // take and set the user's longitude
-//                gpsDegrees = Utils.parseGpsToDouble(
-//                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
-//                );
-//                gpsMinutes = Utils.parseGpsToDouble(
-//                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-//                );
-//                gpsSeconds = Utils.parseGpsToDouble(
-//                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-//                );
-//                sighting.getUserEndTimeAndPlace().setLongitude(
-//                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-//                );
-//
-//                // take the system's time
-//                // this is giving me the time when they edited the comments the last time
-//                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-//
-//                // take and set the user's comments
-//                sighting.setUserComments(comments.getText().toString());
-//
-//                // refresh the views (maybe the final quantity was changed)
-//                showSightings();
-//                // up to here - should be inside a thread, when interrupted should call the above methods
-//            }
-//        });
-//        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-//            @Override
-//            public void onClick(DialogInterface dialog, int which) {
-//                // dialog.dismiss();
-//                // TODO: when NO is clicked or when area around dialog is clicked (make dialog area outside unclickable):
-//                // make initial and final quantity values like they were when dialog was opened
-//                // use the temp sighting to clone back
-//            }
-//        });
-//
-//        comAlertDialogBuilder.setView(rootView);
-//        comAlertDialogBuilder.create();
-//        comAlertDialogBuilder.show();
-//    }
-
     @Override
-    public void deleteSightingCommentsDialog(final Sighting sighting) {
+    public void deleteSightingDialog(final Sighting sighting) {
         AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
 
         comAlertDialogBuilder.setTitle(R.string.delete_sighting_title);
@@ -963,12 +868,12 @@ public class MainActivity extends AppCompatActivity implements
             // If app was killed, I want it to re-fix (boolean will be false by default)
             // If app was not killed and it's just coming back from a break, don't re-fix (boolean is true)//TODO: new change this...save it to file
             startLocationUpdates(trips[0].getGpsMode());
-            //TODO: change this logic now. If temp file exists mimimum = true before googleapi.connect
+            //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
-            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -1007,9 +912,9 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(trips[0].getGpsMode());//was empty
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
-                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1034,7 +939,7 @@ public class MainActivity extends AppCompatActivity implements
                 R.string.google_api_client_connection_suspended,
                 Toast.LENGTH_LONG
         ).show();
-        saveAndFinish();
+        finishAndSave(true);
     }
 
     @Override
@@ -1045,7 +950,7 @@ public class MainActivity extends AppCompatActivity implements
                 R.string.google_api_client_connection_failed,
                 Toast.LENGTH_LONG
         ).show();
-        saveAndFinish();
+        finishAndSave(true);
     }
 
     @Override
@@ -1322,7 +1227,7 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
-    protected void saveAndFinish() {
+    protected void finishAndSave(boolean save) {
 
         // stop executor service
         if (!executorService.isShutdown()) {
@@ -1349,16 +1254,41 @@ public class MainActivity extends AppCompatActivity implements
         // this will finish up objects in timeAndPlacesWhichNeedCoordinates, too
         finishTimeAndPlaces(getAllTimeAndPlaces());
 
-        // NB tempTrip files are not kept (deleted in onCreate)
-        // In the case the minimum GPS signal fixing was done (if it wasn't done, don't bother to save temp files)
-        if (wasMinimumAmountOfGpsFixingDone) {
-            // NB Important to keep this order. Save data first and then start sending mechanisms.
-            saveDataToFile();
+        if(save) {
+            // NB tempTrip files are not kept (deleted in onCreate)
+            // In the case the minimum GPS signal fixing was done (if it wasn't done, don't bother to save temp files)
+            if (wasMinimumAmountOfGpsFixingDone) {
+                // NB Important to keep this order. Save data first and then start sending mechanisms.
+                saveDataToFile();
 
-            // If sending mechanisms are started before the latest files are saved, they look for csv and json files
-            // and if they don't find any, they turn themselves off.
-            if (wasSendButtonPressed && !wereSendingMechanismsStarted) {
-                startSendingMechanisms();
+                // If sending mechanisms are started before the latest files are saved, they look for csv and json files
+                // and if they don't find any, they turn themselves off.
+                if (wasSendButtonPressed && !wereSendingMechanismsStarted) {
+                    startSendingMechanisms();
+                }
+            }
+        } else {
+            File dir = new File(Utils.getDirectory());
+            // all files containing the trip's ID
+            File[] filesToDelete = dir.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    String filename = pathname.getName().toLowerCase();
+
+                    if (filename.contains(String.valueOf(trips[0].getId()))) {
+                        return true;
+                    }
+
+                    return false;
+                }
+            });
+
+            if (filesToDelete.length > 0) {
+                for (File file: filesToDelete) {
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                }
             }
         }
 
@@ -1733,13 +1663,6 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
-
-    // method called by BACK and SAVE. Also, method called by the sighting comments dialog alert
-    public void disconnectOpenedSighting(Sighting sighting) {
-        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
-        sighting = null;
-    }
-
     public void initViews() {
         // set label to MONICET - START TRIP
         setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
@@ -1892,7 +1815,7 @@ public class MainActivity extends AppCompatActivity implements
                                     ).show();
                                 }
                             });
-                            saveAndFinish();
+                            finishAndSave(true);
                         }
                     });//get rid up to here, maybe
 
@@ -1934,7 +1857,7 @@ public class MainActivity extends AppCompatActivity implements
 
                             //sendSightingsAndShutdownTask.start();//test, uncomment if necessary
                             //TODO: maybe replace the above with:
-                            saveAndFinish();
+                            finishAndSave(true);
                         }
                     });
 
@@ -2029,7 +1952,8 @@ public class MainActivity extends AppCompatActivity implements
                 // shared by the SAVE and BACK button
                 // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
                 // hopefully, the unsaved sighting will be GC-ed soon
-                disconnectOpenedSighting(openedSightings[0]);
+                // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
+                openedSightings[0] = null;
 
                 // check that the most recent sighting has an Animal
                 // we are here after ADD or CLICK on a sighting logic, therefore at least a sighting exists
@@ -2103,7 +2027,8 @@ public class MainActivity extends AppCompatActivity implements
 
                         // SAVE no longer works on the sighting, so openedSighting does not need to connect to it anymore
                         // SAVE and BACK share this
-                        disconnectOpenedSighting(openedSightings[0]);
+                        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
+                        openedSightings[0] = null;
 
                         // saved successfully message
                         Toast.makeText(MainActivity.this,

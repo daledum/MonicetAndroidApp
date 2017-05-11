@@ -9,6 +9,14 @@
     <string name="my_sightings">My sightings</string>
 
 
+    <string name="save_trip_before_exiting_dialog_title">
+        Save trip
+    </string>
+    <string name="save_trip_before_exiting_dialog_message">
+        Do you want to save this trip before closing the application?
+    </string>
+    <string name="my_no">NO</string>
+
     <string name="google_api_client_connection_suspended">
         Your GoogleApiClient connection was suspended. Please try to reconnect and then reopen the application.
     </string>

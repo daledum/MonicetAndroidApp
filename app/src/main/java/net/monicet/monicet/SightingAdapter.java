@@ -88,7 +88,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             deleteImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mainActivity.deleteSightingCommentsDialog(currentSighting);
+                    mainActivity.deleteSightingDialog(currentSighting);
                 }
             });
 
