@@ -20,6 +20,8 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.util.Patterns;
@@ -65,6 +67,7 @@ import java.util.regex.Pattern;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
+import static net.monicet.monicet.R.string.sighting;
 import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
 
 public class MainActivity extends AppCompatActivity implements
@@ -75,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements
 
     final Trip[] trips = new Trip[1]; // hack so that I can use inside anonymous classes and deserialize from json file if necessary
     final HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();// To create TRK, GPX, KML, KMZ, PLT files on the server
-    final Sighting[] openedSightings = new Sighting[1]; // artifact/hack so I can use it inside anonymous classes
+    final Sighting[] openedSightings = new Sighting[2]; // 'temporary' sightings (one used when opening a sighting and the other when opening its comments dialog)
     final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();
     final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
@@ -101,6 +104,28 @@ public class MainActivity extends AppCompatActivity implements
     private volatile boolean wereSendingMechanismsStarted = false; // Get rid of volatile, if not using a separate thread
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
+
+    protected void cloneTimeAndPlace(TimeAndPlace destination, TimeAndPlace source) {
+        destination.setTimeInMillis(source.getTimeInMillis());
+        destination.setLatitude(source.getLatitude());
+        destination.setLongitude(source.getLongitude());
+
+    }
+    protected void cloneSighting(Sighting destination, Sighting source) {
+
+        // here only the fields we modify in the sighting comments dialog
+        cloneTimeAndPlace(destination.getStartTimeAndPlace(), source.getStartTimeAndPlace());
+        cloneTimeAndPlace(destination.getEndTimeAndPlace(), source.getEndTimeAndPlace());
+        cloneTimeAndPlace(destination.getUserStartTimeAndPlace(), source.getUserStartTimeAndPlace());
+        cloneTimeAndPlace(destination.getUserEndTimeAndPlace(), source.getUserEndTimeAndPlace());
+
+        // This copies the reference of the Specie (they share the specie), but the start and end
+        // quantities are not shared (normal assignment between primitives)
+        destination.setAnimal(source.getAnimal());
+
+        destination.setUserComments(source.getUserComments());
+        //new String(destination.getUserComments())//TODO: test the string
+    }
 
     protected File getTempTripFile() {
 
@@ -409,26 +434,189 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void showSightingCommentsDialog(final Sighting sighting) {
+
+        // Save the state of the sighting into the temporary sighting
+        // Cloning the relevant data into the temp sighting. It is a snapshot of the way
+        // the sighting was at the beginning of this method (user for reinstating if CANCEL is pressed).
+        openedSightings[1] = new Sighting();
+        cloneSighting(openedSightings[1], sighting);
+
         // TODO: take other smartphone gps reading (from trip, sighting, animal)
         // and compare the sign (if near the 0 degree point, don't do this check)
         LayoutInflater layoutInflater = LayoutInflater.from(this);
 
         View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+
+        // take the system's time
+        // this is giving me the time when they edited the comments the last time
+        // This won't interfere with the finishTimeAndPlaces method. getAllTimeAndPlaces doesn't return user TimeAndPlaces
+        sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+
+        // take and set the user's latitude
+        // first element of the array: degrees; second: minutes; third: seconds
+        final double[] latitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
+
         final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
-        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
+        latitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLatitude()));
+        latitudeDegrees.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                latitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
+                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
+                );
+                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                        latitudeDegreesMinutesAndSeconds[0],
+                        latitudeDegreesMinutesAndSeconds[1],
+                        latitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
+
+
         final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
+        latitudeMinutes.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                latitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
+                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                        latitudeDegreesMinutesAndSeconds[0],
+                        latitudeDegreesMinutesAndSeconds[1],
+                        latitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
+
         final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
+        latitudeSeconds.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                 latitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
+                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                        latitudeDegreesMinutesAndSeconds[0],
+                        latitudeDegreesMinutesAndSeconds[1],
+                        latitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
+
+        // take and set the user's longitude
+        final double[] longitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
 
         final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
-        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
+        longitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLongitude()));
+        longitudeDegrees.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                longitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
+                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
+                );
+                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                        longitudeDegreesMinutesAndSeconds[0],
+                        longitudeDegreesMinutesAndSeconds[1],
+                        longitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
+
         final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
+        longitudeMinutes.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                longitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
+                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                        longitudeDegreesMinutesAndSeconds[0],
+                        longitudeDegreesMinutesAndSeconds[1],
+                        longitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
+
         final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
+        longitudeSeconds.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                longitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
+                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                );
+                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                        longitudeDegreesMinutesAndSeconds[0],
+                        longitudeDegreesMinutesAndSeconds[1],
+                        longitudeDegreesMinutesAndSeconds[2]
+                ));
+            }
+        });
 
         final NumberPicker startQuantity = (NumberPicker)rootView.
                 findViewById(R.id.start_animal_quantity_number_picker);
         startQuantity.setMinValue(0);
-        startQuantity.setMaxValue(99);
-        startQuantity.setValue(sighting.getAnimal().getStartQuantity());
+        startQuantity.setMaxValue(Utils.MAX_VALUE);
+        startQuantity.setValue(openedSightings[1].getAnimal().getStartQuantity());
 
         startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
             @Override
@@ -440,8 +628,8 @@ public class MainActivity extends AppCompatActivity implements
         final NumberPicker endQuantity = (NumberPicker)rootView.
                 findViewById(R.id.end_animal_quantity_number_picker);
         endQuantity.setMinValue(0);
-        endQuantity.setMaxValue(99);
-        endQuantity.setValue(sighting.getAnimal().getEndQuantity());
+        endQuantity.setMaxValue(Utils.MAX_VALUE);
+        endQuantity.setValue(openedSightings[1].getAnimal().getEndQuantity());
         if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
             endQuantity.setVisibility(View.VISIBLE);
         }
@@ -453,10 +641,33 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
+        // take and set the user's comments
         final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
-        comments.setText(sighting.getUserComments());
+        comments.setText(openedSightings[1].getUserComments());
+        comments.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                sighting.setUserComments(comments.getText().toString());
+            }
+        });
 
         AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        // So that we cannot click outside of the dialog. The only way out is OK, CANCEL or an interruption.
+        // Writing into this dialog saves on the spot (live) to the sighting belonging to the trip.
+        // However, if CANCEL is pressed, all changes are discarded. All other scenarions (OK, interruption):
+        // changes are kept
+        comAlertDialogBuilder.setCancelable(false);
 
         comAlertDialogBuilder.setTitle(R.string.comments_message_title);
 
@@ -464,41 +675,9 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
-                // take and set the user's latitude
-                double gpsDegrees = Utils.parseGpsToDouble(
-                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
-                );
-                double gpsMinutes = Utils.parseGpsToDouble(
-                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                double gpsSeconds = Utils.parseGpsToDouble(
-                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLatitude(
-                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-                );
-
-                // take and set the user's longitude
-                gpsDegrees = Utils.parseGpsToDouble(
-                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
-                );
-                gpsMinutes = Utils.parseGpsToDouble(
-                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                gpsSeconds = Utils.parseGpsToDouble(
-                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLongitude(
-                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
-                );
-
-                // take the system's time
-                // this is giving me the time when they edited the comments the last time
-                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-
-                // take and set the user's comments
-                sighting.setUserComments(comments.getText().toString());
-
+                //Set the temp sighting to null (If app interrupted, it's not getting nulified.
+                // This should not cause an issue, app gets killed, anyway)
+                disconnectOpenedSighting(openedSightings[1]);
                 // refresh the views (maybe the final quantity was changed)
                 showSightings();
             }
@@ -506,7 +685,15 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                // dialog.dismiss();
+
+                // Make all values like they were when dialog was opened.
+                // Copy back values from temp sighting into our sighting.
+                cloneSighting(sighting, openedSightings[1]);
+
+                disconnectOpenedSighting(openedSightings[1]);
+
+                // refresh the views (maybe the final quantity was changed)
+                showSightings();
             }
         });
 
@@ -514,6 +701,134 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.create();
         comAlertDialogBuilder.show();
     }
+
+    //get rid
+//    @Override
+//    public void showSightingCommentsDialog(final Sighting sighting) {
+//
+//        // Cloning the relevant data into the temporary sighting. It is a snapshot of the way
+//        // the sighting was at the beginning of this method (user for reinstating if CANCEL is pressed).
+//        openedSightings[1] = new Sighting();
+//        cloneSighting(sighting, openedSightings[1]);
+//        // new up to here //TODO: Is it worth nulifying the temp in saveAndFinish - it gets killed anyway
+//
+//        // TODO: take other smartphone gps reading (from trip, sighting, animal)
+//        // and compare the sign (if near the 0 degree point, don't do this check)
+//        LayoutInflater layoutInflater = LayoutInflater.from(this);
+//
+//        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+//        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
+//        latitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLatitude()));
+//        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
+//        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
+//
+//        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
+//        longitudeDegrees.setText(String.valueOf(sighting.getUserEndTimeAndPlace().getLongitude()));
+//        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
+//        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
+//
+//        final NumberPicker startQuantity = (NumberPicker)rootView.
+//                findViewById(R.id.start_animal_quantity_number_picker);
+//        startQuantity.setMinValue(0);
+//        startQuantity.setMaxValue(99);//Utils.MAX_VALUE
+//        startQuantity.setValue(sighting.getAnimal().getStartQuantity());
+//
+//        startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+//            @Override
+//            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+//                sighting.getAnimal().setStartQuantity(startQuantity.getValue());
+//            }
+//        });
+//
+//        final NumberPicker endQuantity = (NumberPicker)rootView.
+//                findViewById(R.id.end_animal_quantity_number_picker);
+//        endQuantity.setMinValue(0);
+//        endQuantity.setMaxValue(99);//Utils.MAX_VALUE
+//        endQuantity.setValue(sighting.getAnimal().getEndQuantity());
+//        if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
+//            endQuantity.setVisibility(View.VISIBLE);
+//        }
+//
+//        endQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+//            @Override
+//            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+//                sighting.getAnimal().setEndQuantity(endQuantity.getValue());
+//            }
+//        });
+//
+//        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
+//        comments.setText(sighting.getUserComments());
+//
+//        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+//
+//        comAlertDialogBuilder.setCancelable(false);
+//
+//        comAlertDialogBuilder.setTitle(R.string.comments_message_title);
+//
+//        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+//            @Override
+//            public void onClick(DialogInterface dialog, int which) {
+//
+//                // clicking on YES or NO should stop the thread (when clicking on YES, data should be saved). When on NO, nothing should be saved
+//                // thread should call the methods from here // TODO:
+//                // maybe I should run on UI thread a task which opens the comments dialog (access to inner comments views?). When inter, saves data to sighting
+//
+//                //TODO: clicking on yes should do nothing (maybe set the temp sighting to null)
+//
+//                // take and set the user's latitude
+//                double gpsDegrees = Utils.parseGpsToDouble(
+//                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
+//                );
+//                double gpsMinutes = Utils.parseGpsToDouble(
+//                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+//                );
+//                double gpsSeconds = Utils.parseGpsToDouble(
+//                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+//                );
+//                sighting.getUserEndTimeAndPlace().setLatitude(
+//                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+//                );
+//
+//                // take and set the user's longitude
+//                gpsDegrees = Utils.parseGpsToDouble(
+//                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
+//                );
+//                gpsMinutes = Utils.parseGpsToDouble(
+//                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+//                );
+//                gpsSeconds = Utils.parseGpsToDouble(
+//                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+//                );
+//                sighting.getUserEndTimeAndPlace().setLongitude(
+//                        Utils.convertDegMinSecToDecimal(gpsDegrees, gpsMinutes, gpsSeconds)
+//                );
+//
+//                // take the system's time
+//                // this is giving me the time when they edited the comments the last time
+//                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+//
+//                // take and set the user's comments
+//                sighting.setUserComments(comments.getText().toString());
+//
+//                // refresh the views (maybe the final quantity was changed)
+//                showSightings();
+//                // up to here - should be inside a thread, when interrupted should call the above methods
+//            }
+//        });
+//        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+//            @Override
+//            public void onClick(DialogInterface dialog, int which) {
+//                // dialog.dismiss();
+//                // TODO: when NO is clicked or when area around dialog is clicked (make dialog area outside unclickable):
+//                // make initial and final quantity values like they were when dialog was opened
+//                // use the temp sighting to clone back
+//            }
+//        });
+//
+//        comAlertDialogBuilder.setView(rootView);
+//        comAlertDialogBuilder.create();
+//        comAlertDialogBuilder.show();
+//    }
 
     @Override
     public void deleteSightingCommentsDialog(final Sighting sighting) {
@@ -714,14 +1029,22 @@ public class MainActivity extends AppCompatActivity implements
     public void onConnectionSuspended(int i) {
         Log.i("MainActivity", "GoogleApiClient connection has been suspend");
         // attempt to re-establish the connection?
-        // TODO: NB Toast informing the user
+        Toast.makeText(
+                MainActivity.this,
+                R.string.google_api_client_connection_suspended,
+                Toast.LENGTH_LONG
+        ).show();
         saveAndFinish();
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Log.i("MainActivity", "GoogleApiClient connection has failed");
-        // TODO: NB Toast informing the user
+        Toast.makeText(
+                MainActivity.this,
+                R.string.google_api_client_connection_failed,
+                Toast.LENGTH_LONG
+        ).show();
         saveAndFinish();
     }
 
@@ -888,7 +1211,7 @@ public class MainActivity extends AppCompatActivity implements
         interval.setMinValue(0);
         interval.setMaxValue(displayedValues.length - 1);
         interval.setDisplayedValues(displayedValues);
-        // set the default value (see constructor of gpsmodestate)//TODO: what did I mean :( TEST this
+        // set the default value
         interval.setValue(i);
     }
 
@@ -1201,6 +1524,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected boolean isFileWritable(File file) {
+        // ?maybe just use if (file.canWrite())
         try {
             //try to open the file
             FileWriter testWriter = new FileWriter(file, true);
@@ -1410,10 +1734,10 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-    // method called by BACK and SAVE
-    public void disconnectOpenedSighting() {
+    // method called by BACK and SAVE. Also, method called by the sighting comments dialog alert
+    public void disconnectOpenedSighting(Sighting sighting) {
         // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
-        openedSightings[0] = null;
+        sighting = null;
     }
 
     public void initViews() {
@@ -1705,7 +2029,7 @@ public class MainActivity extends AppCompatActivity implements
                 // shared by the SAVE and BACK button
                 // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
                 // hopefully, the unsaved sighting will be GC-ed soon
-                disconnectOpenedSighting();
+                disconnectOpenedSighting(openedSightings[0]);
 
                 // check that the most recent sighting has an Animal
                 // we are here after ADD or CLICK on a sighting logic, therefore at least a sighting exists
@@ -1779,7 +2103,7 @@ public class MainActivity extends AppCompatActivity implements
 
                         // SAVE no longer works on the sighting, so openedSighting does not need to connect to it anymore
                         // SAVE and BACK share this
-                        disconnectOpenedSighting();
+                        disconnectOpenedSighting(openedSightings[0]);
 
                         // saved successfully message
                         Toast.makeText(MainActivity.this,

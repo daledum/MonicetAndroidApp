@@ -8,6 +8,13 @@
     <string name="edit_sighting">Edit sighting</string>
     <string name="my_sightings">My sightings</string>
 
+
+    <string name="google_api_client_connection_suspended">
+        Your GoogleApiClient connection was suspended. Please try to reconnect and then reopen the application.
+    </string>
+    <string name="google_api_client_connection_failed">
+        Your GoogleApiClient connection failed. Please try to connect and then reopen the application.
+    </string>
     <string name="tracking_dialog_title">Continuous GPS sampling</string>
     <string name="tracking_dialog_message">
         You are currently in the normal GPS sampling mode.\nActivate the continuous GPS sampling mode, which uses a lot of battery?

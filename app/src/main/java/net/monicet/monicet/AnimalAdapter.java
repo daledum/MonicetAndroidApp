@@ -62,7 +62,7 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {
 
         final NumberPicker quantity = (NumberPicker)convertView.findViewById(R.id.animal_quantity_number_picker);
         quantity.setMinValue(0);
-        quantity.setMaxValue(99);
+        quantity.setMaxValue(Utils.MAX_VALUE);
         quantity.setValue(currentAnimal.getStartQuantity());
 
         quantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {

@@ -44,6 +44,7 @@ public final class Utils {
     // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
     // running on ui thread...
     public static final int INITIAL_VALUE = 0; // was -1
+    public static final int MAX_VALUE = 99;
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";

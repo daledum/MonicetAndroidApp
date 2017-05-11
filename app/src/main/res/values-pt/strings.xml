@@ -61,4 +61,6 @@
     <string name="end_animal_quantity_message">Quantos você viu no final do avistamento?</string>
     <string name="turn_on_gps_dialog_title">Ligue o GPS</string>
     <string name="turn_on_gps_dialog_message">Por favor, ligue o GPS.</string>
+    <string name="google_api_client_connection_failed">A sua ligação ao GoogleApiClient falhou. Tente conectar e reabrir o aplicativo Android.</string>
+    <string name="google_api_client_connection_suspended">Sua conexão do GoogleApiClient foi suspensa. Tente reconectar e, em seguida, reabra o aplicativo.</string>
 </resources>
