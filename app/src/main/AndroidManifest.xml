@@ -3,12 +3,12 @@
     package="net.monicet.monicet"
     android:installLocation="internalOnly">
 
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
     <application
         android:allowBackup="true"
@@ -16,25 +16,21 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <receiver android:name=".StaticNetworkStateReceiver">
             <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
             </intent-filter>
         </receiver>
-
-        <receiver
-            android:name=".FilesAndBootReceiver">
+        <receiver android:name=".FilesAndBootReceiver">
             <intent-filter>
-                <action android:name=".START"/>
-                <action android:name=".STOP"/>
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
-                <!--TODO: Comment line below when working with internal version-->
-                <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE"/>
+                <action android:name=".START" />
+                <action android:name=".STOP" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- TODO: Comment line below when working with internal version -->
+                <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE" />
             </intent-filter>
         </receiver>
-
-        <receiver android:name=".AlarmReceiver"/>
+        <receiver android:name=".SendFilesAlarmReceiver" />
 
         <meta-data
             android:name="com.google.android.gms.version"
@@ -52,11 +48,36 @@
 
         <service
             android:name=".SendFilesTaskService"
-            android:permission="com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE"
-            android:exported="true">
+            android:exported="true"
+            android:permission="com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE">
             <intent-filter>
-                <action android:name="com.google.android.gms.gcm.ACTION_TASK_READY"/>
+                <action android:name="com.google.android.gms.gcm.ACTION_TASK_READY" />
             </intent-filter>
+        </service>
+
+        <service
+            android:name=".ForegroundService"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name=".START_FOREGROUND_SERVICE_FROM_ACTIVITY" />
+                <action android:name=".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER" />
+                <action android:name=".STOP_FOREGROUND_SERVICE" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name=".BootCompletedReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- TODO: Comment line below when working with internal version -->
+                <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".GpsAlarmIntentService"
+            android:exported="false">
         </service>
 
     </application>

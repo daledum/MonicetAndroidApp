@@ -54,7 +54,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -68,6 +67,7 @@ import java.util.regex.Pattern;
 import static android.R.string.no;
 import static java.lang.Math.abs;
 import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
+import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
@@ -90,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private volatile double mostRecentLocationLatitude = Utils.INITIAL_VALUE;
     private volatile double mostRecentLocationLongitude = Utils.INITIAL_VALUE;
+    private final GpsMode defaultGpsMode = GpsMode.USER_30_MIN;
 
     private final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     // single thread executor for capturing gps coordinates
@@ -104,11 +105,25 @@ public class MainActivity extends AppCompatActivity implements
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
 
+    protected boolean wasStartButtonPressed() {
+        if (trips[0].getStartTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) { return true; }
+        return false;
+    }
+
     @Override
     public void onBackPressed() {
         if (wasMinimumAmountOfGpsFixingDone) {
+            // this below either saves the temp trip or it deletes everything with the trip's ID,
+            // including the file saved by the foreground service (so, stop the fgr service before deleting)
+            //TODO: I add extension to fgr file in stopForegroundService and after I try to delete it in backButtonPressedDialog...issue? Test
+            // but, if I add the extension, the sending mechs will try to send it
+            if (wasStartButtonPressed()) {
+                // a foreground service was started
+                Utils.stopForegroundService(MainActivity.this, false);
+            }
             backButtonPressedDialog();
         } else {
+            // no foreground service was started in this case
             finishAndSave(false);
         }
     }
@@ -201,6 +216,11 @@ public class MainActivity extends AppCompatActivity implements
 
             JsonReader reader = new JsonReader(new FileReader(tempTripFile));
             trips[0] = new Gson().fromJson(reader, Trip.class);
+            try {
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
 
         } catch (FileNotFoundException e) {
@@ -237,11 +257,9 @@ public class MainActivity extends AppCompatActivity implements
             // initialize and show the views (with their logic)... list views, buttons, labels
             initViews();
 
-            if (trips[0].getStartTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
+            if (wasStartButtonPressed()) {
                 //if START button was pressed, initViews should be followed by showSightings()
                 showSightings();
-                // TODO: what to do if comments were interrupted?
-                // TODO: also deal with back button pressed (saveAndFinish like onPause)
             }
 
             // If a trip was reinstated from a temp file, that means the minimum GPS fixing had already been done
@@ -262,6 +280,7 @@ public class MainActivity extends AppCompatActivity implements
             getUserCredentials();
 
             initViews();
+
         }
 
     }
@@ -439,6 +458,8 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
         // hide user GPS interval box
         findViewById(R.id.gps_user_interval_box).setVisibility(View.INVISIBLE);
+        // hide user GPS duration box
+        findViewById(R.id.gps_user_duration_box).setVisibility(View.INVISIBLE);
         // hide BACK button
         findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
         // hide SAVE button
@@ -839,8 +860,9 @@ public class MainActivity extends AppCompatActivity implements
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            // go back to the user gps mode and restart location updates with the new interval
-                            startLocationUpdates(trips[0].getGpsMode());
+                            // go back to the user/default gps mode and restart location updates with the new interval
+                            //startLocationUpdates(trips[0].getGpsMode());//old logic, pre fgr service, get rid
+                            startLocationUpdates(defaultGpsMode);//new logic
                         }
                     });
                 }
@@ -867,11 +889,13 @@ public class MainActivity extends AppCompatActivity implements
             // But if onStop killed other threads after the Gps fixing was done (boolean true), I don't want to refix in onStart
             // If app was killed, I want it to re-fix (boolean will be false by default)
             // If app was not killed and it's just coming back from a break, don't re-fix (boolean is true)//TODO: new change this...save it to file
-            startLocationUpdates(trips[0].getGpsMode());
+            //startLocationUpdates(trips[0].getGpsMode());//old, pre fgr logic, get rid
+            startLocationUpdates(defaultGpsMode);
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
             fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+
             //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
             //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
@@ -909,10 +933,12 @@ public class MainActivity extends AppCompatActivity implements
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                     // permission was granted, yay! Do the location-related task you need to do.
-                    startLocationUpdates(trips[0].getGpsMode());//was empty
+                    //startLocationUpdates(trips[0].getGpsMode());//old, pre fgr service logic, get rid
+                    startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
                     fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+
                     //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
                     //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
@@ -958,12 +984,16 @@ public class MainActivity extends AppCompatActivity implements
 
         onLocationChangedNumberOfCalls++;
 
+        // 3 instruction below should be called after:TODO: implement this
+        //if (location.getAccuracy() < 100.0f) {
+        //}
         mostRecentLocationLatitude = location.getLatitude();
         mostRecentLocationLongitude = location.getLongitude();
 
         //trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());// get rid
         routeData.put(System.currentTimeMillis(),
                 new double[]{location.getLatitude(), location.getLongitude()});
+
         //TEST TODO: now remove
         //trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(), (double) mLocationRequest.getInterval());//get rid
         routeData.put(System.currentTimeMillis() - 1000,
@@ -1043,8 +1073,8 @@ public class MainActivity extends AppCompatActivity implements
     protected void createLocationRequest() {
         mLocationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(trips[0].getGpsMode().getIntervalInMillis())
-                .setFastestInterval(1000); // 1 second
+                .setInterval(defaultGpsMode.getIntervalInMillis())//old logic, get rid was trips[0].getGpsMode().getIntervalInMillis()
+                .setFastestInterval(Utils.ONE_SECOND_IN_MILLIS);
     }
 
     // TODO: this requires knowledge about the trip object and about the sighting object
@@ -1220,7 +1250,8 @@ public class MainActivity extends AppCompatActivity implements
                     @Override
                     public void run() {
                         // go back to the user gps mode and restart location updates with the new interval
-                        startLocationUpdates(trips[0].getGpsMode());
+                        //startLocationUpdates(trips[0].getGpsMode());//old logic, pre fgr service, get rid
+                        startLocationUpdates(defaultGpsMode);
                     }
                 });
             }
@@ -1269,7 +1300,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         } else {
             File dir = new File(Utils.getDirectory());
-            // all files containing the trip's ID
+            // all files containing the trip's ID, including the foreground service route files (make sure you stop them first)
             File[] filesToDelete = dir.listFiles(new FileFilter() {
                 @Override
                 public boolean accept(File pathname) {
@@ -1300,7 +1331,7 @@ public class MainActivity extends AppCompatActivity implements
     protected void saveTripToFile(String status, File finishedTripFileWithoutExtension) {
         File directory = new File(Utils.getDirectory());
 
-        // There are no temp trip files at this moment (they get deleted in onCreate, after de-jsoninizing)
+        // There are no temp trip files at this moment (they get deleted in onCreate, after de-jsonizing)
         // It makes sense to check if it got to add an extension only in the case of FINISHED files
         if (status.equals(Utils.FINISHED) && finishedTripFileWithoutExtension != null) {
             // Delete this file (no need to keep it, we are creating a new one)
@@ -1420,15 +1451,7 @@ public class MainActivity extends AppCompatActivity implements
                 bufferedWriter.append(status);
                 bufferedWriter.newLine();
 
-                for (Map.Entry<Long, double[]> entry : routeData.entrySet()) {
-                    double[] coords = entry.getValue();
-                    bufferedWriter.append(entry.getKey().toString());
-                    bufferedWriter.append(",");
-                    bufferedWriter.append("" + coords[0]);
-                    bufferedWriter.append(",");
-                    bufferedWriter.append("" + coords[1]);
-                    bufferedWriter.newLine();
-                }
+                Utils.writeTimeAndCoordinates(bufferedWriter, routeData);
             } else {
                 Log.d("MainActivity", "the extension of the route file is not CSV, so, a CSV file was not saved");
             }
@@ -1443,13 +1466,10 @@ public class MainActivity extends AppCompatActivity implements
             }// else. When status is temp (we save temporary files in order to reopen them later),
             // we don't add extensions, so that sending mechanisms doesn't send and delete them
 
-            //TODO: rename according to status here even for temp (but no extension...it should be temp already)
-            // TODO: if it's called finished, then it has the extension already...so, change logic
-
         } catch (IOException e) {
             e.printStackTrace();
             Log.d("MainActivity", "File exception when saving route file");
-            routeFile.delete(); //TODO: change this logic, when working with temp route file?
+            routeFile.delete();
         }
     }
 
@@ -1669,6 +1689,11 @@ public class MainActivity extends AppCompatActivity implements
 
         gpsUserIntervalLogic();
 
+        NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
+        durationNumberPicker.setMinValue(1);
+        durationNumberPicker.setMaxValue(24);
+        durationNumberPicker.setValue((int)(trips[0].getDuration() / Utils.ONE_HOUR_IN_MILLIS));
+
         // set animal adapter to custom list view
         ((ListView) findViewById(R.id.list_view_animals)).setAdapter(arrayAdapters[0]);
 
@@ -1710,10 +1735,11 @@ public class MainActivity extends AppCompatActivity implements
                     // if GPS has connected and fixed on a location - capture coordinate
                     if (mGoogleApiClient.isConnected() && wasMinimumAmountOfGpsFixingDone) {
                         //here get the user interval
-                        NumberPicker np = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
-                        int indexOfInterval = np.getValue();
-                        long intervalToCompareWith = (indexOfInterval == 0) ?
-                                Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+                        NumberPicker intervalNumberPicker = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                        int indexOfInterval = intervalNumberPicker.getValue();
+                        //also get rid of 1 MINUTE
+                        //long intervalToCompareWith = (indexOfInterval == 0) ? Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+                        long intervalToCompareWith = indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
 
                         for (GpsMode gpsMode: GpsMode.values()) {
                             if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
@@ -1723,18 +1749,29 @@ public class MainActivity extends AppCompatActivity implements
                             }
                         }
 
+                        NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
+                        trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
+
+                        // send everything in millis
+                        Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
+                        startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
+                        startIntent.putExtra("interval", trips[0].getGpsMode().getIntervalInMillis());
+                        startIntent.putExtra("duration", trips[0].getDuration());
+                        startIntent.putExtra("time", trips[0].getId());
+                        MainActivity.this.startService(startIntent);
+
+                        //get rid from here
                         // if I'm not in fixing or sampling modes, meaning that I am in one of the user
                         // modes (the one selected most recently by the user)
                         // update the location request interval
-                        //TODO: if I pressed START while in fixing: give START here mostRecentLoc's coords (5 calls did take place),
-                        // if not add to list and start sampling mode
                         // I could not have pressed start while in SAMPLING (START and sightings only use SAMPLING)
-                        if (mLocationRequest.getInterval() != GpsMode.FIXING.getIntervalInMillis() &&
-                                mLocationRequest.getInterval() != GpsMode.SAMPLING.getIntervalInMillis()) {//TODO: move this in the for above
-                            startLocationUpdates(trips[0].getGpsMode());
-                        }
+//                        if (mLocationRequest.getInterval() != GpsMode.FIXING.getIntervalInMillis() &&
+//                                mLocationRequest.getInterval() != GpsMode.SAMPLING.getIntervalInMillis()) {
+//                            startLocationUpdates(trips[0].getGpsMode());
+//                        }
                         //else, if I am in fixing or sampling mode (doInitialFix and captureCoordinates
                         // will get the mode into the new user mode at the end
+                        //get rid up to here
 
                         // b) - time
                         trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
@@ -1850,6 +1887,8 @@ public class MainActivity extends AppCompatActivity implements
                         public void onClick(DialogInterface dialog, int which) {
                             wasSendButtonPressed = true;
 
+                            Utils.stopForegroundService(MainActivity.this, true);
+
                             // set the time
                             trips[0].getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
                             // set the coordinates
@@ -1914,7 +1953,7 @@ public class MainActivity extends AppCompatActivity implements
 
     public void useAlarmManager() {
         // Alarm Manager starts an hourly alarm after BOOT COMPLETED or START_ACTION
-        // which starts the AlarmReceiver, which sends and deletes files.
+        // which starts the SendFilesAlarmReceiver, which sends and deletes files.
         // It disables itself if folder is empty. It doesn't listen to the network
         // enable it
         Utils.setComponentState(

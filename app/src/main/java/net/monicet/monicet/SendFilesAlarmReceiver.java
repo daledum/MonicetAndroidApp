@@ -11,7 +11,7 @@ import java.io.IOException;
  * Created by ubuntu on 17-02-2017.
  */
 
-public class AlarmReceiver extends BroadcastReceiver {
+public class SendFilesAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         final Context receivedContext = context;

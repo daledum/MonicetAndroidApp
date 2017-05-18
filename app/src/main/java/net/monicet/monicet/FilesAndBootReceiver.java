@@ -18,7 +18,7 @@ public class FilesAndBootReceiver extends BroadcastReceiver {
         // TODO: only works with local storage ? - see manifest
         AlarmManager alarmMgr = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
         // Set the Intent (even when creating a new one, comparison will be done using filterEquals)
-        Intent myIntent = new Intent(context, AlarmReceiver.class);
+        Intent myIntent = new Intent(context, SendFilesAlarmReceiver.class);
         // Returns an existing or new PendingIntent (if it wasn't previously created) matching the given parameters
         PendingIntent alarmIntent = PendingIntent.getBroadcast(context, 0, myIntent, 0); //PendingIntent.FLAG_UPDATE_CURRENT
 

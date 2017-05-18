@@ -2,28 +2,24 @@ package net.monicet.monicet;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
+import android.util.Log;
 
-import org.json.JSONObject;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Created by ubuntu on 07-02-2017.
@@ -36,15 +32,28 @@ public final class Utils {
     public static final String TEMP = "temp";
     public static final String ROUTE = "Route";
     public static final String TRIP = "Trip";
-    public static final int ONE_SECOND_IN_MILLIS = 1000;
-    public static final int ONE_MINUTE_IN_MILLIS = 60 * 1000;
-    public static final int FIVE_MINUTES_IN_MILLIS = 5 * 60 * 1000;
+    public static final String FOREGROUND_PREFIX = "fgr";
+    public static final String MINUTES = "Min";
+    public static final String HOURS = "Hours";
+    public static final String TIME = "Time";
+    public static final long ONE_SECOND_IN_MILLIS = 1000;
+    public static final long ONE_MINUTE_IN_MILLIS = 60 * 1000;
+    public static final long FIVE_MINUTES_IN_MILLIS = 5 * 60 * 1000;
+    public static final long ONE_HOUR_IN_MILLIS = 3600000;
 
     // this is used for dealing with views in the SightingAdapter (when working with Animal end quantity and TimeAndPlace)
     // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
     // running on ui thread...
     public static final int INITIAL_VALUE = 0; // was -1
     public static final int MAX_VALUE = 99;
+
+    public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
+            ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
+    public static final String START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER =
+            ".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER";
+    public static final String STOP_FOREGROUND_SERVICE = ".STOP_FOREGROUND_SERVICE";
+    public static final int FOREGROUND_ID = 1234;
+    public static final int NOTIFICATION_ID = 1235;
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";
@@ -298,25 +307,6 @@ public final class Utils {
         return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
     }
 
-//    private static void sendFile(URL url, File file, Context context) {
-//        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-//        try {
-//            urlConnection.setDoOutput(true);// set it for output
-//            //urlConnection.setChunkedStreamingMode(0);
-//            //urlConnection.setFixedLengthStreamingMode(); // get content length The number of bytes
-//
-//            OutputStream out = new BufferedOutputStream(urlConnection.getOutputStream());
-//            writeStream(out);
-//
-//            InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-//            readStream(in);
-//        } finally {
-//            urlConnection.disconnect();
-//        }
-//
-//
-//    }
-
     public static void setComponentState(Context context, Class componentClass, boolean enabled) {
 
         // Alex: maybe just use context
@@ -332,6 +322,26 @@ public final class Utils {
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED :
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
         pm.setComponentEnabledSetting(componentName, state, PackageManager.DONT_KILL_APP);
+    }
+
+    public static void stopForegroundService(Context context, boolean addExtension) {
+        Intent stopIntent = new Intent(context, ForegroundService.class);
+        stopIntent.putExtra("addExtension", addExtension);
+        stopIntent.setAction(Utils.STOP_FOREGROUND_SERVICE);
+    }
+
+    public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,
+                                               Map<Long, double[]> routeData) throws IOException {
+
+        for (Map.Entry<Long, double[]> entry : routeData.entrySet()) {
+            double[] coordinates = entry.getValue();
+            bufferedWriter.append(entry.getKey().toString());
+            bufferedWriter.append(",");
+            bufferedWriter.append("" + coordinates[0]);
+            bufferedWriter.append(",");
+            bufferedWriter.append("" + coordinates[1]);
+            bufferedWriter.newLine();
+        }
     }
 
     // class name

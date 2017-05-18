@@ -66,4 +66,5 @@
     <string name="save_trip_before_exiting_dialog_title">Salvar viagem</string>
     <string name="save_trip_before_exiting_dialog_message">Deseja salvar essa viagem antes de fechar o aplicativo?</string>
     <string name="my_no">NÃO</string>
+    <string name="gps_user_duration_text">Por favor, selecione a duração aproximada da sua viagem, em horas.</string>
 </resources>

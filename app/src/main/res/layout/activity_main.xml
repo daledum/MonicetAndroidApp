@@ -36,6 +36,31 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/gps_user_duration_box"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/gps_user_interval_box"
+        android:layout_centerHorizontal="true">
+
+        <TextView
+            android:id="@+id/gps_user_duration_textview"
+            android:layout_width="0dp"
+            android:layout_weight="4"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/gps_user_duration_text"/>
+
+        <NumberPicker
+            android:id="@+id/gps_user_duration_number_picker"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="@dimen/larger_height"
+            android:layout_margin="5dp"/>
+
+    </LinearLayout>
+
     <TextView
         android:id="@+id/no_sightings_text_view"
         android:layout_alignParentTop="true"
@@ -47,7 +72,7 @@
 
     <TextView
         android:id="@+id/wait_for_gps_fix_textview"
-        android:layout_centerInParent="true"
+        android:layout_below="@+id/gps_user_duration_box"
         android:layout_centerHorizontal="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

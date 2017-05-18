@@ -18,6 +18,7 @@ public class Trip implements Serializable {
     private TimeAndPlace startTimeAndPlace;
     private TimeAndPlace endTimeAndPlace;
     private volatile GpsMode gpsMode;
+    private long duration;
 
     public class MyFile {
         private String fileTitle;
@@ -48,6 +49,7 @@ public class Trip implements Serializable {
         endTimeAndPlace = new TimeAndPlace();
         //mRouteData = new HashMap<Long,double[]>();// get rid
         gpsMode = GpsMode.USER_5_MIN;
+        duration = 4 * Utils.ONE_HOUR_IN_MILLIS;
 
         tripFile = new MyFile();
         routeFile = new MyFile();
@@ -81,5 +83,8 @@ public class Trip implements Serializable {
 
     public MyFile getTripFile() { return tripFile; }
     public MyFile getRouteFile() { return routeFile; }
+
+    public long getDuration() { return duration; }
+    public void setDuration(long vDuration) { duration = vDuration; }
 
 }

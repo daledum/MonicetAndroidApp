@@ -35,6 +35,9 @@
     <string name="gps_user_interval_text">
         Please, select how often you want to sample GPS coordinates. By default, it samples every 5 minutes. Battery is saved when a large number is selected.
     </string>
+    <string name="gps_user_duration_text">
+        Please, select the approximate duration of your trip, in hours.
+    </string>
     <string name="gps_fix_message">Please, press again after the GPS signal has fixed.</string>
     <string name="gps_fix_wait_message">
         Please, make sure that your GPS is turned on and set to use all available sources. When this text disappears, the GPS signal has fixed and you can start your trip.
