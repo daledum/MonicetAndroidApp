@@ -52,6 +52,7 @@ public final class Utils {
     public static final String START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER =
             ".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER";
     public static final String STOP_FOREGROUND_SERVICE = ".STOP_FOREGROUND_SERVICE";
+    public static final String STOP_GPS_ALARM_INTENT_SERVICE = ".STOP_GPS_ALARM";
     public static final int FOREGROUND_ID = 1234;
     public static final int NOTIFICATION_ID = 1235;
 

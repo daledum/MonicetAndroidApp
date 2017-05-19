@@ -1,16 +1,21 @@
 package net.monicet.monicet;
 
+import android.Manifest;
 import android.app.IntentService;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -25,7 +30,6 @@ import static android.R.attr.action;
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
  * <p>
- * TODO: Customize class - update intent actions and extra parameters.
  */
 public class GpsAlarmIntentService extends IntentService implements
         LocationListener,
@@ -33,6 +37,9 @@ public class GpsAlarmIntentService extends IntentService implements
         GoogleApiClient.OnConnectionFailedListener {
 
     HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();
+    private GoogleApiClient mGoogleApiClient = null;
+    private LocationRequest mLocationRequest;
+    private File file = null;
 
     public GpsAlarmIntentService() {
         // Used to name the worker thread, important only for debugging.
@@ -47,11 +54,17 @@ public class GpsAlarmIntentService extends IntentService implements
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        if (intent != null) {
+
+        if (intent == null) {
+            stopSelf();
+        } else {
             String fileName = intent.getStringExtra("fileName");
-            if (fileName != null) {
+
+            if (fileName == null) {
+                stopSelf();
+            } else {
                 // This means I am called by the Foreground Service via the Alarm Manager and I am getting the fileName
-                // fileName is not set as an extra only when the alarm is cancelled (the alarm is not set then, anyway)
+                // fileName is not set as an extra only in the scenario when the alarm is cancelled (the alarm is not set then, anyway)
 
                 // test starts here
                 File dir = new File(Utils.EXTERNAL_DIRECTORY);
@@ -61,68 +74,196 @@ public class GpsAlarmIntentService extends IntentService implements
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                //test
+                //test, get rid
 
-                // this doesn't need to know the interval (alarm is triggered after that interval)
+                long tripDuration = intent.getExtras().getLong("duration");
+                long startingTime = intent.getExtras().getLong("time");
 
-                // this should have access to maybe name of file to write to (if after reboot, service is restarted, but it won't have the ID anymore)
-                // service should check before starting alarms that there is a need for sampling the gps data and should pass the name of the file to the alarm
-                // so that the alarm passes it to the gps sampler
+                // if we are 2 hours over the approximate ending time of the trip (stop the alarm..thus stopping this gps sampling service)
+                if (System.currentTimeMillis() >
+                        (startingTime + tripDuration + 2 * Utils.ONE_HOUR_IN_MILLIS)) {
+                    Intent stopIntent = new Intent(this, ForegroundService.class);
+                    stopIntent.setAction(Utils.STOP_GPS_ALARM_INTENT_SERVICE);
+                    startService(stopIntent);
+                    stopSelf();
+                } else {
 
-                // it should:
-                // sample GPS coords for 1 minute (with a 1 or 2 sec interval and copy them to a map), which is then written to a file
+                    file = new File(Utils.getDirectory(), fileName);
+                    // Not checking if it exists here, because I have called the above constructor and it just created new files
+                    // on the drive, without calling createNewFile() or anything
 
-                // should the writing to file be in a thread, too?
+                    // see if the file exists
+                    boolean fileExisted = false;
+                    try {
+                        // createNewFile() creates a new, empty file named by this abstract pathname
+                        // if and only if a file with this name does not yet exist and
+                        // returns true if the named file does not exist and was successfully created
+                        // false if the named file already exists
+                        if(!file.createNewFile()) {
+                            // this means that the file already existed
+                            fileExisted = true;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (!fileExisted) {
+                            file.delete();
+                            file = null;
+                        }
+                    }
 
-                // if interrupted it should just stop the api client etc
+                    if (fileExisted) {
+                        // This means that the file seen by (or created by the foreground service) still exists
+                        createLocationRequest();
+                        buildGoogleApiClient();
+                        mGoogleApiClient.connect();
+                        try {
+                            Thread.sleep(Utils.ONE_MINUTE_IN_MILLIS);
+                        } catch (InterruptedException e) {
+                            Log.d("GpsAlarmIntentService", "1 minute wait interrupted");
+                        } finally {
+                            appendToFile();
+                            stopSelf();
+                        }
+                    } else {
+                        // The file doesn't exist anymore
+                        // 1 It was deleted by the user/app. The file existed before (foreground service makes sure of that).
+                        // a App deletes it when back is pressed and user wants the trip to be deleted (or when, via notif deletes the trip).
+                        // All files containing that ID (startingTime) would be then deleted.
+                        // b user deletes it. Then, maybe the extensionless tempTrip file is still there. This overlaps with scenario 2
+                        // 2 The foreground service gave it an extension (only after SEND was pressed). In this case, the foreground service also
+                        // stopped the alarm which triggers this service, so, do nothing. SEND was pressed, so the other files have extensions, too?
+                        // Maybe my alarm triggers before the activity adds the extension to any of the trip or route files.
+                        // And the fgr file with extension could have been sent already (sending mechs are alive). So, we could have
+                        // no fgr file and an extensionless trip or route file...? For a short time, at least.
+                        stopSelf();
+                    }
+                }
+            }
+        }
+    }
 
-                // after 1 minute
-                // stop the google api client etc
-                /////////
-                // the alarm receiver should sample gps every interval + 1 Min (it samples for a minute)
-                // and add to a file containing the ID (time it started)
-                // if alarm rec sees that difference between the current time and the ID is larger than the duration, it should
-                // send an intent to the foreground service
+    protected void appendToFile() {
+        // first stop the location updates writing to the routeData you'll be reading soon
+        stopGps();
+
+        if (file != null && file.exists()) {
+
+            String fileName = file.getName();
+
+            try {
+
+                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true));
+                Utils.writeTimeAndCoordinates(bufferedWriter, routeData);
+                bufferedWriter.flush();
+                bufferedWriter.close();
+
+            } catch (IOException e) {
+
+                Log.d("GpsAlarmIntentService", "File IOException when adding to fgr - first try");
+
+                // The file existed, but, there were problems when writing to it. Or maybe it was deleted during the write.
+                if (file.exists()) {
+                    // the file still exists, so, try again
+
+                    try {
+
+                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true));
+                        Utils.writeTimeAndCoordinates(bufferedWriter, routeData);
+                        bufferedWriter.flush();
+                        bufferedWriter.close();
+
+                    } catch (IOException exc) {
+
+                        Log.d("GpsAlarmIntentService", "File IOException when adding to fgr - second try");
+
+                        // Still not working: delete file and create a new one, with the same name
+                        if (file.delete()) {
+
+                            File dir = new File(Utils.getDirectory());
+                            File newFile = new File(dir, fileName);
+                            try {
+                                newFile.createNewFile();
+                            } catch (IOException exception) {
+                                Log.d("GpsAlarmIntentService", "File IOException - couldn't create a new fgr file");
+                            }
+                        }
+
+                    }
+                }
 
             }
         }
     }
 
-    protected void appendToFile(File file) {
-        if (file.exists()) {
-            //logic here
-        } else {
-            //logic here
-        }
-        // work on the exception logic here, maybe see what to do in the catch, too
-        try {
-            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true));
-            Utils.writeTimeAndCoordinates(bufferedWriter, routeData);
-            bufferedWriter.flush();
-            bufferedWriter.close();
-        } catch (IOException e) {
-            Log.d("GpsAlarmIntentService", "File IOException");
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+    }
+
+    protected void createLocationRequest() {
+        mLocationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(Utils.ONE_SECOND_IN_MILLIS)
+                .setFastestInterval(Utils.ONE_SECOND_IN_MILLIS);
+    }
+
+    protected void stopGps() {
+        //This can be called multiple times in a row, without error
+        if (mGoogleApiClient != null) {
+            if (mGoogleApiClient.isConnected()) {// Doc:  It must be connected at the time of this call
+                LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+            }
+
+            if (mGoogleApiClient.isConnected()) {
+                mGoogleApiClient.disconnect();
+            }
         }
     }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-
+        // TODO: Will the background gps sampling be allowed to work without permission in the newer APIs?
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED) {
+            LocationServices.FusedLocationApi.
+                    requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        } else {
+            Log.d("GpsAlarmIntentService", "No GPS Fine Location Permission");
+            stopGps();
+            stopSelf();
+        }
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-
+        appendToFile();
+        stopSelf();
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
+        appendToFile();
+        stopSelf();
     }
 
     @Override
     public void onLocationChanged(Location location) {
-        //remember to check the accuracy
+        //if (location.getAccuracy() < 100.0f) {
+        //}
+        routeData.put(System.currentTimeMillis(),
+                new double[]{location.getLatitude(), location.getLongitude()});
 
     }
+
+    @Override
+    public void onDestroy() {
+        // onDestroy might not always be called by the OS
+        stopGps();
+        super.onDestroy();
+    }
+
 }

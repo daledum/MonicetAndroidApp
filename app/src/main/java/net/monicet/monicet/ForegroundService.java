@@ -42,6 +42,7 @@ public class ForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        //TODO:? do I need to call super.onStartCommand(intent, flags, startId);
         // onStartCommand() is called every time a client starts the service using startService(Intent intent).
         // This means that onStartCommand() can get called multiple times.
         // You should do the things in this method that are needed each time a client requests something from your service.
@@ -52,45 +53,48 @@ public class ForegroundService extends Service {
         // will not create a new service object.
         // Instead, it will just call onStartCommand() on the existing service object.
 
-        if (intent.getAction().equals(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY)) {
-            // it arrives here from the app, after the user started the trip (pressed START), which comes after minGpsFixing
+        switch (intent.getAction()) {//possible from Java 7 and upwards, uses .equals
 
-            //steps:
-            // 1 Enable the boot completed receiver, which starts this service after the device restarts
-            Utils.setComponentState(
-                    this,
-                    BootCompletedReceiver.class,
-                    true
-            );
+            case Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY: {
+                // it arrives here from the app, after the user started the trip (pressed START), which comes after minGpsFixing
 
-            Bundle extras = intent.getExtras();
-            long samplingInterval = extras.getLong("interval");
-            long tripDuration = extras.getLong("duration");
-            long startingTime = extras.getLong("time");
+                // Enable the boot completed receiver, which starts this service after the device restarts
+                Utils.setComponentState(
+                        this,
+                        BootCompletedReceiver.class,
+                        true
+                );
 
-            // Try to create a file fgrMinMHoursHTimeId, without the extension
-            String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
+                Bundle extras = intent.getExtras();
+                long samplingInterval = extras.getLong("interval");
+                long tripDuration = extras.getLong("duration");
+                long startingTime = extras.getLong("time");
 
-            if (fileName != null) {
-                // Set and start the alarm
-                // Alarms get killed on reboot, just like pendingIntents
-                // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
-                //TODO: If you want a new interval for the alarm, cancel the old one
-                startAlarm(fileName, samplingInterval);
+                // Try to create a file fgrMinMHoursHTimeId, without the extension
+                String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
 
-                // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
-                startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+                if (fileName != null) {
+                    // Set and start the alarm
+                    // Alarms get killed on reboot, just like pendingIntents
+                    // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
+                    //TODO: If you want a new interval for the alarm, cancel the old one
+                    startAlarm(fileName, samplingInterval, tripDuration, startingTime);
+
+                    // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
+                    startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
 
 
-            } else { // The foreground route file couldn't be created. Maybe after a reboot (boot completed receiver was enabled previously),
-                // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
-                // Stop the service, (and the foreground (if started)...for future iterations, when all this could be called several times)
-                stopSelf(); //foreground wasn't started, alarm wasn't started
+                } else { // The foreground route file couldn't be created. Maybe after a reboot (boot completed receiver was enabled previously),
+                    // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
+                    // start the foreground service, but don't start the alarm (which starts the gps sampling intent service)
+                    // the intent service won't have a file to write to
+                    startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+                }
+
+                break;
             }
 
-        } else {
-            if (intent.getAction().equals(Utils.START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER)) {
-
+            case Utils.START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER: {
                 File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
                 if (extensionlessFgrRouteFile == null) {
                     // The file does not exist (it was not created - write error, see above when I try to create the file OR it was deleted)
@@ -154,7 +158,7 @@ public class ForegroundService extends Service {
                                 );
 
                                 if (fileName != null) {
-                                    startAlarm(fileName, samplingInterval);
+                                    startAlarm(fileName, samplingInterval, tripDuration, startingTime);
 
                                     // TODO: start foreground and build notification
                                     startForeground(Utils.FOREGROUND_ID, getCompatNotification());
@@ -180,69 +184,112 @@ public class ForegroundService extends Service {
                         }
                     }
                 } else {// extensionlessFgrRouteFile exists
+                    String fileName = extensionlessFgrRouteFile.getName();
                     // start the alarm
-                    startAlarm(extensionlessFgrRouteFile.getName(), 0);
+                    long[] intervalDurationAndTime = getIntervalDurationAndTime(fileName);
+                    startAlarm(fileName,
+                            intervalDurationAndTime[0],
+                            intervalDurationAndTime[1],
+                            intervalDurationAndTime[2]
+                    );
 
                     // TODO: start foreground and build notification
                     startForeground(Utils.FOREGROUND_ID, getCompatNotification());
                 }
-            } else {
-                if (intent.getAction().equals(Utils.STOP_FOREGROUND_SERVICE)) {
-                    // I am using this action so I could differentiate between the moments my app asks for this Service to stop
-                    // and when the OS kills this Service (if using stopService() from Activity, onDestroy() gets called,
-                    // but onDestroy could get called when the OS is killing the Service)
 
-                    // Cancel the alarm
-                    // Create the same intent (extras are not taken into consideration),
-                    // and thus a matching PendingIntent/IntentSender, for the one that was scheduled.
-                    AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
-                    alarmMgr.cancel(getAlarmPendingIntent(null));// here it sends null as the filename
-
-                    // also disable the boot completed receiver, so it doesn't start this service at start-up (reboot/restart)
-                    Utils.setComponentState(
-                            this,
-                            BootCompletedReceiver.class,
-                            false
-                    );
-
-                    // stop the foreground (and disable notification)
-                    stopForeground(true);
-
-                    // this needs to be done after alarm is stopped (file should not be written to at the time)
-                    if (intent.getExtras().getBoolean("addExtension")) {
-                        // Add extension to file
-                        // The extension is added when Service ends...after SEND is pressed
-                        File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
-                        if (extensionlessFgrRouteFile != null) {
-                            String fileName = extensionlessFgrRouteFile.getName();
-                            File directory = new File(Utils.getDirectory());
-                            extensionlessFgrRouteFile.renameTo(new File(directory, fileName + ".CSV"));
-                        }
-                    } // no need for else, here, if trip is being deleted saveAndFinish will delete the fgr Route file, too
-
-                    //void stopForeground (int flags)
-                    //stopSelf() is used to always stop the current service.
-                    //stopSelf(int startId) is also used to stop the current service, but only if startId was the ID specified the last time the service was started.
-                    //stopService(Intent service) is used to stop services, but from outside the service to be stopped.  If the service is not running, nothing happens. Otherwise it is stopped. Note that calls to startService() are not counted - this stops the service no matter how many times it was started.
-                    //onDestroy() state called for all 3
-                    //stopService(new Intent(SummaryActivity.this, SocketService.class));
-                    //AppController.getInstance().stopService();
-                    stopSelf();
-                }//TODO: maybe, an else here with activity paused (so that the notification can add OPEN to DELETE and NEW)
+                break;
             }
+
+            case Utils.STOP_FOREGROUND_SERVICE: {
+                // I am using this action so I could differentiate between the moments my app asks for this Service to stop
+                // and when the OS kills this Service (if using stopService() from Activity, onDestroy() gets called,
+                // but onDestroy could get called when the OS is killing the Service)
+
+                // Cancel the alarm
+                // Create the same intent (extras are not taken into consideration),
+                // and thus a matching PendingIntent/IntentSender, for the one that was scheduled.
+                AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0));// here it sends null as the filename
+
+                // also disable the boot completed receiver, so it doesn't start this service at start-up (reboot/restart)
+                Utils.setComponentState(
+                        this,
+                        BootCompletedReceiver.class,
+                        false
+                );
+
+                // stop the foreground (and disable notification)
+                stopForeground(true);
+
+                // this needs to be done after alarm is stopped (file should not be written to at the time)
+                // IntentServices are difficult to interrupt.
+                // The IntentService only writes to file at the end, so, this might not try to rename the file
+                // while it's being written to
+                if (intent.getExtras().getBoolean("addExtension")) {
+                    // Add extension to file
+                    // The extension is added when Service ends...after SEND is pressed
+                    File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
+                    if (extensionlessFgrRouteFile != null) {
+                        String fileName = extensionlessFgrRouteFile.getName();
+                        File directory = new File(Utils.getDirectory());
+                        if (!extensionlessFgrRouteFile.renameTo(
+                                new File(directory, fileName + AllowedFileExtension.CSV))) {
+                            // maybe the file was written to by the Gps IntentService, so, wait a second
+                            try {
+                                Thread.sleep(Utils.ONE_SECOND_IN_MILLIS);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            } finally {
+                                extensionlessFgrRouteFile.renameTo(
+                                        new File(directory, fileName + AllowedFileExtension.CSV));
+                            }
+                        }
+                    }
+                } // no need for else, here, if trip is being deleted saveAndFinish will delete the fgr Route file, too
+
+                //void stopForeground (int flags)
+                //stopSelf() is used to always stop the current service.
+                //stopSelf(int startId) is also used to stop the current service, but only if startId was the ID specified the last time the service was started.
+                //stopService(Intent service) is used to stop services, but from outside the service to be stopped.  If the service is not running, nothing happens. Otherwise it is stopped. Note that calls to startService() are not counted - this stops the service no matter how many times it was started.
+                //onDestroy() state called for all 3
+                //stopService(new Intent(SummaryActivity.this, SocketService.class));
+                //AppController.getInstance().stopService();
+                stopSelf();
+
+                break;
+            }
+
+            case Utils.STOP_GPS_ALARM_INTENT_SERVICE: {
+                AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0));
+
+                Utils.setComponentState(
+                        this,
+                        BootCompletedReceiver.class,
+                        false
+                );
+
+                break;
+            }
+
+            //TODO: maybe, a case here with activity paused (so that the notification can add OPEN to DELETE and NEW)
         }
 
         return START_STICKY;
     }
 
-    protected PendingIntent getAlarmPendingIntent(String fileName) {
+    protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration, long startingTime) {
         // TODO: only works with local storage ? - see manifest
         // Set the Intent (even when creating a new one, comparison will be done using filterEquals)
         Intent intent = new Intent(this, GpsAlarmIntentService.class);
 
         // alarm receiver reads the duration and startingTime from the fileName
         // filename is null only when we want a pending intent that will cancel the alarm
-        if (fileName != null) { intent.putExtra("fileName", fileName); }
+        if (fileName != null) {
+            intent.putExtra("fileName", fileName);
+            intent.putExtra("duration", tripDuration);
+            intent.putExtra("time", startingTime);
+        }
 
         // Returns an existing or new PendingIntent (if it wasn't previously created) matching the given parameters
         // If you just want to change the extras without actually rescheduling the existing alarm,
@@ -273,7 +320,7 @@ public class ForegroundService extends Service {
                 return fgrRouteFile.getName();
             }
         } catch (IOException e) {
-            Log.d("UtilsStartFgrService", "IOExc creating the fgr route file");
+            Log.d("UtilsStartFgrService", "IOException creating the fgr route file");
         }
         return null;
     }
@@ -310,29 +357,18 @@ public class ForegroundService extends Service {
         return null;
     }
 
-    protected void startAlarm(String fileName, long samplingInterval) {
-
-        long interval = samplingInterval;
-        if (interval == 0) {
-            // extract it from the fileName, which has the form:
-//            Utils.FOREGROUND_PREFIX +
-//            Utils.MINUTES + String.valueOf(samplingInterval) +
-//            Utils.HOURS + String.valueOf(tripDuration) +
-//            Utils.TIME + String.valueOf(startingTime)
-            int beginIndex = fileName.indexOf(Utils.MINUTES) + Utils.MINUTES.length();
-            int endIndex = fileName.indexOf(Utils.HOURS);
-            // Then I multiply that with ONE_MINUTE
-            interval = Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_MINUTE_IN_MILLIS;
-        }
+    protected void startAlarm(String fileName, long samplingInterval,
+                              long tripDuration, long startingTime) {
 
         // set the alarm to sample the first time 'interval' millis from now. The alarm receiver
         // samples for a minute, so set the interval between alarms as 'interval' + 1 minute
         AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);
         alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,// will awake the device
-                SystemClock.elapsedRealtime() + interval,// first time the alarm should go off
-                interval + Utils.ONE_MINUTE_IN_MILLIS,// interval in milliseconds between subsequent repeats of the alarm
-                getAlarmPendingIntent(fileName)// sending the fileName to the alarm as an extra
+                SystemClock.elapsedRealtime() + samplingInterval,// first time the alarm should go off (it went off immediately, nonetheless)
+                samplingInterval + Utils.ONE_MINUTE_IN_MILLIS,// interval in milliseconds between subsequent repeats of the alarm
+                // sending the args to the alarm recipient (gps alarm intent service) as extra (it doesn't need the sampling interval, only the alarms needs it)
+                getAlarmPendingIntent(fileName, tripDuration, startingTime)
         );
     }
 
@@ -351,6 +387,34 @@ public class ForegroundService extends Service {
 //        // and service is supposed to be restarted automatically at some time in the not-too-distant future,
 //        // when RAM needs permit it.
 //    }
+
+    // Extract the sampling interval (for setting the alarm),
+    // the duration of the trip and its ID (starting time of the trip)
+    protected long[] getIntervalDurationAndTime(String fileName) {
+
+        // extract it from the fileName, which has the form:
+//            Utils.FOREGROUND_PREFIX +
+//            Utils.MINUTES + String.valueOf(samplingInterval) +
+//            Utils.HOURS + String.valueOf(tripDuration) +
+//            Utils.TIME + String.valueOf(startingTime)
+
+        int beginIndex = fileName.indexOf(Utils.MINUTES) + Utils.MINUTES.length();
+        int endIndex = fileName.indexOf(Utils.HOURS);
+        // Then I multiply that with ONE_MINUTE
+        long interval =
+                Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_MINUTE_IN_MILLIS;
+
+        beginIndex = fileName.indexOf(Utils.HOURS) + Utils.HOURS.length();
+        endIndex = fileName.indexOf(Utils.TIME);
+        long duration =
+                Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_HOUR_IN_MILLIS;
+
+        beginIndex = fileName.indexOf(Utils.TIME) + Utils.TIME.length();
+        long time = Long.parseLong(fileName.substring(beginIndex));
+
+        return new long[]{interval, duration, time};
+    }
+
 
     @Override
     public IBinder onBind(Intent intent) {

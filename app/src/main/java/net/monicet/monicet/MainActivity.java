@@ -118,7 +118,8 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: I add extension to fgr file in stopForegroundService and after I try to delete it in backButtonPressedDialog...issue? Test
             // but, if I add the extension, the sending mechs will try to send it
             if (wasStartButtonPressed()) {
-                // a foreground service was started
+                // a foreground service was started, so stop it. This is one way to stop both the activity and
+                // the foreground service (and the alarm). Another would be to delete trip, via notification)
                 Utils.stopForegroundService(MainActivity.this, false);
             }
             backButtonPressedDialog();
@@ -894,10 +895,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -937,10 +938,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -982,6 +983,12 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onLocationChanged(Location location) {
 
+//        if (onLocationChangedNumberOfCalls == 0) {
+//            // indifferent to the accuracy, I want at least one reading, so that I know it fired at least once
+//            mostRecentLocationLatitude = location.getLatitude();
+//            mostRecentLocationLongitude = location.getLongitude();
+//        }
+
         onLocationChangedNumberOfCalls++;
 
         // 3 instruction below should be called after:TODO: implement this
@@ -990,12 +997,10 @@ public class MainActivity extends AppCompatActivity implements
         mostRecentLocationLatitude = location.getLatitude();
         mostRecentLocationLongitude = location.getLongitude();
 
-        //trip.addRouteData(System.currentTimeMillis(), location.getLatitude(), location.getLongitude());// get rid
         routeData.put(System.currentTimeMillis(),
                 new double[]{location.getLatitude(), location.getLongitude()});
 
         //TEST TODO: now remove
-        //trip.addRouteData(System.currentTimeMillis() - 1000, location.getLatitude(), (double) mLocationRequest.getInterval());//get rid
         routeData.put(System.currentTimeMillis() - 1000,
                 new double[]{location.getLatitude(), (double) mLocationRequest.getInterval()});
         //remove up to here
@@ -1073,7 +1078,7 @@ public class MainActivity extends AppCompatActivity implements
     protected void createLocationRequest() {
         mLocationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(defaultGpsMode.getIntervalInMillis())//old logic, get rid was trips[0].getGpsMode().getIntervalInMillis()
+                .setInterval(defaultGpsMode.getIntervalInMillis())
                 .setFastestInterval(Utils.ONE_SECOND_IN_MILLIS);
     }
 
@@ -1341,6 +1346,16 @@ public class MainActivity extends AppCompatActivity implements
         // file title will be either tempTrip1029282822 or finishedTrip10292929292
         String fileTitle = status + trips[0].getTripFile().getFileTitle();
         File tripFile = new File(directory, fileTitle);
+        // new from here
+        //TODO: also need to call createNewFile() ? ALEX File issue here
+        if (!tripFile.exists()) {
+            try {
+                tripFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        // new up to here
 
         try {
             FileWriter tripWriter = new FileWriter(tripFile);
@@ -1367,7 +1382,7 @@ public class MainActivity extends AppCompatActivity implements
         } catch (IOException e) {
             e.printStackTrace();
             Log.d("MainActivity", "File exception when saving trip file");
-            tripFile.delete();//TODO: change this logic?
+            tripFile.delete();
         }
 
     }
@@ -1422,6 +1437,16 @@ public class MainActivity extends AppCompatActivity implements
         if (routeFile == null) {
             // this means that there are no openable/writable tempRouteId or finishedRouteId files
             routeFile = new File(directory, fileTitle);
+            // new from here
+            //TODO: also need to call createNewFile() ? ALEX File issue here
+            if (!routeFile.exists()) {
+                try {
+                    routeFile.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            // new up to here
         }
 
         try {

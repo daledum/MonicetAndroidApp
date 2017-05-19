@@ -62,6 +62,7 @@
             <intent-filter>
                 <action android:name=".START_FOREGROUND_SERVICE_FROM_ACTIVITY" />
                 <action android:name=".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER" />
+                <action android:name=".STOP_GPS_ALARM" />
                 <action android:name=".STOP_FOREGROUND_SERVICE" />
             </intent-filter>
         </service>
