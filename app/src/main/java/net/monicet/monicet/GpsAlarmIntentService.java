@@ -40,6 +40,7 @@ public class GpsAlarmIntentService extends IntentService implements
     private GoogleApiClient mGoogleApiClient = null;
     private LocationRequest mLocationRequest;
     private File file = null;
+    private String userName = null;
 
     public GpsAlarmIntentService() {
         // Used to name the worker thread, important only for debugging.
@@ -66,9 +67,9 @@ public class GpsAlarmIntentService extends IntentService implements
                 // This means I am called by the Foreground Service via the Alarm Manager and I am getting the fileName
                 // fileName is not set as an extra only in the scenario when the alarm is cancelled (the alarm is not set then, anyway)
 
-                // test starts here
+                // test starts here .. file name should be fgrMinMHoursHTimeId - did not get action
                 File dir = new File(Utils.EXTERNAL_DIRECTORY);
-                File testFile = new File(dir, System.currentTimeMillis() + fileName);
+                File testFile = new File(dir, String.valueOf((int)(System.currentTimeMillis()/1000000)) + fileName);
                 try {
                     testFile.createNewFile();
                 } catch (IOException e) {
@@ -77,8 +78,10 @@ public class GpsAlarmIntentService extends IntentService implements
                 //test, get rid
 
                 long tripDuration = intent.getExtras().getLong("duration");
-                long startingTime = intent.getExtras().getLong("time");
+                long startingTime = intent.getExtras().getLong("time");//TODO: get rid and use shared prefs (see below)
+                userName = intent.getExtras().getString("user");
 
+                // TODO: change this with lastTimeActivitySampledCoords (use shared prefs) + duration of trip
                 // if we are 2 hours over the approximate ending time of the trip (stop the alarm..thus stopping this gps sampling service)
                 if (System.currentTimeMillis() >
                         (startingTime + tripDuration + 2 * Utils.ONE_HOUR_IN_MILLIS)) {
@@ -154,6 +157,11 @@ public class GpsAlarmIntentService extends IntentService implements
             try {
 
                 BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true));
+                bufferedWriter.append(userName);
+                bufferedWriter.append(",");
+                //NB if this extension changes in ForegroundService, where it's added, it should change here, too
+                bufferedWriter.append(fileName);//+ AllowedFileExtension.CSV
+                bufferedWriter.newLine();
                 Utils.writeTimeAndCoordinates(bufferedWriter, routeData);
                 bufferedWriter.flush();
                 bufferedWriter.close();

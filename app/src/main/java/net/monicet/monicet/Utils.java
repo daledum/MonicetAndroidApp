@@ -1,5 +1,7 @@
 package net.monicet.monicet;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
 import android.util.Log;
+import android.util.Patterns;
 
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
@@ -20,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Created by ubuntu on 07-02-2017.
@@ -60,8 +64,6 @@ public final class Utils {
     public static final String START_ACTION = ".START";
     public static final String STOP_ACTION = ".STOP";
 
-    // this will get set by the MainActivity.. as a default: set it to all the registered extension
-    private static String DIRECTORY;
     // back-ups, if directory is null (for usage in SendAndDeleteFiles())
     public static final String EXTERNAL_DIRECTORY =
             Environment.getExternalStorageDirectory()
@@ -76,12 +78,18 @@ public final class Utils {
             Environment.getDataDirectory()
             + "/data/net.monicet.monicet/files";
 
-    // allow to be set only once, only when it's null
-    public static void setDirectory(String dir) {
-        if (DIRECTORY == null) {
-            DIRECTORY = dir;
-        }
-    }
+    // this will get set by the MainActivity.. as a default: set it to all the registered extension
+    //private static String DIRECTORY; //get rid
+    private static final String DIRECTORY = EXTERNAL_DIRECTORY;
+
+    // allow to be set only once, only when it's null, get rid NB won't survive the reboot
+//    public static void setDirectory(String dir) {
+//        if (DIRECTORY == null) {
+//            DIRECTORY = dir;
+//        }
+//    }
+
+    //should get rid of this, too
     public static String getDirectory() { return DIRECTORY; }
 
     public static double parseGpsToDouble(String sValue, GpsEdgeValue edgeValue) {
@@ -327,8 +335,24 @@ public final class Utils {
 
     public static void stopForegroundService(Context context, boolean addExtension) {
         Intent stopIntent = new Intent(context, ForegroundService.class);
-        stopIntent.putExtra("addExtension", addExtension);
         stopIntent.setAction(Utils.STOP_FOREGROUND_SERVICE);
+        stopIntent.putExtra("addExtension", addExtension);
+        context.startService(stopIntent);
+    }
+
+    public static String getUserCredentials(Context context) {
+        String emailAddresses = "";
+
+        Pattern emailPattern = Patterns.EMAIL_ADDRESS;
+        Account[] accounts = AccountManager.get(context).getAccounts();
+
+        for (Account account : accounts) {
+            if (emailPattern.matcher(account.name).matches()) {
+                emailAddresses += account.name + ",";
+            }
+        }
+
+        return emailAddresses.substring(0, emailAddresses.length() - 1);
     }
 
     public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,

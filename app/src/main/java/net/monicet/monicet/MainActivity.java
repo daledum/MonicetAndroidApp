@@ -117,11 +117,6 @@ public class MainActivity extends AppCompatActivity implements
             // including the file saved by the foreground service (so, stop the fgr service before deleting)
             //TODO: I add extension to fgr file in stopForegroundService and after I try to delete it in backButtonPressedDialog...issue? Test
             // but, if I add the extension, the sending mechs will try to send it
-            if (wasStartButtonPressed()) {
-                // a foreground service was started, so stop it. This is one way to stop both the activity and
-                // the foreground service (and the alarm). Another would be to delete trip, via notification)
-                Utils.stopForegroundService(MainActivity.this, false);
-            }
             backButtonPressedDialog();
         } else {
             // no foreground service was started in this case
@@ -145,6 +140,12 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.setNegativeButton(R.string.my_no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                if (wasStartButtonPressed()) {
+                    //TODO: work on the logic here...fgr service gets stopped when I press back and choose not to save the trip
+                    // a foreground service was started, so stop it. This is one way to stop both the activity and
+                    // the foreground service (and the alarm). Another would be to delete trip, via notification)
+                    Utils.stopForegroundService(MainActivity.this, false);
+                }
                 finishAndSave(false);
                 //MainActivity.super.onBackPressed();//this probably calls finish
 
@@ -278,7 +279,8 @@ public class MainActivity extends AppCompatActivity implements
 
             // these two only if it wasn't deserialized (otherwise, the deserialized trip already contains this data)
             setTripIdAndFileNamesAndExtensions();
-            getUserCredentials();
+            // set user name (user's email address)
+            trips[0].setUserName(Utils.getUserCredentials(this));
 
             initViews();
 
@@ -297,7 +299,8 @@ public class MainActivity extends AppCompatActivity implements
 
             // set data directory, where files exist - used by:
             // initTripAndViews(); dynamic receiver, the SEND button logic, by receivers, alarm, GCM etc
-            setDataDirectory();
+            //setDataDirectory();//TODO: the data directory should be getFilesDir().toString() when deploying (internal version). getDirectory should be replaced by
+            // getFilesDir() which returns /data/data/net.monicet.monicet/files (if not use, shared preferences and set it here)
 
             registerDynamicReceiver();
 
@@ -1054,18 +1057,6 @@ public class MainActivity extends AppCompatActivity implements
         return true;
     }
 
-    protected void getUserCredentials() {
-        String emailAddresses = "";
-        Pattern emailPattern = Patterns.EMAIL_ADDRESS;
-        Account[] accounts = AccountManager.get(this).getAccounts();
-        for (Account account : accounts) {
-            if (emailPattern.matcher(account.name).matches()) {
-                emailAddresses += account.name + ",";
-            }
-        }
-        trips[0].setUserName(emailAddresses.substring(0, emailAddresses.length() - 1));
-    }
-
     // google sample - why synchronized - only the main UI thread calls it
     protected synchronized void buildGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -1628,13 +1619,13 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    public void setDataDirectory() {
-        // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
-        // set directory here for the SendAndDeleteFiles Utils method
-        Utils.setDirectory(EXTERNAL_DIRECTORY); // have this in the initData() method - must be called before registerDynamicReceiver()
-        //should be Utils.setDirectory(getFilesDir().toString()); // Alex: was, directory.toString(), toString should be optional
-
-    }
+//    public void setDataDirectory() {
+//        // before registering the dynamic receiver, which will trigger - inform the package where you saved the files
+//        // set directory here for the SendAndDeleteFiles Utils method
+//        Utils.setDirectory(EXTERNAL_DIRECTORY); // have this in the initData() method - must be called before registerDynamicReceiver()
+//        //should be Utils.setDirectory(getFilesDir().toString()); // Alex: was, directory.toString(), toString should be optional
+//
+//    }
 
     public void setTripIdAndFileNamesAndExtensions() {
 
@@ -1783,6 +1774,7 @@ public class MainActivity extends AppCompatActivity implements
                         startIntent.putExtra("interval", trips[0].getGpsMode().getIntervalInMillis());
                         startIntent.putExtra("duration", trips[0].getDuration());
                         startIntent.putExtra("time", trips[0].getId());
+                        startIntent.putExtra("user", trips[0].getUserName());
                         MainActivity.this.startService(startIntent);
 
                         //get rid from here
@@ -1920,7 +1912,7 @@ public class MainActivity extends AppCompatActivity implements
                             captureCoordinates(trips[0].getEndTimeAndPlace());
 
                             //sendSightingsAndShutdownTask.start();//test, uncomment if necessary
-                            //TODO: maybe replace the above with:
+                            //TODO: maybe replace the thread above with:
                             finishAndSave(true);
                         }
                     });

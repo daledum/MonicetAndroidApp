@@ -14,6 +14,7 @@ import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
@@ -69,6 +70,7 @@ public class ForegroundService extends Service {
                 long samplingInterval = extras.getLong("interval");
                 long tripDuration = extras.getLong("duration");
                 long startingTime = extras.getLong("time");
+                String userName = extras.getString("user");
 
                 // Try to create a file fgrMinMHoursHTimeId, without the extension
                 String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
@@ -78,7 +80,7 @@ public class ForegroundService extends Service {
                     // Alarms get killed on reboot, just like pendingIntents
                     // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
                     //TODO: If you want a new interval for the alarm, cancel the old one
-                    startAlarm(fileName, samplingInterval, tripDuration, startingTime);
+                    startAlarm(fileName, samplingInterval, tripDuration, startingTime, userName);
 
                     // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
                     startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
@@ -150,6 +152,8 @@ public class ForegroundService extends Service {
                                 long samplingInterval = gpsMode.getIntervalInMillis();
                                 long tripDuration = trip.getDuration();
                                 long startingTime = trip.getId();
+                                String userName = trip.getUserName();
+
 
                                 String fileName = createForegroundRouteFile(
                                         samplingInterval,
@@ -158,7 +162,8 @@ public class ForegroundService extends Service {
                                 );
 
                                 if (fileName != null) {
-                                    startAlarm(fileName, samplingInterval, tripDuration, startingTime);
+                                    startAlarm(fileName, samplingInterval,
+                                            tripDuration, startingTime, userName);
 
                                     // TODO: start foreground and build notification
                                     startForeground(Utils.FOREGROUND_ID, getCompatNotification());
@@ -185,12 +190,45 @@ public class ForegroundService extends Service {
                     }
                 } else {// extensionlessFgrRouteFile exists
                     String fileName = extensionlessFgrRouteFile.getName();
+
+                    //TODO: read first part (up to ",") of first line of file
+                    String userName = null;
+                    try {
+                        BufferedReader in = new BufferedReader(new FileReader("foo.in"));
+
+                        try {
+                            String lineContainingUserName = in.readLine();
+                            // take the user's email address, which is written to the file at the beginning
+                            int indexOfComma = lineContainingUserName.indexOf(",");
+                            if (indexOfComma != -1) {
+                                userName = lineContainingUserName.substring(0, indexOfComma).trim();
+                            }
+                        } catch(IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        try {
+                            in.close();
+                        } catch(IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    } catch(FileNotFoundException exc) {
+                        exc.printStackTrace();
+                    }
+
+                    // could not extract the user name from the file, therefore we'll use the
+                    // current user name of the device running the service now
+                    if (userName == null) {
+                        userName = Utils.getUserCredentials(this).trim();
+                    }
+
                     // start the alarm
                     long[] intervalDurationAndTime = getIntervalDurationAndTime(fileName);
                     startAlarm(fileName,
                             intervalDurationAndTime[0],
                             intervalDurationAndTime[1],
-                            intervalDurationAndTime[2]
+                            intervalDurationAndTime[2],
+                            userName
                     );
 
                     // TODO: start foreground and build notification
@@ -209,7 +247,7 @@ public class ForegroundService extends Service {
                 // Create the same intent (extras are not taken into consideration),
                 // and thus a matching PendingIntent/IntentSender, for the one that was scheduled.
                 AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
-                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0));// here it sends null as the filename
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0, null));// here it sends null as the filename
 
                 // also disable the boot completed receiver, so it doesn't start this service at start-up (reboot/restart)
                 Utils.setComponentState(
@@ -261,7 +299,7 @@ public class ForegroundService extends Service {
 
             case Utils.STOP_GPS_ALARM_INTENT_SERVICE: {
                 AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
-                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0));
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0, null));
 
                 Utils.setComponentState(
                         this,
@@ -278,7 +316,8 @@ public class ForegroundService extends Service {
         return START_STICKY;
     }
 
-    protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration, long startingTime) {
+    protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration,
+                                                  long startingTime, String userName) {
         // TODO: only works with local storage ? - see manifest
         // Set the Intent (even when creating a new one, comparison will be done using filterEquals)
         Intent intent = new Intent(this, GpsAlarmIntentService.class);
@@ -288,7 +327,8 @@ public class ForegroundService extends Service {
         if (fileName != null) {
             intent.putExtra("fileName", fileName);
             intent.putExtra("duration", tripDuration);
-            intent.putExtra("time", startingTime);
+            intent.putExtra("time", startingTime);//TODO: get rid of this
+            intent.putExtra("user", userName);
         }
 
         // Returns an existing or new PendingIntent (if it wasn't previously created) matching the given parameters
@@ -358,7 +398,7 @@ public class ForegroundService extends Service {
     }
 
     protected void startAlarm(String fileName, long samplingInterval,
-                              long tripDuration, long startingTime) {
+                              long tripDuration, long startingTime, String userName) {
 
         // set the alarm to sample the first time 'interval' millis from now. The alarm receiver
         // samples for a minute, so set the interval between alarms as 'interval' + 1 minute
@@ -368,7 +408,7 @@ public class ForegroundService extends Service {
                 SystemClock.elapsedRealtime() + samplingInterval,// first time the alarm should go off (it went off immediately, nonetheless)
                 samplingInterval + Utils.ONE_MINUTE_IN_MILLIS,// interval in milliseconds between subsequent repeats of the alarm
                 // sending the args to the alarm recipient (gps alarm intent service) as extra (it doesn't need the sampling interval, only the alarms needs it)
-                getAlarmPendingIntent(fileName, tripDuration, startingTime)
+                getAlarmPendingIntent(fileName, tripDuration, startingTime, userName)
         );
     }
 
