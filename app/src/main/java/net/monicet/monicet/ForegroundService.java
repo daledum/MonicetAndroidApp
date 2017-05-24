@@ -21,6 +21,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
+import static android.R.attr.duration;
+
 public class ForegroundService extends Service {
 
     //TODO: what's with this here, should I call super or what...see other code
@@ -67,10 +69,10 @@ public class ForegroundService extends Service {
                 );
 
                 Bundle extras = intent.getExtras();
-                long samplingInterval = extras.getLong("interval");
-                long tripDuration = extras.getLong("duration");
-                long startingTime = extras.getLong("time");
-                String userName = extras.getString("user");
+                long samplingInterval = extras.getLong(Utils.GPS_SAMPLING_INTERVAL);
+                long tripDuration = extras.getLong(Utils.TRIP_DURATION);
+                long startingTime = extras.getLong(Utils.TRIP_START_TIME);
+                String userName = extras.getString(Utils.USERNAME);
 
                 // Try to create a file fgrMinMHoursHTimeId, without the extension
                 String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
@@ -80,7 +82,7 @@ public class ForegroundService extends Service {
                     // Alarms get killed on reboot, just like pendingIntents
                     // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
                     //TODO: If you want a new interval for the alarm, cancel the old one
-                    startAlarm(fileName, samplingInterval, tripDuration, startingTime, userName);
+                    startAlarm(fileName, samplingInterval, tripDuration, userName);
 
                     // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
                     startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
@@ -162,8 +164,7 @@ public class ForegroundService extends Service {
                                 );
 
                                 if (fileName != null) {
-                                    startAlarm(fileName, samplingInterval,
-                                            tripDuration, startingTime, userName);
+                                    startAlarm(fileName, samplingInterval, tripDuration, userName);
 
                                     // TODO: start foreground and build notification
                                     startForeground(Utils.FOREGROUND_ID, getCompatNotification());
@@ -202,6 +203,9 @@ public class ForegroundService extends Service {
                             int indexOfComma = lineContainingUserName.indexOf(",");
                             if (indexOfComma != -1) {
                                 userName = lineContainingUserName.substring(0, indexOfComma).trim();
+                                if (!userName.contains("@")) {//it's not a valid user if it doesn't have @
+                                    userName = null;
+                                }
                             }
                         } catch(IOException e) {
                             e.printStackTrace();
@@ -223,11 +227,9 @@ public class ForegroundService extends Service {
                     }
 
                     // start the alarm
-                    long[] intervalDurationAndTime = getIntervalDurationAndTime(fileName);
                     startAlarm(fileName,
-                            intervalDurationAndTime[0],
-                            intervalDurationAndTime[1],
-                            intervalDurationAndTime[2],
+                            getIntervalMillisFromFileName(fileName),
+                            getDurationMillisFromFileName(fileName),
                             userName
                     );
 
@@ -247,7 +249,7 @@ public class ForegroundService extends Service {
                 // Create the same intent (extras are not taken into consideration),
                 // and thus a matching PendingIntent/IntentSender, for the one that was scheduled.
                 AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
-                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0, null));// here it sends null as the filename
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, null));// here it sends null as the filename
 
                 // also disable the boot completed receiver, so it doesn't start this service at start-up (reboot/restart)
                 Utils.setComponentState(
@@ -263,7 +265,7 @@ public class ForegroundService extends Service {
                 // IntentServices are difficult to interrupt.
                 // The IntentService only writes to file at the end, so, this might not try to rename the file
                 // while it's being written to
-                if (intent.getExtras().getBoolean("addExtension")) {
+                if (intent.getExtras().getBoolean(Utils.ADD_EXTENSION)) {
                     // Add extension to file
                     // The extension is added when Service ends...after SEND is pressed
                     File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
@@ -299,7 +301,7 @@ public class ForegroundService extends Service {
 
             case Utils.STOP_GPS_ALARM_INTENT_SERVICE: {
                 AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);//was Context.ALARM_SERVICE
-                alarmMgr.cancel(getAlarmPendingIntent(null, 0, 0, null));
+                alarmMgr.cancel(getAlarmPendingIntent(null, 0, null));
 
                 Utils.setComponentState(
                         this,
@@ -316,8 +318,7 @@ public class ForegroundService extends Service {
         return START_STICKY;
     }
 
-    protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration,
-                                                  long startingTime, String userName) {
+    protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration, String userName) {
         // TODO: only works with local storage ? - see manifest
         // Set the Intent (even when creating a new one, comparison will be done using filterEquals)
         Intent intent = new Intent(this, GpsAlarmIntentService.class);
@@ -325,10 +326,9 @@ public class ForegroundService extends Service {
         // alarm receiver reads the duration and startingTime from the fileName
         // filename is null only when we want a pending intent that will cancel the alarm
         if (fileName != null) {
-            intent.putExtra("fileName", fileName);
-            intent.putExtra("duration", tripDuration);
-            intent.putExtra("time", startingTime);//TODO: get rid of this
-            intent.putExtra("user", userName);
+            intent.putExtra(Utils.FILENAME, fileName);
+            intent.putExtra(Utils.TRIP_DURATION, tripDuration);
+            intent.putExtra(Utils.USERNAME, userName);
         }
 
         // Returns an existing or new PendingIntent (if it wasn't previously created) matching the given parameters
@@ -398,7 +398,7 @@ public class ForegroundService extends Service {
     }
 
     protected void startAlarm(String fileName, long samplingInterval,
-                              long tripDuration, long startingTime, String userName) {
+                              long tripDuration, String userName) {
 
         // set the alarm to sample the first time 'interval' millis from now. The alarm receiver
         // samples for a minute, so set the interval between alarms as 'interval' + 1 minute
@@ -408,7 +408,7 @@ public class ForegroundService extends Service {
                 SystemClock.elapsedRealtime() + samplingInterval,// first time the alarm should go off (it went off immediately, nonetheless)
                 samplingInterval + Utils.ONE_MINUTE_IN_MILLIS,// interval in milliseconds between subsequent repeats of the alarm
                 // sending the args to the alarm recipient (gps alarm intent service) as extra (it doesn't need the sampling interval, only the alarms needs it)
-                getAlarmPendingIntent(fileName, tripDuration, startingTime, userName)
+                getAlarmPendingIntent(fileName, tripDuration, userName)
         );
     }
 
@@ -428,9 +428,8 @@ public class ForegroundService extends Service {
 //        // when RAM needs permit it.
 //    }
 
-    // Extract the sampling interval (for setting the alarm),
-    // the duration of the trip and its ID (starting time of the trip)
-    protected long[] getIntervalDurationAndTime(String fileName) {
+    // Extract the sampling interval (for setting the alarm)
+    protected long getIntervalMillisFromFileName(String fileName) {
 
         // extract it from the fileName, which has the form:
 //            Utils.FOREGROUND_PREFIX +
@@ -440,19 +439,21 @@ public class ForegroundService extends Service {
 
         int beginIndex = fileName.indexOf(Utils.MINUTES) + Utils.MINUTES.length();
         int endIndex = fileName.indexOf(Utils.HOURS);
+
         // Then I multiply that with ONE_MINUTE
-        long interval =
-                Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_MINUTE_IN_MILLIS;
+        return Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_MINUTE_IN_MILLIS;
+    }
 
-        beginIndex = fileName.indexOf(Utils.HOURS) + Utils.HOURS.length();
-        endIndex = fileName.indexOf(Utils.TIME);
-        long duration =
-                Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_HOUR_IN_MILLIS;
+    // Extract the approx duration of the trip interval (for setting the alarm)
+    protected long getDurationMillisFromFileName(String fileName) {
 
-        beginIndex = fileName.indexOf(Utils.TIME) + Utils.TIME.length();
-        long time = Long.parseLong(fileName.substring(beginIndex));
+        int beginIndex = fileName.indexOf(Utils.HOURS) + Utils.HOURS.length();
+        int endIndex = fileName.indexOf(Utils.TIME);
+        return Long.parseLong(fileName.substring(beginIndex, endIndex)) * Utils.ONE_HOUR_IN_MILLIS;
 
-        return new long[]{interval, duration, time};
+        // for ID (or trip starting time):
+//        beginIndex = fileName.indexOf(Utils.TIME) + Utils.TIME.length();
+//        long time = Long.parseLong(fileName.substring(beginIndex));
     }
 
 

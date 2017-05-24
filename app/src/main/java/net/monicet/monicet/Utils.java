@@ -51,6 +51,15 @@ public final class Utils {
     public static final int INITIAL_VALUE = 0; // was -1
     public static final int MAX_VALUE = 99;
 
+    public static final String PREFS_NAME = "MonicetPrefsFile";
+    public static final String GPS_SAMPLING_INTERVAL = "interval";
+    public static final String TRIP_DURATION = "duration";
+    public static final String TRIP_START_TIME = "time";
+    public static final String FILENAME = "filename";
+    public static final String USERNAME = "username";
+    public static final String ADD_EXTENSION = "addExtension";
+    public static final String TIME_ACTIVITY_SAMPLED_GPS = "timeActivitySampledGps";
+
     public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
             ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
     public static final String START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER =
@@ -335,8 +344,8 @@ public final class Utils {
 
     public static void stopForegroundService(Context context, boolean addExtension) {
         Intent stopIntent = new Intent(context, ForegroundService.class);
-        stopIntent.setAction(Utils.STOP_FOREGROUND_SERVICE);
-        stopIntent.putExtra("addExtension", addExtension);
+        stopIntent.setAction(STOP_FOREGROUND_SERVICE);
+        stopIntent.putExtra(ADD_EXTENSION, addExtension);
         context.startService(stopIntent);
     }
 

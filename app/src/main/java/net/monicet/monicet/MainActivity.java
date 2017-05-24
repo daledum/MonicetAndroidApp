@@ -9,9 +9,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -64,9 +66,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import static android.R.id.edit;
 import static android.R.string.no;
 import static java.lang.Math.abs;
 import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
+import static net.monicet.monicet.Utils.PREFS_NAME;
 import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
 
 public class MainActivity extends AppCompatActivity implements
@@ -808,6 +812,10 @@ public class MainActivity extends AppCompatActivity implements
                 // the iterator uses a snapshot of the underlying list (or set)
                 // and does not reflect any changes to the list or set after the snapshot was created.
 
+                // this is used by the background gps sampling intent service, which reads the time
+                // from the shared preferences, in order to decide if it should continue sampling
+                updateTimeActivitySampledGps(System.currentTimeMillis());
+
                 // If less than 10 seconds elapsed since the most recent thread finished,
                 // therefore mostRecentLocation has fresh coordinates
                 if (System.currentTimeMillis() - timeWhenLastRunningThreadEndedInMillis <
@@ -898,10 +906,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -941,10 +949,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1182,6 +1190,10 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void run() {
 
+                // this is used by the background gps sampling intent service, which reads the time
+                // from the shared preferences, in order to decide if it should continue sampling
+                updateTimeActivitySampledGps(System.currentTimeMillis());
+
                 RunnableFuture<Void> task = new FutureTask<Void>(new Runnable() {
                     @Override
                     public void run() {
@@ -1252,6 +1264,13 @@ public class MainActivity extends AppCompatActivity implements
                 });
             }
         });
+    }
+
+    protected void updateTimeActivitySampledGps(long time) {
+        SharedPreferences sharedPref = getSharedPreferences(Utils.PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putLong("timeActivitySampledCoords", time);
+        editor.apply();
     }
 
     protected void finishAndSave(boolean save) {
@@ -1771,10 +1790,11 @@ public class MainActivity extends AppCompatActivity implements
                         // send everything in millis
                         Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
                         startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
-                        startIntent.putExtra("interval", trips[0].getGpsMode().getIntervalInMillis());
-                        startIntent.putExtra("duration", trips[0].getDuration());
-                        startIntent.putExtra("time", trips[0].getId());
-                        startIntent.putExtra("user", trips[0].getUserName());
+                        startIntent.putExtra(Utils.GPS_SAMPLING_INTERVAL,
+                                trips[0].getGpsMode().getIntervalInMillis());
+                        startIntent.putExtra(Utils.TRIP_DURATION, trips[0].getDuration());
+                        startIntent.putExtra(Utils.TRIP_START_TIME, trips[0].getId());
+                        startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
                         MainActivity.this.startService(startIntent);
 
                         //get rid from here
@@ -1852,26 +1872,27 @@ public class MainActivity extends AppCompatActivity implements
                 } else {
 
                     // maybe get rid of this from here
-                    final Thread sendSightingsAndShutdownTask = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
-                                    findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
-
-                                    Toast.makeText(
-                                            MainActivity.this,
-                                            R.string.send_wait_message,
-                                            Toast.LENGTH_LONG
-                                    ).show();
-                                }
-                            });
-                            finishAndSave(true);
-                        }
-                    });//get rid up to here, maybe
+//                    final Thread sendSightingsAndShutdownTask = new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//
+//                            runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
+//                                    findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
+//
+//                                    Toast.makeText(
+//                                            MainActivity.this,
+//                                            R.string.send_wait_message,
+//                                            Toast.LENGTH_LONG
+//                                    ).show();
+//                                }
+//                            });
+//                            finishAndSave(true);
+//                        }
+//                    });
+                    //get rid up to here, maybe
 
                     AlertDialog.Builder comAlertDialogBuilder =
                             new AlertDialog.Builder(MainActivity.this);
