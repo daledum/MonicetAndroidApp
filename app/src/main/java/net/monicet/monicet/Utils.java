@@ -59,6 +59,7 @@ public final class Utils {
     public static final String USERNAME = "username";
     public static final String ADD_EXTENSION = "addExtension";
     public static final String TIME_ACTIVITY_SAMPLED_GPS = "timeActivitySampledGps";
+    public static final String DELETE_TRIP = "delete";
 
     public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
             ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
@@ -66,7 +67,7 @@ public final class Utils {
             ".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER";
     public static final String STOP_FOREGROUND_SERVICE = ".STOP_FOREGROUND_SERVICE";
     public static final String STOP_GPS_ALARM_INTENT_SERVICE = ".STOP_GPS_ALARM";
-    public static final int FOREGROUND_ID = 1234;
+    public static final int FOREGROUND_ID = 1234;//get rid?
     public static final int NOTIFICATION_ID = 1235;
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";

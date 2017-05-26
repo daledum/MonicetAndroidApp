@@ -72,6 +72,7 @@ import static java.lang.Math.abs;
 import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
 import static net.monicet.monicet.Utils.PREFS_NAME;
 import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
+import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
@@ -87,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
-    private GoogleApiClient mGoogleApiClient;
+    private GoogleApiClient mGoogleApiClient = null;//TODO: test this...new 26th of May was nothing PendingIntent
     private LocationRequest mLocationRequest;
 //    Volatile only has relevance to modifications of the variable itself, not the object it refers to.
 //    A volatile field gives you guarantees as what happens when you change it. (Not an object which it might be a reference to)
@@ -159,7 +160,6 @@ public class MainActivity extends AppCompatActivity implements
         comAlertDialogBuilder.create();
         comAlertDialogBuilder.show();
     }
-
 
     protected void cloneTimeAndPlace(TimeAndPlace destination, TimeAndPlace source) {
         destination.setTimeInMillis(source.getTimeInMillis());
@@ -297,27 +297,35 @@ public class MainActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // TODO: if coming back from a config change - I should first check if the views are visible?
+        boolean delete = getIntent().getBooleanExtra(Utils.DELETE_TRIP, false);
+
+        //get rid
+        // set data directory, where files exist - used by:
+        // initTripAndViews(); dynamic receiver, the SEND button logic, by receivers, alarm, GCM etc
+        //setDataDirectory();//TODO: the data directory should be getFilesDir().toString() when deploying (internal version). getDirectory should be replaced by
+        // getFilesDir() which returns /data/data/net.monicet.monicet/files (if not use, shared preferences and set it here)
+
+        registerDynamicReceiver();
+
+        // create seed animals from resources,containing specie names, photos and description
+        // (to feed the custom ListView ArrayAdapter)
+        buildSeedAnimalsFromResources();
+
+        // create animal adapter (which uses seed animals) +
+        // create the custom Sightings ArrayAdapter and populate it will null
+        makeAndSetArrayAdapters();
+
+        // Stuff up to here should be called before initTripAndViews();
+        initTripAndViews();
+
+        // Delete everything here (I have access to the trip's ID now, so I can find the files)
+        if (delete) {
+            Utils.stopForegroundService(MainActivity.this, false);
+            finishAndSave(false);
+        }
+
         if (areGooglePlayServicesInstalled()) {
             // if google play services are OK
-
-            // set data directory, where files exist - used by:
-            // initTripAndViews(); dynamic receiver, the SEND button logic, by receivers, alarm, GCM etc
-            //setDataDirectory();//TODO: the data directory should be getFilesDir().toString() when deploying (internal version). getDirectory should be replaced by
-            // getFilesDir() which returns /data/data/net.monicet.monicet/files (if not use, shared preferences and set it here)
-
-            registerDynamicReceiver();
-
-            // create seed animals from resources,containing specie names, photos and description
-            // (to feed the custom ListView ArrayAdapter)
-            buildSeedAnimalsFromResources();
-
-            // create animal adapter (which uses seed animals) +
-            // create the custom Sightings ArrayAdapter and populate it will null
-            makeAndSetArrayAdapters();
-
-            // Stuff up to here should be called before initTripAndViews();
-            initTripAndViews();
 
             // Stuff from here and onwards writes or reads from the trips[0] object, so call after initTripAndViews();
             // create loc request so that when google api client connects - shouldn't matter, it's ready (does it onStart)
@@ -906,10 +914,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -949,10 +957,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1036,7 +1044,7 @@ public class MainActivity extends AppCompatActivity implements
 
     protected void stopLocationUpdates() {
 
-        if (mGoogleApiClient.isConnected()) { // Doc:  It must be connected at the time of this call
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) { // Doc:  It must be connected at the time of this call
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
         }
     }
@@ -1292,7 +1300,7 @@ public class MainActivity extends AppCompatActivity implements
 //            Thread.currentThread().interrupt();
 //        }
 
-        if (mGoogleApiClient.isConnected()) {
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
 
@@ -1925,7 +1933,7 @@ public class MainActivity extends AppCompatActivity implements
                         public void onClick(DialogInterface dialog, int which) {
                             wasSendButtonPressed = true;
 
-                            Utils.stopForegroundService(MainActivity.this, true);
+                            stopForegroundService(MainActivity.this, true);
 
                             // set the time
                             trips[0].getEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());

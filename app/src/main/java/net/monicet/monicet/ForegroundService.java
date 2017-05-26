@@ -21,8 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
-import static android.R.attr.duration;
-
 public class ForegroundService extends Service {
 
     //TODO: what's with this here, should I call super or what...see other code
@@ -85,14 +83,14 @@ public class ForegroundService extends Service {
                     startAlarm(fileName, samplingInterval, tripDuration, userName);
 
                     // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
-                    startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
 
 
                 } else { // The foreground route file couldn't be created. Maybe after a reboot (boot completed receiver was enabled previously),
                     // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
                     // start the foreground service, but don't start the alarm (which starts the gps sampling intent service)
                     // the intent service won't have a file to write to
-                    startForeground(Utils.FOREGROUND_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or NOTIFICATION_ID ?
                 }
 
                 break;
@@ -167,7 +165,7 @@ public class ForegroundService extends Service {
                                     startAlarm(fileName, samplingInterval, tripDuration, userName);
 
                                     // TODO: start foreground and build notification
-                                    startForeground(Utils.FOREGROUND_ID, getCompatNotification());
+                                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification());// or Notification id
 
                                 } else { // The foreground route file couldn't be created.
                                     Utils.setComponentState(
@@ -234,7 +232,7 @@ public class ForegroundService extends Service {
                     );
 
                     // TODO: start foreground and build notification
-                    startForeground(Utils.FOREGROUND_ID, getCompatNotification());
+                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification());//or notif id
                 }
 
                 break;
@@ -413,10 +411,38 @@ public class ForegroundService extends Service {
     }
 
     protected Notification getCompatNotification() {
-        return new NotificationCompat.Builder(this)//TODO: change these
+
+        Intent openTripNotificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent openTripPendingIntent =
+                PendingIntent.getActivity(this, 0, openTripNotificationIntent, 0);
+        //The default behaviour (setting no flags, ie: 0 as the flags parameter) is to return
+        // an existing PendingIntent if there is one that matches the parameters provided.
+        // If there is no existing matching PendingIntent then a new one will be created and returned.
+
+        Intent deleteTripNotificationIntent = new Intent(this, MainActivity.class);
+        deleteTripNotificationIntent.putExtra(Utils.DELETE_TRIP, true);
+        // this is a different pending intent, with a different request code (99, instead of 0)
+        PendingIntent deleteTripPendingIntent =
+                PendingIntent.getActivity(this, 99, deleteTripNotificationIntent, 0);//PendingIntent.FLAG_UPDATE_CURRENT
+        //Flag indicating that if the described PendingIntent already exists, then keep it but
+        // replace its extra data with what is in this new Intent.
+
+        // For opening or creating a new instance of the activity
+        // intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);//override onNewIntent method in MainActivity.
+        // You will get intent "init" which will passed as a parameter to onNewIntent method.
+
+        // If you want to create a new instance and close the current instance you need to set
+        // Intent.FLAG_ACTIVITY_CLEAR_TOP.
+        // If you want to reuse the same instance of the activity in this case you need to set
+        // both Intent.FLAG_ACTIVITY_CLEAR_TOP and Intent.FLAG_ACTIVITY_SINGLE_TOP after that it
+        // will not create another instance of the activity but call onNewIntent() of activity to run the new Intent.
+
+        return new NotificationCompat.Builder(this)//TODO: change these (also maybe get rid of Compat 4.1 and up anyway)
                 .setContentTitle("Monicet")// was getText(R.string.notification_title)
                 .setContentText("Text for Monicet")
                 .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
+                .addAction(R.drawable.common_full_open_on_phone, "open", openTripPendingIntent)//this appears only when app is not visible
+                .addAction(R.drawable.googleg_disabled_color_18, "del", deleteTripPendingIntent)
                 .build();
     }
 //    @Override
