@@ -49,7 +49,7 @@ public final class Utils {
     // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
     // running on ui thread...
     public static final int INITIAL_VALUE = 0; // was -1
-    public static final int MAX_VALUE = 99;
+    public static final int MAX_VALUE = 199;
 
     public static final String PREFS_NAME = "MonicetPrefsFile";
     public static final String GPS_SAMPLING_INTERVAL = "interval";
@@ -69,6 +69,10 @@ public final class Utils {
     public static final String STOP_GPS_ALARM_INTENT_SERVICE = ".STOP_GPS_ALARM";
     public static final int FOREGROUND_ID = 1234;//get rid?
     public static final int NOTIFICATION_ID = 1235;
+    public static final int SENDING_ALARM_REQUEST_CODE = 0;
+    public static final int GPS_SAMPLING_ALARM_REQUEST_CODE = 1;
+    public static final int OPEN_TRIP_REQUEST_CODE = 2;
+    public static final int DELETE_TRIP_REQUEST_CODE = 3;
 
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";

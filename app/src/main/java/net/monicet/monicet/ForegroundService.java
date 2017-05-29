@@ -335,7 +335,7 @@ public class ForegroundService extends Service {
         // Flag indicating that if the described PendingIntent already exists,
         // then keep it but replace its extra data with what is in this new Intent.TODO: test that the receiver is getting the fileName
 
-        return PendingIntent.getService(this, 0, intent, 0);////PendingIntent.FLAG_UPDATE_CURRENT //? TODO: also, test that it wakes up the phone to sample
+        return PendingIntent.getService(this, Utils.GPS_SAMPLING_ALARM_REQUEST_CODE, intent, 0);////PendingIntent.FLAG_UPDATE_CURRENT //? TODO: also, test that it wakes up the phone to sample
     }
 
     protected String createForegroundRouteFile(long samplingInterval, long tripDuration, long startingTime) {
@@ -413,17 +413,17 @@ public class ForegroundService extends Service {
     protected Notification getCompatNotification() {
 
         Intent openTripNotificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent openTripPendingIntent =
-                PendingIntent.getActivity(this, 0, openTripNotificationIntent, 0);
+        PendingIntent openTripPendingIntent = PendingIntent.getActivity(this,
+                Utils.OPEN_TRIP_REQUEST_CODE, openTripNotificationIntent, 0);
         //The default behaviour (setting no flags, ie: 0 as the flags parameter) is to return
         // an existing PendingIntent if there is one that matches the parameters provided.
         // If there is no existing matching PendingIntent then a new one will be created and returned.
 
         Intent deleteTripNotificationIntent = new Intent(this, MainActivity.class);
         deleteTripNotificationIntent.putExtra(Utils.DELETE_TRIP, true);
-        // this is a different pending intent, with a different request code (99, instead of 0)
-        PendingIntent deleteTripPendingIntent =
-                PendingIntent.getActivity(this, 99, deleteTripNotificationIntent, 0);//PendingIntent.FLAG_UPDATE_CURRENT
+        // this is a different pending intent, with a different request code
+        PendingIntent deleteTripPendingIntent = PendingIntent.getActivity(this,
+                Utils.DELETE_TRIP_REQUEST_CODE, deleteTripNotificationIntent, 0);//PendingIntent.FLAG_UPDATE_CURRENT
         //Flag indicating that if the described PendingIntent already exists, then keep it but
         // replace its extra data with what is in this new Intent.
 
@@ -438,11 +438,11 @@ public class ForegroundService extends Service {
         // will not create another instance of the activity but call onNewIntent() of activity to run the new Intent.
 
         return new NotificationCompat.Builder(this)//TODO: change these (also maybe get rid of Compat 4.1 and up anyway)
-                .setContentTitle("Monicet")// was getText(R.string.notification_title)
-                .setContentText("Text for Monicet")
-                .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark)
-                .addAction(R.drawable.common_full_open_on_phone, "open", openTripPendingIntent)//this appears only when app is not visible
-                .addAction(R.drawable.googleg_disabled_color_18, "del", deleteTripPendingIntent)
+                .setContentTitle(getText(R.string.app_name))// was getText(R.string.notification_title)
+                .setContentText(getText(R.string.trip_was_started))
+                .setSmallIcon(R.mipmap.ic_launcher_whale_tail_blue)//TODO: this needs to be a special status bar icon (transparent, and filled with white) material design
+                .addAction(R.drawable.ic_open, getText(R.string.open_trip), openTripPendingIntent)//this appears only when app is not visible
+                .addAction(R.drawable.ic_delete, getText(R.string.delete_trip), deleteTripPendingIntent)
                 .build();
     }
 //    @Override

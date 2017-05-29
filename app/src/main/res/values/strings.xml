@@ -7,7 +7,9 @@
     <string name="add_sighting">Add sighting</string>
     <string name="edit_sighting">Edit sighting</string>
     <string name="my_sightings">My sightings</string>
-
+    <string name="trip_was_started">A trip was started</string>
+    <string name="open_trip">OPEN</string>
+    <string name="delete_trip">DELETE</string>
 
     <string name="save_trip_before_exiting_dialog_title">
         Save trip
