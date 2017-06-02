@@ -97,6 +97,7 @@ public class ForegroundService extends Service {
             }
 
             case Utils.START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER: {
+
                 File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
                 if (extensionlessFgrRouteFile == null) {
                     // The file does not exist (it was not created - write error, see above when I try to create the file OR it was deleted)
@@ -413,12 +414,14 @@ public class ForegroundService extends Service {
     protected Notification getCompatNotification() {
 
         Intent openTripNotificationIntent = new Intent(this, MainActivity.class);
+        //openTripNotificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent openTripPendingIntent = PendingIntent.getActivity(this,
                 Utils.OPEN_TRIP_REQUEST_CODE, openTripNotificationIntent, 0);
         //The default behaviour (setting no flags, ie: 0 as the flags parameter) is to return
         // an existing PendingIntent if there is one that matches the parameters provided.
         // If there is no existing matching PendingIntent then a new one will be created and returned.
 
+        //TODO: get rid of this
         Intent deleteTripNotificationIntent = new Intent(this, MainActivity.class);
         deleteTripNotificationIntent.putExtra(Utils.DELETE_TRIP, true);
         // this is a different pending intent, with a different request code
@@ -441,8 +444,9 @@ public class ForegroundService extends Service {
                 .setContentTitle(getText(R.string.app_name))// was getText(R.string.notification_title)
                 .setContentText(getText(R.string.trip_was_started))
                 .setSmallIcon(R.mipmap.ic_launcher_whale_tail_blue)//TODO: this needs to be a special status bar icon (transparent, and filled with white) material design
-                .addAction(R.drawable.ic_open, getText(R.string.open_trip), openTripPendingIntent)//this appears only when app is not visible
-                .addAction(R.drawable.ic_delete, getText(R.string.delete_trip), deleteTripPendingIntent)
+                .setContentIntent(openTripPendingIntent)
+                //.addAction(R.drawable.ic_open, getText(R.string.open_trip), openTripPendingIntent)//this appears only when app is not visible
+                //.addAction(R.drawable.ic_delete, getText(R.string.delete_trip), deleteTripPendingIntent)
                 .build();
     }
 //    @Override

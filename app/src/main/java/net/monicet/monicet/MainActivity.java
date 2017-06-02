@@ -1,8 +1,6 @@
 package net.monicet.monicet;
 
 import android.Manifest;
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -13,7 +11,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -22,12 +19,14 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.format.DateFormat;
 import android.util.Log;
-import android.util.Patterns;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -64,14 +63,9 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 
-import static android.R.id.edit;
 import static android.R.string.no;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.Utils.EXTERNAL_DIRECTORY;
-import static net.monicet.monicet.Utils.PREFS_NAME;
-import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -116,33 +110,40 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.delete, menu);
+        return super.onCreateOptionsMenu(menu);//return true;//?
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.toolbar_delete_action:
+                deleteToolbarMenuButtonPressedDialog();
+                return true;// code might not reach this line
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
     public void onBackPressed() {
         if (wasMinimumAmountOfGpsFixingDone) {
-            // this below either saves the temp trip or it deletes everything with the trip's ID,
-            // including the file saved by the foreground service (so, stop the fgr service before deleting)
-            //TODO: I add extension to fgr file in stopForegroundService and after I try to delete it in backButtonPressedDialog...issue? Test
-            // but, if I add the extension, the sending mechs will try to send it
-            backButtonPressedDialog();
-        } else {
+            finishAndSave(true);
+        } else {// if gos fixing wasn't done, nothing to save actually
             // no foreground service was started in this case
             finishAndSave(false);
         }
     }
 
-    protected void backButtonPressedDialog() {
+    protected void deleteToolbarMenuButtonPressedDialog() {
+
         AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
 
-        comAlertDialogBuilder.setTitle(R.string.save_trip_before_exiting_dialog_title);
-        comAlertDialogBuilder.setMessage(R.string.save_trip_before_exiting_dialog_message);
+        comAlertDialogBuilder.setTitle(R.string.delete_trip_dialog_title);
+        comAlertDialogBuilder.setMessage(R.string.delete_trip_dialog_message);
 
         comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                finishAndSave(true);
-                //MainActivity.super.onBackPressed();//this probably calls finish
-            }
-        });
-        comAlertDialogBuilder.setNegativeButton(R.string.my_no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 if (wasStartButtonPressed()) {
@@ -153,7 +154,12 @@ public class MainActivity extends AppCompatActivity implements
                 }
                 finishAndSave(false);
                 //MainActivity.super.onBackPressed();//this probably calls finish
-
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //MainActivity.super.onBackPressed();//this probably calls finish
             }
         });
 
@@ -324,6 +330,14 @@ public class MainActivity extends AppCompatActivity implements
             finishAndSave(false);
         }
 
+        //test starts here
+//        Toast.makeText(
+//                MainActivity.this,
+//                "onCreate",
+//                Toast.LENGTH_SHORT
+//        ).show();
+        //test ends here
+
         if (areGooglePlayServicesInstalled()) {
             // if google play services are OK
 
@@ -359,6 +373,13 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onPause() {
+        //test starts here
+//        Toast.makeText(
+//                MainActivity.this,
+//                "onPause",
+//                Toast.LENGTH_SHORT
+//        ).show();
+        //test ends here
         super.onPause();
 
         // 1 - You arrived here because you're app was interrupted (no one called finish), then run
@@ -468,7 +489,8 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void showSightings() {
         // set label
-        setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));
+        //setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));//get rid
+        setTitle(getText(R.string.my_sightings));
 
         // hide START button
         findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
@@ -914,10 +936,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -957,10 +979,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1274,10 +1296,10 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
-    protected void updateTimeActivitySampledGps(long time) {
+    protected void updateTimeActivitySampledGps(final long time) {//time was not final
         SharedPreferences sharedPref = getSharedPreferences(Utils.PREFS_NAME, 0);
         SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putLong("timeActivitySampledCoords", time);
+        editor.putLong(Utils.TIME_ACTIVITY_SAMPLED_GPS, time);
         editor.apply();
     }
 
@@ -1728,7 +1750,11 @@ public class MainActivity extends AppCompatActivity implements
 
     public void initViews() {
         // set label to MONICET - START TRIP
-        setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        //setTitle(getText(R.string.app_name) + " - " + getText(R.string.start_trip));//get rid
+        setTitle(getText(R.string.start_trip));
+        getSupportActionBar().setIcon(R.mipmap.ic_launcher_whale_tail_blue);
 
         gpsUserIntervalLogic();
 
@@ -1792,19 +1818,6 @@ public class MainActivity extends AppCompatActivity implements
                             }
                         }
 
-                        NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
-                        trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
-
-                        // send everything in millis
-                        Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
-                        startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
-                        startIntent.putExtra(Utils.GPS_SAMPLING_INTERVAL,
-                                trips[0].getGpsMode().getIntervalInMillis());
-                        startIntent.putExtra(Utils.TRIP_DURATION, trips[0].getDuration());
-                        startIntent.putExtra(Utils.TRIP_START_TIME, trips[0].getId());
-                        startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
-                        MainActivity.this.startService(startIntent);
-
                         //get rid from here
                         // if I'm not in fixing or sampling modes, meaning that I am in one of the user
                         // modes (the one selected most recently by the user)
@@ -1822,6 +1835,19 @@ public class MainActivity extends AppCompatActivity implements
                         trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
                         // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
                         captureCoordinates(trips[0].getStartTimeAndPlace());
+
+                        NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
+                        trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
+
+                        // send everything in millis
+                        Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
+                        startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
+                        startIntent.putExtra(Utils.GPS_SAMPLING_INTERVAL,
+                                trips[0].getGpsMode().getIntervalInMillis());
+                        startIntent.putExtra(Utils.TRIP_DURATION, trips[0].getDuration());
+                        startIntent.putExtra(Utils.TRIP_START_TIME, trips[0].getId());
+                        startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
+                        MainActivity.this.startService(startIntent);
 
                         // deal with the views
                         showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
@@ -1856,10 +1882,8 @@ public class MainActivity extends AppCompatActivity implements
 
                 // and link the openedSighting to it (most recently added sighting),
                 // so that the save button knows where to save
-                openSighting(
-                        getText(R.string.app_name) + " - " + getText(R.string.add_sighting),
-                        trips[0].getLastCreatedSighting()
-                );
+                openSighting(getString(R.string.add_sighting),  trips[0].getLastCreatedSighting());
+                //getText(R.string.app_name) + " - " + getText(R.string.add_sighting),//get rid
             }
         });
     }

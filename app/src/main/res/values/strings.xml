@@ -11,11 +11,11 @@
     <string name="open_trip">OPEN</string>
     <string name="delete_trip">DELETE</string>
 
-    <string name="save_trip_before_exiting_dialog_title">
-        Save trip
+    <string name="delete_trip_dialog_title">
+        Delete trip
     </string>
-    <string name="save_trip_before_exiting_dialog_message">
-        Do you want to save this trip before closing the application?
+    <string name="delete_trip_dialog_message">
+        Are you sure that you want to delete this trip?
     </string>
     <string name="my_no">NO</string>
 

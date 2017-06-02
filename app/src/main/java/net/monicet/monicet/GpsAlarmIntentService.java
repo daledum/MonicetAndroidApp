@@ -69,16 +69,6 @@ public class GpsAlarmIntentService extends IntentService implements
                 // This means I am called by the Foreground Service via the Alarm Manager and I am getting the fileName
                 // fileName is not set as an extra only in the scenario when the alarm is cancelled (the alarm is not set then, anyway)
 
-                // test starts here .. file name should be fgrMinMHoursHTimeId - did not get action
-//                File dir = new File(Utils.EXTERNAL_DIRECTORY);
-//                File testFile = new File(dir, String.valueOf((int)(System.currentTimeMillis()/1000000)) + fileName);
-//                try {
-//                    testFile.createNewFile();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-                //test, get rid
-
                 long tripDuration = intent.getExtras().getLong(Utils.TRIP_DURATION);
 
                 SharedPreferences sharedPref = getSharedPreferences(Utils.PREFS_NAME, 0);
@@ -122,6 +112,7 @@ public class GpsAlarmIntentService extends IntentService implements
                     }
 
                     if (fileExisted) {
+
                         // This means that the file seen by (or created by the foreground service) still exists
                         // this file is needed here (we add the coordinates to it)
                         createLocationRequest();

@@ -7,6 +7,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
 
+import java.io.File;
+import java.io.IOException;
+
 /**
  * Created by ubuntu on 17-02-2017.
  */
@@ -35,6 +38,7 @@ public class FilesAndBootReceiver extends BroadcastReceiver {
                     false
             );
         } else {
+
             // it's either BOOT COMPLETED or START, so start the alarm
             alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
                     SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,

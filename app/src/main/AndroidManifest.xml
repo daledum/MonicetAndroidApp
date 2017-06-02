@@ -38,10 +38,10 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection">
+            android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|screenLayout|fontScale|uiMode|orientation|screenSize|smallestScreenSize|layoutDirection"
+            android:finishOnTaskLaunch="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -55,10 +55,9 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name=".ForegroundService"
-            android:enabled="true"
-            android:exported="false">
+        <service android:name=".ForegroundService">
+            <!--android:enabled="true"-->
+            <!--android:exported="false"-->
             <intent-filter>
                 <action android:name=".START_FOREGROUND_SERVICE_FROM_ACTIVITY" />
                 <action android:name=".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER" />
@@ -67,19 +66,14 @@
             </intent-filter>
         </service>
         <receiver
-            android:name=".BootCompletedReceiver"
-            android:enabled="true"
-            android:exported="false">
+            android:name=".BootCompletedReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <!-- TODO: Comment line below when working with internal version -->
                 <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE" />
             </intent-filter>
         </receiver>
-        <service
-            android:name=".GpsAlarmIntentService"
-            android:exported="false">
-        </service>
+        <service android:name=".GpsAlarmIntentService" />
 
     </application>
 

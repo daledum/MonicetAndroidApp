@@ -63,8 +63,8 @@
     <string name="turn_on_gps_dialog_message">Por favor, ligue o GPS.</string>
     <string name="google_api_client_connection_failed">A sua ligação ao GoogleApiClient falhou. Tente conectar e reabrir o aplicativo Android.</string>
     <string name="google_api_client_connection_suspended">Sua conexão do GoogleApiClient foi suspensa. Tente reconectar e, em seguida, reabra o aplicativo.</string>
-    <string name="save_trip_before_exiting_dialog_title">Salvar viagem</string>
-    <string name="save_trip_before_exiting_dialog_message">Deseja salvar essa viagem antes de fechar o aplicativo?</string>
+    <string name="delete_trip_dialog_title">Apagar viagem</string>
+    <string name="delete_trip_dialog_message">Tem certeza de que deseja apagar esta viagem?</string>
     <string name="my_no">NÃO</string>
     <string name="gps_user_duration_text">Por favor, selecione a duração aproximada da sua viagem, em horas.</string>
     <string name="trip_was_started">Uma viagem foi iniciada</string>
