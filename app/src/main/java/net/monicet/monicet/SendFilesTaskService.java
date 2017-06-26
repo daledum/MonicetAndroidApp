@@ -45,14 +45,14 @@ public class SendFilesTaskService extends GcmTaskService {
         //Bundle data = taskParams.getExtras();
         //String path = (String)data.getCharSequence(FILES_PATH);
 
-        // test starts here
-        File dir = new File(Utils.EXTERNAL_DIRECTORY);
-        File testFile = new File(dir, "oneOff" + System.currentTimeMillis());
-        try {
-            testFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // test starts here//reinstate for testing
+//        File dir = new File(Utils.EXTERNAL_DIRECTORY);
+//        File testFile = new File(dir, "oneOff" + System.currentTimeMillis());
+//        try {
+//            testFile.createNewFile();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         //test
 
         // test ends here

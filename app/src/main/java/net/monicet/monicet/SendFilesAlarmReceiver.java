@@ -16,14 +16,14 @@ public class SendFilesAlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         final Context receivedContext = context;
 
-        // test starts here
-        File dir = new File(Utils.EXTERNAL_DIRECTORY);
-        File testFile = new File(dir, "alarmRec" + System.currentTimeMillis());
-        try {
-            testFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // test starts here//reinstate for tests
+//        File dir = new File(Utils.EXTERNAL_DIRECTORY);
+//        File testFile = new File(dir, "alarmRec" + System.currentTimeMillis());
+//        try {
+//            testFile.createNewFile();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         //test
 
         // does network work, so it needs to be on a separate thread

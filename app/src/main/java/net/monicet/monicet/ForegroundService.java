@@ -82,7 +82,7 @@ public class ForegroundService extends Service {
                     //TODO: If you want a new interval for the alarm, cancel the old one
                     startAlarm(fileName, samplingInterval, tripDuration, userName);
 
-                    // TODO: start foreground and build notification (maybe do this later, if filed created successfully)
+                    // TODO: start foreground and build notification (maybe do this later, if file created successfully)
                     startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
 
 
@@ -270,7 +270,8 @@ public class ForegroundService extends Service {
                     File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
                     if (extensionlessFgrRouteFile != null) {
                         String fileName = extensionlessFgrRouteFile.getName();
-                        File directory = new File(Utils.getDirectory());
+                        //File directory = new File(Utils.getDirectory());
+                        File directory = new File(Utils.getDirectory(this));
                         if (!extensionlessFgrRouteFile.renameTo(
                                 new File(directory, fileName + AllowedFileExtension.CSV))) {
                             // maybe the file was written to by the Gps IntentService, so, wait a second
@@ -341,7 +342,8 @@ public class ForegroundService extends Service {
 
     protected String createForegroundRouteFile(long samplingInterval, long tripDuration, long startingTime) {
 
-        File directory = new File(Utils.getDirectory());// set directory method uses the external directory
+        //File directory = new File(Utils.getDirectory());// set directory method uses the external directory
+        File directory = new File(Utils.getDirectory(this));
 
         if (!directory.exists()) {
             directory.mkdirs();
@@ -365,7 +367,8 @@ public class ForegroundService extends Service {
     }
 
     protected File getExtensionlessFile(final String type) {
-        File directory = new File(Utils.getDirectory());// set directory method uses the external directory
+        //File directory = new File(Utils.getDirectory());// set directory method uses the external directory
+        File directory = new File(Utils.getDirectory(this));
 
         // Array of files (max should be 1 element) for files and directories in this directory
         // which contain the word Utils.WHATEVER and have no extension

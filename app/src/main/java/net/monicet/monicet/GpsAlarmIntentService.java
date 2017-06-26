@@ -87,7 +87,8 @@ public class GpsAlarmIntentService extends IntentService implements
                     stopSelf();
                 } else {
 
-                    file = new File(Utils.getDirectory(), fileName);
+                    //file = new File(Utils.getDirectory(), fileName);
+                    file = new File(Utils.getDirectory(this), fileName);
                     // Not checking if it exists here, because I have called the above constructor and it just created new files
                     // on the drive, without calling createNewFile() or anything
 
@@ -124,6 +125,7 @@ public class GpsAlarmIntentService extends IntentService implements
                             Log.d("GpsAlarmIntentService", "1 minute wait interrupted");
                         } finally {
                             appendToFile();
+                            stopGps();// onDestroy might not always be called by the OS, so make sure GPS is stopped
                             stopSelf();
                         }
                     } else {
@@ -187,7 +189,8 @@ public class GpsAlarmIntentService extends IntentService implements
                         // Still not working: delete file and create a new one, with the same name
                         if (file.delete()) {
 
-                            File dir = new File(Utils.getDirectory());
+                            //File dir = new File(Utils.getDirectory());
+                            File dir = new File(Utils.getDirectory(this));
                             File newFile = new File(dir, fileName);
                             try {
                                 newFile.createNewFile();

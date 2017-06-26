@@ -11,6 +11,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Environment;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -191,10 +192,45 @@ public class MainActivity extends AppCompatActivity implements
 
     protected File getTempTripFile() {
 
-        File dir = new File(Utils.getDirectory());// set directory method uses the external directory
+        //File dir = new File(Utils.getDirectory());// set directory method uses the external directory
+        File dir = new File(Utils.getDirectory(MainActivity.this));
+
+        //dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath());
+        //dir = getFilesDir();
+
+        //test
+        //storage/emulated/0/download for DOWNLOAD, documents for documents
+        //storage.emulated/0/ for getexternalstoragedirectory
+//        Toast.makeText(
+//                MainActivity.this,
+//                //String.valueOf(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)),//"mounted" state
+//                String.valueOf(getFilesDir().toString()),//data/user/0/net.monicet.monicet/files
+//                Toast.LENGTH_LONG
+//        ).show();
+
         if (!dir.exists()) {
-            dir.mkdirs();
+            //dir.mkdirs();
+            if (dir.mkdirs()) {
+                //
+            } else {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Folder doesn't exist and cannot be created",
+                        Toast.LENGTH_SHORT
+                ).show();
+                //return null;//unable to make dir
+            }
         } // only for external?
+//        else {//dir exists//get rid
+//            if (dir.isDirectory()) {
+//                Toast.makeText(
+//                        MainActivity.this,
+//                        "IT EXISTS AND IT IS A DIR",
+//                        Toast.LENGTH_SHORT
+//                ).show();
+//            }
+//        }
+        //test ends here
 
         // Array of pathnames (max 1 element) for files and directories in this directory
         // which contain the words TEMP and TRIP
@@ -272,6 +308,7 @@ public class MainActivity extends AppCompatActivity implements
             if (wasStartButtonPressed()) {
                 //if START button was pressed, initViews should be followed by showSightings()
                 showSightings();
+                //TODO: no sightings bug...showSightings updates the data of the arrayadapter, it's empty, not null
             }
 
             // If a trip was reinstated from a temp file, that means the minimum GPS fixing had already been done
@@ -510,20 +547,32 @@ public class MainActivity extends AppCompatActivity implements
         // show SEND button
         findViewById(R.id.fab_send).setVisibility(View.VISIBLE);
 
+        // update the sightings adapter and the sightings view
         if (trips[0].getNumberOfSightings() == 0) {
+            arrayAdapters[1].clear();
+            arrayAdapters[1].addAll(new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})));
+            arrayAdapters[1].notifyDataSetChanged();
+
             // show the no sightings message (its text is set in XML), if the trip is empty
             findViewById(R.id.no_sightings_text_view).setVisibility(View.VISIBLE);
             findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
         } else {
+            arrayAdapters[1].clear();
+            //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
+            arrayAdapters[1].addAll(trips[0].getSightings());
+            arrayAdapters[1].notifyDataSetChanged();
+
             // show sightings list view, if the trip has any sightings
             findViewById(R.id.list_view_sightings).setVisibility(View.VISIBLE);
             findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
         }
 
-        // update sighting adapter
-        arrayAdapters[1].clear();
-        arrayAdapters[1].addAll(trips[0].getSightings());//no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
-        arrayAdapters[1].notifyDataSetChanged();
+//        // update sighting adapter
+//        arrayAdapters[1].clear();
+//        //TODO: the no sightings bug: here..trips[0].getSightings() does not return null...just an empty arraylist
+//        //move this in the if above...give null to the array if no sightings
+//        arrayAdapters[1].addAll(trips[0].getSightings());//no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
+//        arrayAdapters[1].notifyDataSetChanged();
     }
 
     @Override
@@ -936,10 +985,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -979,10 +1028,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1344,7 +1393,8 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
         } else {
-            File dir = new File(Utils.getDirectory());
+            //File dir = new File(Utils.getDirectory());
+            File dir = new File(Utils.getDirectory(MainActivity.this));
             // all files containing the trip's ID, including the foreground service route files (make sure you stop them first)
             File[] filesToDelete = dir.listFiles(new FileFilter() {
                 @Override
@@ -1374,7 +1424,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected void saveTripToFile(String status, File finishedTripFileWithoutExtension) {
-        File directory = new File(Utils.getDirectory());
+        //File directory = new File(Utils.getDirectory());
+        File directory = new File(Utils.getDirectory(MainActivity.this));
 
         // There are no temp trip files at this moment (they get deleted in onCreate, after de-jsonizing)
         // It makes sense to check if it got to add an extension only in the case of FINISHED files
@@ -1428,7 +1479,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     protected void saveRouteToFile(String status, File finishedRouteFileWithoutExtension) {
-        File directory = new File(Utils.getDirectory());
+        //File directory = new File(Utils.getDirectory());
+        File directory = new File(Utils.getDirectory(MainActivity.this));
         File routeFile = null;
 
         // A finishedRoute file and a tempRouteFile cannot be both present in the same directory
@@ -1561,7 +1613,8 @@ public class MainActivity extends AppCompatActivity implements
         // TODO: write the json and csv files internally
         // android:installLocation is internalOnly
 
-        File dir = new File(Utils.getDirectory());// set directory method in onCreate uses the external directory
+        //File dir = new File(Utils.getDirectory());// set directory method in onCreate uses the external directory
+        File dir = new File(Utils.getDirectory(MainActivity.this));
         if (!dir.exists()) {
             dir.mkdirs();
         } // only for external, TODO: remove this? (if yes, move dir - new file inside the logic below)
@@ -1849,7 +1902,7 @@ public class MainActivity extends AppCompatActivity implements
                         startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
                         MainActivity.this.startService(startIntent);
 
-                        // deal with the views
+                        // deal with the views//TODO: no sightings bug...I save, I return then press START
                         showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
                     } else {
                         Toast.makeText(
@@ -1977,7 +2030,7 @@ public class MainActivity extends AppCompatActivity implements
         });
 
     }
-    
+
     public void startSendingMechanisms() {
         // enable and (re)start mechanisms designed to send (and delete if sent)
         // those files via the Internet (they all use the Utils method SendAndDeleteFiles,

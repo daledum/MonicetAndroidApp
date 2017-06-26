@@ -16,14 +16,14 @@ public class DynamicNetworkStateReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         final Context receivedContext = context;
 
-        // test starts here
-        File dir = new File(Utils.EXTERNAL_DIRECTORY);
-        File testFile = new File(dir, "dynamicRec" + System.currentTimeMillis());
-        try {
-            testFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // test starts here//TODO:reinstate for testing
+//        File dir = new File(Utils.EXTERNAL_DIRECTORY);
+//        File testFile = new File(dir, "dynamicRec" + System.currentTimeMillis());
+//        try {
+//            testFile.createNewFile();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         //test
 
         // dynamic receivers run on the UI thread, this receiver calls a method which connects to the Internet,

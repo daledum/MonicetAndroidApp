@@ -80,21 +80,24 @@ public final class Utils {
 
     // back-ups, if directory is null (for usage in SendAndDeleteFiles())
     public static final String EXTERNAL_DIRECTORY =
-            Environment.getExternalStorageDirectory()
-            + "/Monicet"; // this should be set in the activity via the same mechanism...should drop this
-    // this is a back-up, it's not being used
-    public static final String INTERNAL_DIRECTORY =
-            Environment.getDataDirectory()
-            + "/data/"
-            + BuildConfig.APPLICATION_ID + "/files";
-    // or hard-coded internal path
-    public static final String INTERNAL_DIRECTORY_HARDCODED =
-            Environment.getDataDirectory()
-            + "/data/net.monicet.monicet/files";
+            Environment.getExternalStorageDirectory() + "/Monicet";
+//    public static final String EXTERNAL_DIRECTORY =
+//            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)//Environment.getExternalStorageDirectory()
+//            + "/Monicet"; // this should be set in the activity via the same mechanism...should drop this
+//    // this is a back-up, it's not being used
+//    public static final String INTERNAL_DIRECTORY =
+//            Environment.getDataDirectory()
+//            + "/data/"
+//            + BuildConfig.APPLICATION_ID + "/files";
+//    // or hard-coded internal path
+//    public static final String INTERNAL_DIRECTORY_HARDCODED =
+//            Environment.getDataDirectory()
+//            + "/data/net.monicet.monicet/files";
 
     // this will get set by the MainActivity.. as a default: set it to all the registered extension
-    //private static String DIRECTORY; //get rid
-    private static final String DIRECTORY = EXTERNAL_DIRECTORY;
+    //private static String DIRECTORY; //get rid eventually
+
+    //private static final String DIRECTORY = EXTERNAL_DIRECTORY;//this was here before //TODO: path issue This was the default, together with getdatadir without conntext
 
     // allow to be set only once, only when it's null, get rid NB won't survive the reboot
 //    public static void setDirectory(String dir) {
@@ -104,7 +107,19 @@ public final class Utils {
 //    }
 
     //should get rid of this, too
-    public static String getDirectory() { return DIRECTORY; }
+    //public static String getDirectory() { return DIRECTORY; }
+
+    public static String getDirectory(Context context) {
+
+        //return context.getFilesDir().toString();//TODO: internal version
+
+        File dir = new File(EXTERNAL_DIRECTORY);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        return dir.toString();
+    }
 
     public static double parseGpsToDouble(String sValue, GpsEdgeValue edgeValue) {
         double result = 0;
@@ -151,32 +166,34 @@ public final class Utils {
 
     public static boolean sendAndDeleteFiles(Context context) {
 
-        File dir;
-        if (DIRECTORY != null) {
-            dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
-        } else {
-            // if this is called before the path was set by the MainActivity
-            // (in case the dynamic receiver is registered, thus (sticky intent) triggered before setting the dir)
-            // default path, when DIRECTORY is null
-            if (context != null) {
-                dir = new File(context.getFilesDir().toString());
-            } else {
-                dir = new File(INTERNAL_DIRECTORY);
-            }
-        }
+        File dir;//reinstate below for testing
+//        if (DIRECTORY != null) {
+//            dir = new File(DIRECTORY); //TODO: toString? if external remove + remember to use dir everywhere
+//        } else {
+//            // if this is called before the path was set by the MainActivity
+//            // (in case the dynamic receiver is registered, thus (sticky intent) triggered before setting the dir)
+//            // default path, when DIRECTORY is null
+//            if (context != null) {
+//                dir = new File(context.getFilesDir().toString());
+//            } else {
+//                dir = new File(INTERNAL_DIRECTORY);
+//            }
+//        }
 
         //test // TODO: remove this after tests
-        dir = new File(EXTERNAL_DIRECTORY);
+//        dir = new File(EXTERNAL_DIRECTORY);
         //test
 
+        //test//reinstate this while testing
+//        File testFile = new File(dir, "send" + System.currentTimeMillis());
+//        try {
+//            testFile.createNewFile();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         //test
-        File testFile = new File(dir, "send" + System.currentTimeMillis());
-        try {
-            testFile.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        //test
+
+        dir = new File(getDirectory(context)); //comment this out while testing
 
         FileFilter fileFilter = new FileFilter() {
             @Override
@@ -358,7 +375,8 @@ public final class Utils {
         String emailAddresses = "";
 
         Pattern emailPattern = Patterns.EMAIL_ADDRESS;
-        Account[] accounts = AccountManager.get(context).getAccounts();
+        Account[] accounts = AccountManager.get(context).getAccounts();//this only works pre ICS
+        //Account[] accounts = AccountManager.get(context).getAccountsByType("com.google");//this doesn't work
 
         for (Account account : accounts) {
             if (emailPattern.matcher(account.name).matches()) {
@@ -366,7 +384,8 @@ public final class Utils {
             }
         }
 
-        return emailAddresses.substring(0, emailAddresses.length() - 1);
+        //return emailAddresses.substring(0, emailAddresses.length() - 1);//TODO: reinstate this
+        return "marc.fern@gmail.com";
     }
 
     public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,
