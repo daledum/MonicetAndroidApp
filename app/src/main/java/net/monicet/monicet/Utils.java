@@ -63,6 +63,8 @@ public final class Utils {
 
     public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
             ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
+//    public static final String RESTART_FOREGROUND_SERVICE_FROM_ACTIVITY =
+//            ".RESTART_FOREGROUND_SERVICE_FROM_ACTIVITY";
     public static final String START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER =
             ".START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER";
     public static final String STOP_FOREGROUND_SERVICE = ".STOP_FOREGROUND_SERVICE";

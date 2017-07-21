@@ -67,6 +67,11 @@ import java.util.concurrent.TimeoutException;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
+import static net.monicet.monicet.Utils.GPS_SAMPLING_INTERVAL;
+import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
+import static net.monicet.monicet.Utils.TRIP_DURATION;
+import static net.monicet.monicet.Utils.TRIP_START_TIME;
+import static net.monicet.monicet.Utils.USERNAME;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -104,6 +109,45 @@ public class MainActivity extends AppCompatActivity implements
     private volatile boolean wereSendingMechanismsStarted = false; // Get rid of volatile, if not using a separate thread
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
+
+    protected void removeTemporarySighting() {
+        // This is called:
+        // a - when inside the animal adapter (got here by pressing ADD or CLICK on a sighting)
+        // b - when onPause() runs (for the problematic situation when it runs inside the animal adapter,
+        // after ADD had been previously pressed and the trip is stuck with animalless sighting)
+
+        // openedSighting should no longer point to our unsaved (if coming from ADD)
+        // or opened sighting (if coming from CLICK on sight)
+        // this line is also called inside the BACK button logic
+        // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
+        // hopefully, the unsaved sighting will be GC-ed soon
+        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
+        openedSightings[0] = null;
+
+        // When not called by onPause(), we are here after ADD or 'CLICK on a sighting' logic,
+        // therefore at least a sighting exists.
+        // But when called inside onPause(), which can happen at any moment, a sighting might not exist
+        if (trips[0].getNumberOfSightings() != 0) {
+            // Check that the most recent sighting has an Animal
+            if (trips[0].getLastCreatedSighting().getAnimal() == null) {
+                // in this case, we arrived here after ADD (newly created, animal-less sighting)
+                // so, remove this sighting from this trip
+                trips[0].getSightings().remove(trips[0].getLastCreatedSighting());
+            }// else - we're coming here from CLICK on Sight, we are not touching that already existing sighting
+        }//else - there are no sightings - onPause() was called at a moment when the trip has no sightings
+
+    }
+
+    protected void startForegroundService() {
+        // send everything in millis
+        Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
+        startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
+        startIntent.putExtra(Utils.GPS_SAMPLING_INTERVAL, trips[0].getGpsMode().getIntervalInMillis());
+        startIntent.putExtra(Utils.TRIP_DURATION, trips[0].getDuration());
+        startIntent.putExtra(Utils.TRIP_START_TIME, trips[0].getId());
+        startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
+        MainActivity.this.startService(startIntent);
+    }
 
     protected boolean wasStartButtonPressed() {
         if (trips[0].getStartTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) { return true; }
@@ -306,6 +350,11 @@ public class MainActivity extends AppCompatActivity implements
             initViews();
 
             if (wasStartButtonPressed()) {
+                // start foreground service - this happens every time the activity starts and START
+                // was pressed - just to make sure the foreground service, notification and background
+                // gps sampling are always active
+                startForegroundService();
+
                 //if START button was pressed, initViews should be followed by showSightings()
                 showSightings();
                 //TODO: no sightings bug...showSightings updates the data of the arrayadapter, it's empty, not null
@@ -428,6 +477,7 @@ public class MainActivity extends AppCompatActivity implements
         // called finish() on it or someone else has requested that it finished.
 
         if (!isFinishing()) {
+            removeTemporarySighting();
             finishAndSave(true);
         }
     }
@@ -985,10 +1035,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -1028,10 +1078,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1889,18 +1939,12 @@ public class MainActivity extends AppCompatActivity implements
                         // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
                         captureCoordinates(trips[0].getStartTimeAndPlace());
 
+                        // get the duration from the user - to be used by the background gps sampling
+                        // service, via the foreground service and alarm
                         NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
                         trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
 
-                        // send everything in millis
-                        Intent startIntent = new Intent(MainActivity.this, ForegroundService.class);
-                        startIntent.setAction(Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY);
-                        startIntent.putExtra(Utils.GPS_SAMPLING_INTERVAL,
-                                trips[0].getGpsMode().getIntervalInMillis());
-                        startIntent.putExtra(Utils.TRIP_DURATION, trips[0].getDuration());
-                        startIntent.putExtra(Utils.TRIP_START_TIME, trips[0].getId());
-                        startIntent.putExtra(Utils.USERNAME, trips[0].getUserName());
-                        MainActivity.this.startService(startIntent);
+                        startForegroundService();
 
                         // deal with the views//TODO: no sightings bug...I save, I return then press START
                         showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
@@ -2105,26 +2149,11 @@ public class MainActivity extends AppCompatActivity implements
                 // maybe move ADD logic to SAVE logic, so here, we do nothing,
                 // like we should, see SAVE button logic for more info
 
-                // TODO:
-                // if we came here from ADD, it switched into fast gps mode,
-                // and tried to write data to the linked sighting
-
-                // openedSighting should no longer point to our unsaved (if coming from ADD)
-                // or opened sighting (if coming from CLICK on sight)
-                // shared by the SAVE and BACK button
-                // call this before removing the unsaved sighting, so, openedSighting doesn't point to it
-                // hopefully, the unsaved sighting will be GC-ed soon
-                // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
-                openedSightings[0] = null;
-
-                // check that the most recent sighting has an Animal
-                // we are here after ADD or CLICK on a sighting logic, therefore at least a sighting exists
-                if (trips[0].getLastCreatedSighting().getAnimal() == null) {
-                    // in this case, we arrived here after ADD (newly created, animal-less sighting
-                    // so, remove this sighting from this trip
-                    trips[0].getSightings().remove(trips[0].getLastCreatedSighting());
-                }
-                // else - we're coming here from CLICK on Sight, we are not touching that already existing sighting
+                // Method shared with onPause
+                // Nullifying shared with the SAVE button, too
+                // This nullifies the opened sighting and, when coming here after an ADD press (and
+                // not a CLICK on a sighting) remove the last sighting from the trip
+                removeTemporarySighting();
 
                 // prepare views - hide and show what's needed
                 showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
@@ -2188,7 +2217,7 @@ public class MainActivity extends AppCompatActivity implements
                         openedSightings[0].setAnimal(animalToInsertInSighting);
 
                         // SAVE no longer works on the sighting, so openedSighting does not need to connect to it anymore
-                        // SAVE and BACK share this
+                        // SAVE and BACK and onPause share this
                         // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
                         openedSightings[0] = null;
 

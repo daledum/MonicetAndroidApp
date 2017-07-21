@@ -57,8 +57,18 @@ public class ForegroundService extends Service {
         switch (intent.getAction()) {//possible from Java 7 and upwards, uses .equals
 
             case Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY: {
-                // it arrives here from the app, after the user started the trip (pressed START), which comes after minGpsFixing
+                // It arrives here from the app every time the main activity is started
+                // and the START button had already been pressed OR after the user started
+                // the trip (pressed START), which comes after minGpsFixing.
+                // We want to make sure, in case the notification (fgr service) was
+                // killed (by the OS, low memory), that, when the activity is started again,
+                // the service (and alarm, and thus the gps sampling) restart.
+                // This will also take place even if the fgr service/notification is already running,
+                // but everything will be overwritten, therefore no duplicate services/alarms.
 
+                //TODO: test with two consecutive reboots (re-enabling an enabled component should be fine)
+                // But do I want to enable it every time the activity starts?
+                //If this doesn't work - add a boolean bundle extra with true if coming after START
                 // Enable the boot completed receiver, which starts this service after the device restarts
                 Utils.setComponentState(
                         this,
@@ -69,32 +79,98 @@ public class ForegroundService extends Service {
                 Bundle extras = intent.getExtras();
                 long samplingInterval = extras.getLong(Utils.GPS_SAMPLING_INTERVAL);
                 long tripDuration = extras.getLong(Utils.TRIP_DURATION);
-                long startingTime = extras.getLong(Utils.TRIP_START_TIME);
                 String userName = extras.getString(Utils.USERNAME);
 
-                // Try to create a file fgrMinMHoursHTimeId, without the extension
-                String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
+                // Here, if this case is being re-run because it hadn't finished (system killed it
+                // and the flag is start_redeliver_intent), I want to see if file was already created
+                // Get the foreground route file
+                File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
+                if (extensionlessFgrRouteFile == null) {
+                    // The file does not exist (the file was never created, either because:
+                    // 1 this is the first run, or
+                    // 2 it tried but it did not succeed - see if filename == null, or
+                    // 3 the system killed this case before it got to creating the file... or the
+                    // file was deleted)
 
-                if (fileName != null) {
-                    // Set and start the alarm
-                    // Alarms get killed on reboot, just like pendingIntents
-                    // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
-                    //TODO: If you want a new interval for the alarm, cancel the old one
+                    long startingTime = extras.getLong(Utils.TRIP_START_TIME);
+
+                    // Try to create a file fgrMinMHoursHTimeId, without the extension
+                    String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
+
+                    if (fileName == null) {
+                        // The foreground route file couldn't be created. Maybe after a reboot
+                        // (boot completed receiver was enabled previously), or after another go of this case
+                        // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
+
+                        // Start the foreground service, but don't start the alarm (which starts the gps sampling intent service)
+                        // the intent service won't have a file to write to
+                        startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+                    } else { // meaning the foreground route file was created
+                        // Set and start the alarm and notification - this will overwrite old alarm
+                        // and notification
+                        // Alarms get killed on reboot, just like pendingIntents
+                        // However, the alarm has to work after reboot (I will get a start service from bootcompletedreceiver)
+                        //TODO: If you want a new interval for the alarm, cancel the old one
+                        startAlarm(fileName, samplingInterval, tripDuration, userName);
+                        // TODO: start foreground and build notification (maybe do this later, if file created successfully)
+                        startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
+                    }
+                } else { //meaning the extensionless foreground route file already exists
+                    String fileName = extensionlessFgrRouteFile.getName();
                     startAlarm(fileName, samplingInterval, tripDuration, userName);
-
-                    // TODO: start foreground and build notification (maybe do this later, if file created successfully)
                     startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
-
-
-                } else { // The foreground route file couldn't be created. Maybe after a reboot (boot completed receiver was enabled previously),
-                    // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
-                    // start the foreground service, but don't start the alarm (which starts the gps sampling intent service)
-                    // the intent service won't have a file to write to
-                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or NOTIFICATION_ID ?
                 }
 
                 break;
             }
+
+            //TODO: get rid of this case
+//            case Utils.RESTART_FOREGROUND_SERVICE_FROM_ACTIVITY: {
+//                // It arrives here every time the main activity is started and the START button had
+//                // already been pressed.
+//                // This case is here just to make sure, in case the notification (fgr service) was
+//                // killed, that, when the activity is started again, the service (and alarm, and
+//                // thus the gps sampling) restart.
+//                // This will also take place even if the fgr service/notification is already running,
+//                // but everything will be overwritten, therefore no duplicate services/alarms.
+//                // Foreground route file is created here only if the START_FOREGROUND... case failed
+//                // to create one
+//
+//                Bundle extras = intent.getExtras();
+//                long samplingInterval = extras.getLong(Utils.GPS_SAMPLING_INTERVAL);
+//                long tripDuration = extras.getLong(Utils.TRIP_DURATION);
+//                String userName = extras.getString(Utils.USERNAME);
+//
+//                // get the foreground route file
+//                File extensionlessFgrRouteFile = getExtensionlessFile(Utils.FOREGROUND_PREFIX);
+//                if (extensionlessFgrRouteFile == null) {
+//                    // The file does not exist (it was not created in the START_FOREGROUND...
+//                    // case - write error, see above when I try to create the file OR it was deleted)
+//
+//                    long startingTime = extras.getLong(Utils.TRIP_START_TIME);
+//                    // Try to create a file fgrMinMHoursHTimeId, without the extension
+//                    String fileName = createForegroundRouteFile(samplingInterval, tripDuration, startingTime);
+//                    if (fileName == null) {
+//                        // The foreground route file couldn't be created this time, either. Maybe after a reboot
+//                        // (boot completed receiver was enabled previously), or after RESTART_FOREGROUND...
+//                        // it will be able to create the file (If SEND is pressed the boot completed receiver is disabled anyway).
+//                        // start the foreground service, but don't start the alarm (which starts the gps sampling intent service)
+//                        // the intent service won't have a file to write to
+//                        startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or NOTIFICATION_ID ?
+//                    } else { // meaning the foreground route file was created
+//                        // Set and start the alarm and notification - this will overwrite old alarm
+//                        // and notification
+//                        startAlarm(fileName, samplingInterval, tripDuration, userName);
+//                        startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
+//                    }
+//                } else { //meaning the extensionless foreground route file already exists
+//                    String fileName = extensionlessFgrRouteFile.getName();
+//                    startAlarm(fileName, samplingInterval, tripDuration, userName);
+//                    startForeground(Utils.NOTIFICATION_ID, getCompatNotification()); //or  Utils.FOREGROUND_ID?
+//                }
+//
+//                break;
+//            }
 
             case Utils.START_FOREGROUND_SERVICE_FROM_BOOT_RECEIVER: {
 
@@ -312,10 +388,11 @@ public class ForegroundService extends Service {
                 break;
             }
 
-            //TODO: maybe, a case here with activity paused (so that the notification can add OPEN to DELETE and NEW)
         }
 
-        return START_STICKY;
+        return START_REDELIVER_INTENT; //was START_STICKY;
+        // useful for services that are receiving commands of work to do, and want to make sure
+        // they do eventually complete the work for each command sent
     }
 
     protected PendingIntent getAlarmPendingIntent(String fileName, long tripDuration, String userName) {
