@@ -113,14 +113,15 @@ public final class Utils {
 
     public static String getDirectory(Context context) {
 
-        //return context.getFilesDir().toString();//TODO: internal version
+        return context.getFilesDir().toString();//TODO: internal version
 
-        File dir = new File(EXTERNAL_DIRECTORY);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
-        return dir.toString();
+        //TODO: external version
+//        File dir = new File(EXTERNAL_DIRECTORY);
+//        if (!dir.exists()) {
+//            dir.mkdirs();
+//        }
+//
+//        return dir.toString();
     }
 
     public static double parseGpsToDouble(String sValue, GpsEdgeValue edgeValue) {

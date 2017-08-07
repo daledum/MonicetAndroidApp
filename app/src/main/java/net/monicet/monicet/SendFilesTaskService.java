@@ -58,6 +58,7 @@ public class SendFilesTaskService extends GcmTaskService {
         // test ends here
 
         // this is a GcmTaskService which is a Service which is a Context
+        //TODO: uncomment the first line below and remove the second line below
         boolean successful = Utils.sendAndDeleteFiles(this);
         if (successful) { return GcmNetworkManager.RESULT_SUCCESS; }
 

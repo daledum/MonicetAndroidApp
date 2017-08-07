@@ -1838,6 +1838,10 @@ public class MainActivity extends AppCompatActivity implements
             seedAnimals.add(new Animal(specie));
         }
 
+        // the user will have access to all the species and families - always (they will just be
+        // grouped differently according to the custom list file)
+        // Create global array with all the species, should add family (own language, I know which
+        // one it is when I build the string) and the name of the specie in Latin
     }
 
     public void makeAndSetArrayAdapters() {
