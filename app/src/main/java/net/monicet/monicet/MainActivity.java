@@ -1035,10 +1035,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -1078,10 +1078,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1842,6 +1842,19 @@ public class MainActivity extends AppCompatActivity implements
         // grouped differently according to the custom list file)
         // Create global array with all the species, should add family (own language, I know which
         // one it is when I build the string) and the name of the specie in Latin
+
+        // via getResources().getResourceEntryName() get the name of the xml element
+        //getResources().getResourceEntryName(R.array.speciesArray) works too (or R.string.
+        // I need to go through each specie, create an animal, with its EN/ES/PT name and its Latin
+        // name, its family (or group) - check if the EN/ES/PT name of the animal
+        // is in the baleen whale string array and if yes, assign the EN/ES/PT name of the group to
+        // its family
+
+        //OR: Go through each array element of the baleen whale string array, let's say, then create an
+        // animal, take the name of the array element (will be in EN/SP/PT), use that to find the
+        //resource name (latin name)??via R getFields, add that to the animal object, together with the EN/ES/PT name
+        // of the string array (to be the family)
+
     }
 
     public void makeAndSetArrayAdapters() {
@@ -2228,6 +2241,7 @@ public class MainActivity extends AppCompatActivity implements
                         // saved successfully message
                         Toast.makeText(MainActivity.this,
                                 R.string.sighting_saved_confirmation_message, Toast.LENGTH_SHORT).show();
+
 //                        Toast.makeText(activity,
 //                                R.string.sighting_saved_instructions_message, Toast.LENGTH_LONG).show();
 

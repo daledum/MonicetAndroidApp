@@ -86,6 +86,214 @@
         Are you sure you want to delete this sighting?
     </string>
 
+    <string-array name="BaleenWhales">
+        <item>@string/MegapteraNoveangliae</item>
+        <item>@string/BalaenopteraMusculus</item>
+        <item>@string/BalaenopteraPhysalus</item>
+        <item>@string/BalaenopteraBorealis</item>
+        <item>@string/BalaenopteraEdeni</item>
+        <item>@string/BalaenopteraAcutorostrata</item>
+        <item>@string/BalaenaMysticetus</item>
+        <item>@string/EubalaenaGlacialis</item>
+        <item>@string/EubalaenaJaponica</item>
+        <item>@string/EubalaenaAustralis</item>
+        <item>@string/CapereaMarginata</item>
+        <item>@string/EschrichtiusRobustus</item>
+        <item>@string/BalaenopteraBonaerensis</item>
+        <item>@string/BalaenopteraOmurai</item>
+    </string-array>
+
+    <string-array name="ToothedWhales">
+        <item>@string/PhyseterMacrocephalus</item>
+        <item>@string/KogiaBreviceps</item>
+        <item>@string/KogiaSima</item>
+        <item>@string/DelphinapterusLeucas</item>
+        <item>@string/MonodonMonoceros</item>
+        <item>@string/PeponocephalaElectra</item>
+    </string-array>
+
+    <string-array name="BeakedWhales">
+        <item>@string/ZiphiusSp</item>
+        <item>@string/ZiphiusCavirostris</item>
+        <item>@string/MesoplodonBidens</item>
+        <item>@string/HyperoodonAmpullatus</item>
+        <item>@string/MesoplodonDensirostris</item>
+        <item>@string/MesoplodonMirus</item>
+        <item>@string/BerardiusArnuxii</item>
+        <item>@string/BerardiusBairdii</item>
+        <item>@string/HyperoodonPlanifrons</item>
+        <item>@string/IndopacetusPacificus</item>
+        <item>@string/MesoplodonBowdoini</item>
+        <item>@string/MesoplodonCarlhubbsi</item>
+        <item>@string/MesoplodonEuropaeus</item>
+        <item>@string/MesoplodonGinkgodens</item>
+        <item>@string/MesoplodonGrayi</item>
+        <item>@string/MesoplodonHectori</item>
+        <item>@string/MesoplodonHotaula</item>
+        <item>@string/MesoplodonLayardii</item>
+        <item>@string/MesoplodonPerrini</item>
+        <item>@string/MesoplodonPeruvianus</item>
+        <item>@string/MesoplodonStejnegeri</item>
+        <item>@string/MesoplodonTraversii</item>
+        <item>@string/TasmacetusShepherdi</item>
+    </string-array>
+
+    <string-array name="BigDolphins">
+        <item>@string/TursiopsTruncatus</item>
+        <item>@string/StenoBredanensis</item>
+        <item>@string/GrampusGriseus</item>
+        <item>@string/SousaTeuszii</item>
+        <item>@string/SousaChinensis</item>
+        <item>@string/SousaPlumbea</item>
+        <item>@string/SousaSahulensis</item>
+        <item>@string/TursiopsAduncus</item>
+    </string-array>
+
+    <string-array name="SmallDolphins">
+        <item>@string/StenellaFrontalis</item>
+        <item>@string/DelphinusDelphis</item>
+        <item>@string/StenellaCoeruleoalba</item>
+        <item>@string/CephalorhynchusCommersonii</item>
+        <item>@string/CephalorhynchusEutropia</item>
+        <item>@string/CephalorhynchusHeavisidii</item>
+        <item>@string/CephalorhynchusHectori</item>
+        <item>@string/LagenodelphisHosei</item>
+        <item>@string/LagenorhynchusAcutus</item>
+        <item>@string/LagenorhynchusAustralis</item>
+        <item>@string/LagenorhynchusCruciger</item>
+        <item>@string/LagenorhynchusObliquidens</item>
+        <item>@string/LagenorhynchusObscurus</item>
+        <item>@string/LissodelphisBorealis</item>
+        <item>@string/LissodelphisPeronii</item>
+        <item>@string/OrcaellaBrevirostris</item>
+        <item>@string/OrcaellaHeinsohni</item>
+        <item>@string/SotaliaGuianensis</item>
+        <item>@string/StenellaAttenuata</item>
+        <item>@string/StenellaClymene</item>
+        <item>@string/StenellaLongirostris</item>
+    </string-array>
+
+    <string-array name="BlackDolphins">
+        <item>@string/GlobicephalaMacrorhynchus</item>
+        <item>@string/OrcinusOrca</item>
+        <item>@string/PseudorcaCrassidens</item>
+        <item>@string/GlobicephalaMelas</item>
+        <item>@string/FeresaAttenuata</item>
+    </string-array>
+
+    <string-array name="Porpoises">
+        <item>@string/PhocaenaPhocaena</item>
+        <item>@string/PontoporiaBlainvillei</item>
+        <item>@string/NeophocaenaPhocaenoides</item>
+        <item>@string/PhocoenaDioptrica</item>
+        <item>@string/PhocoenaSinus</item>
+        <item>@string/PhocoenaSpinipinnis</item>
+        <item>@string/PhocoenoidesDalli</item>
+    </string-array>
+
+    <string-array name="SeaTurtles">
+        <item>@string/CarettaCaretta</item>
+        <item>@string/DermochelysCoriacea</item>
+        <item>@string/CheloniaMydas</item>
+        <item>@string/EretmochelysImbricata</item>
+        <item>@string/LepidochelysKempii</item>
+        <item>@string/LepidochelysOlivacea</item>
+        <item>@string/NatatorDepressus</item>
+
+    </string-array>
+
+    <string name="StenellaFrontalis">Atlantic spotted dolphin</string>
+    <string name="TursiopsTruncatus">Common bottlenose dolphin</string>
+    <string name="StenoBredanensis">Rough-toothed dolphin</string>
+    <string name="GlobicephalaMacrorhynchus">Short-finned pilot whale</string>
+    <string name="DelphinusDelphis">Common dolphin</string>
+    <string name="StenellaCoeruleoalba">Striped dolphin</string>
+    <string name="GrampusGriseus">Risso\'s dolphin</string>
+    <string name="PhyseterMacrocephalus">Sperm whale</string>
+    <string name="OrcinusOrca">Killer whale</string>
+    <string name="PseudorcaCrassidens">False killer whale</string>
+    <string name="ZiphiusSp">Beaked Whale</string>
+    <string name="ZiphiusCavirostris">Cuvier\'s beaked whale</string>
+    <string name="MesoplodonBidens">Sowerby\'s beaked whale</string>
+    <string name="MegapteraNoveangliae">Humpback whale</string>
+    <string name="HyperoodonAmpullatus">Northern bottlenose whale</string>
+    <string name="KogiaBreviceps">Pygmy sperm whale</string>
+    <string name="BalaenopteraMusculus">Blue whale</string>
+    <string name="BalaenopteraPhysalus">Fin whale</string>
+    <string name="BalaenopteraBorealis">Sei whale</string>
+    <string name="BalaenopteraEdeni">Bryde\'s whale</string>
+    <string name="BalaenopteraAcutorostrata">Northern/common minke whale</string>
+    <string name="CarettaCaretta">Loggerhead turtle</string>
+    <string name="DermochelysCoriacea">Leatherback turtle</string>
+    <string name="CheloniaMydas">Green turtle</string>
+    <string name="EretmochelysImbricata">Hawksbill turtle</string>
+    <string name="LepidochelysKempii">Kemp\’s ridley turtle</string>
+    <string name="MesoplodonDensirostris">Blainville\'s beaked whale</string>
+    <string name="MesoplodonMirus">True\'s beaked whale</string>
+    <string name="GlobicephalaMelas">Long-finned pilot whale</string>
+    <string name="PhocaenaPhocaena">Harbour porpoise</string>
+    <string name="BalaenaMysticetus">Bowhead/Greenland whale</string>
+    <string name="EubalaenaGlacialis">North Atlantic right whale</string>
+    <string name="EubalaenaJaponica">North Pacific right whale</string>
+    <string name="EubalaenaAustralis">Southern right whale</string>
+    <string name="CapereaMarginata">Pygmy right whale</string>
+    <string name="EschrichtiusRobustus">Gray whale</string>
+    <string name="BalaenopteraBonaerensis">Antarctic/southern minke whale</string>
+    <string name="BalaenopteraOmurai">Omura\'s whale</string>
+    <string name="KogiaSima">Dwarf sperm whale</string>
+    <string name="BerardiusArnuxii">Arnoux\’s beaked whale</string>
+    <string name="BerardiusBairdii">Baird\’s beaked whale</string>
+    <string name="HyperoodonPlanifrons">Southern bottlenose whale</string>
+    <string name="IndopacetusPacificus">Tropical bottlenose/Indo-Pacific beaked/Longman\'s beaked whale</string>
+    <string name="MesoplodonBowdoini">Andrews\’ beaked whale</string>
+    <string name="MesoplodonCarlhubbsi">Hubbs\' beaked whale</string>
+    <string name="MesoplodonEuropaeus">Gervais\’ beaked whale</string>
+    <string name="MesoplodonGinkgodens">Ginkgo-toothed beaked whale</string>
+    <string name="MesoplodonGrayi">Gray\’s beaked whale</string>
+    <string name="MesoplodonHectori">Hector\’s beaked whale</string>
+    <string name="MesoplodonHotaula">Deraniyagala\’s beaked whale</string>
+    <string name="MesoplodonLayardii">Strap-toothed beaked whale/Layard\’s beaked whale</string>
+    <string name="MesoplodonPerrini">Perrin\’s beaked whale</string>
+    <string name="MesoplodonPeruvianus">Pygmy beaked whale</string>
+    <string name="MesoplodonStejnegeri">Stejneger\’s beaked whale</string>
+    <string name="MesoplodonTraversii">Spade-toothed whale</string>
+    <string name="TasmacetusShepherdi">Shepherd\’s beaked whale/Tasman beaked whale</string>
+    <string name="DelphinapterusLeucas">Beluga or white whale</string>
+    <string name="MonodonMonoceros">Narwhal</string>
+    <string name="PontoporiaBlainvillei">Franciscana/Toninha/La Plata dolphin</string>
+    <string name="CephalorhynchusCommersonii">Commerson\'s or panda dolphin/skunk/piebald</string>
+    <string name="CephalorhynchusEutropia">Chilean dolphin</string>
+    <string name="CephalorhynchusHeavisidii">Heaviside\'s dolphin</string>
+    <string name="CephalorhynchusHectori">Hector\'s dolphin</string>
+    <string name="FeresaAttenuata">Pygmy killer whale</string>
+    <string name="LagenodelphisHosei">Fraser\'s dolphin</string>
+    <string name="LagenorhynchusAcutus">Atlantic white-sided dolphin</string>
+    <string name="LagenorhynchusAustralis">Peale\’s dolphin</string>
+    <string name="LagenorhynchusCruciger">Hourglass dolphin</string>
+    <string name="LagenorhynchusObliquidens">Pacific white-sided dolphin</string>
+    <string name="LagenorhynchusObscurus">Dusky dolphin</string>
+    <string name="LissodelphisBorealis">Northern right-whale dolphin</string>
+    <string name="LissodelphisPeronii">Southern right-whale dolphin</string>
+    <string name="OrcaellaBrevirostris">Irrawaddy dolphin</string>
+    <string name="OrcaellaHeinsohni">Australian snubfin dolphin</string>
+    <string name="PeponocephalaElectra">Melon-headed whale/Electra dolphin</string>
+    <string name="SousaTeuszii">Atlantic humpback dolphin</string>
+    <string name="SousaChinensis">Indo-Pacific humpback dolphin</string>
+    <string name="SousaPlumbea">Indian Ocean humpback dolphin</string>
+    <string name="SousaSahulensis">Australian humpback dolphin</string>
+    <string name="SotaliaGuianensis">Guiana dolphin</string>
+    <string name="StenellaAttenuata">Pantropical spotted dolphin</string>
+    <string name="StenellaClymene">Clymene dolphin</string>
+    <string name="StenellaLongirostris">Spinner dolphin</string>
+    <string name="TursiopsAduncus">Indo-Pacific bottlenose dolphin</string>
+    <string name="NeophocaenaPhocaenoides">Indo-Pacific finless porpoise</string>
+    <string name="PhocoenaDioptrica">Spectacled porpoise</string>
+    <string name="PhocoenaSinus">Vaquita</string>
+    <string name="PhocoenaSpinipinnis">Burmeister\’s porpoise</string>
+    <string name="PhocoenoidesDalli">Dall\’s porpoise</string>
+    <string name="LepidochelysOlivacea">Olive ridley turtle</string>
+    <string name="NatatorDepressus">Flatback turtle</string>
+
     <string name="sperm_whale_1">Sperm whale</string>
     <string name="fin_whale_2">Fin whale</string>
     <string name="sei_whale_3">Sei whale</string>
@@ -100,9 +308,6 @@
     <string name="blainville_beaked_whale_12">Blainville\'s beaked whale</string>
     <string name="true_beaked_whale_13">True\'s beaked whale</string>
     <string name="pygmy_sperm_whale_14">Pygmy sperm whale</string>
-
-    <string name="southern_minke_whale_15">Southern minke whale</string>
-
     <string name="short_finned_pilot_whale_16">Short-finned pilot whale</string>
     <string name="false_killer_whale_17">False killer whale</string>
     <string name="killer_whale_18">Killer whale</string>
@@ -113,38 +318,12 @@
     <string name="risso_dolphin_23">Risso\'s dolphin</string>
     <string name="striped_dolphin_24">Striped dolphin</string>
     <string name="rough_toothed_dolphin_25">Rough-toothed dolphin</string>
-
-    <string name="humpback_dolphin_26">Humpback dolphin</string>
-
     <string name="harbour_porpoise_27">Harbour porpoise</string>
-
-    <string name="finless_porpoise_28">Finless porpoise</string>
-    <string name="vaquita_29">Vaquita</string>
-    <string name="spectacled_porpoise_30">Spectacled porpoise</string>
-    <string name="burmeister_porpoise_31">Burmeister\'s porpoise</string>
-    <string name="dall_porpoise_32">Dall\'s porpoise</string>
-
     <string name="loggerhead_turtle_33">Loggerhead turtle</string>
     <string name="leatherback_turtle_34">Leatherback turtle</string>
     <string name="green_turtle_35">Green turtle</string>
     <string name="hawksbill_turtle_36">Hawksbill turtle</string>
     <string name="kemp_ridley_turtle_37">Kemp\'s ridley turtle</string>
-
-    <string name="olive_ridley_sea_turtle_38">Olive ridley sea turtle</string>
-    <string name="flatback_sea_turtle_39">Flatback sea turtle</string>
-
-    <string name="fur_seal_40">Fur seal</string>
-    <string name="sea_lion_41">Sea lion</string>
-    <string name="true_seal_42">True seal</string>
-    <string name="walrus_43">Walrus</string>
-    <string name="polar_bear_44">Polar bear</string>
-    <string name="otter_45">Otter</string>
-
-    <string name="whales">Whales</string>
-    <string name="dolphins">Dolphins</string>
-    <string name="porpoises">Porpoises</string>
-    <string name="turtles">Turtles</string>
-    <string name="others">Others</string>
 
     <string-array name="speciesArray">
         <item>@string/sperm_whale_1</item>
@@ -179,64 +358,23 @@
         <item>@string/kemp_ridley_turtle_37</item>
     </string-array>
 
-    <string-array name="whalesArray">
-        <item>@string/sperm_whale_1</item>
-        <item>@string/fin_whale_2</item>
-        <item>@string/sei_whale_3</item>
-        <item>@string/blue_whale_4</item>
-        <item>@string/humpback_whale_5</item>
-        <item>@string/beaked_whale_6</item>
-        <item>@string/sowerby_beaked_whale_7</item>
-        <item>@string/northern_minke_whale_8</item>
-        <item>@string/northern_bottlenose_whale_9</item>
-        <item>@string/bryde_whale_10</item>
-        <item>@string/cuvier_beaked_whale_11</item>
-        <item>@string/blainville_beaked_whale_12</item>
-        <item>@string/true_beaked_whale_13</item>
-        <item>@string/pygmy_sperm_whale_14</item>
-        <item>@string/southern_minke_whale_15</item>
-    </string-array>
+    <string name="BaleenWhales">Baleen whales</string>
+    <string name="ToothedWhales">Toothed wales</string>
+    <string name="BeakedWhales">Beaked wales</string>
+    <string name="BigDolphins">Big dolphins</string>
+    <string name="SmallDolphins">Small dolphins</string>
+    <string name="BlackDolphins">Black dolphins</string>
+    <string name="Porpoises">Porpoises</string>
+    <string name="SeaTurtles">Sea turtles</string>
+    <string name="Others">Others</string>
 
-    <string-array name="dolphinsArray">
-        <item>@string/short_finned_pilot_whale_16</item>
-        <item>@string/false_killer_whale_17</item>
-        <item>@string/killer_whale_18</item>
-        <item>@string/long_finned_pilot_whale_19</item>
-        <item>@string/common_dolphin_20</item>
-        <item>@string/common_bottlenose_dolphin_21</item>
-        <item>@string/atlantic_spotted_dolphin_22</item>
-        <item>@string/risso_dolphin_23</item>
-        <item>@string/striped_dolphin_24</item>
-        <item>@string/rough_toothed_dolphin_25</item>
-        <item>@string/humpback_dolphin_26</item>
-    </string-array>
+    <string name="PinnipediaSp">Seal</string>
+    <string name="UrsusMaritimus">Polar bear</string>
+    <string name="EnhydraLutris">Sea otter</string>
+    <string name="LontraFelina">Marine otter</string>
 
-    <string-array name="porpoisesArray">
-        <item>@string/harbour_porpoise_27</item>
-        <item>@string/finless_porpoise_28</item>
-        <item>@string/vaquita_29</item>
-        <item>@string/spectacled_porpoise_30</item>
-        <item>@string/burmeister_porpoise_31</item>
-        <item>@string/dall_porpoise_32</item>
-    </string-array>
-
-    <string-array name="turtlesArray">
-        <item>@string/loggerhead_turtle_33</item>
-        <item>@string/leatherback_turtle_34</item>
-        <item>@string/green_turtle_35</item>
-        <item>@string/hawksbill_turtle_36</item>
-        <item>@string/kemp_ridley_turtle_37</item>
-        <item>@string/olive_ridley_sea_turtle_38</item>
-        <item>@string/flatback_sea_turtle_39</item>
-    </string-array>
-
-    <string-array name="othersArray">
-        <item>@string/fur_seal_40</item>
-        <item>@string/sea_lion_41</item>
-        <item>@string/true_seal_42</item>
-        <item>@string/walrus_43</item>
-        <item>@string/polar_bear_44</item>
-        <item>@string/otter_45</item>
+    <string-array name="Others">
+        <item>@string/UrsusMaritimus</item>
     </string-array>
 
 </resources>
