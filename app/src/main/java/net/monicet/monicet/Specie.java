@@ -10,6 +10,8 @@ public class Specie implements Serializable {
 
     // The specie field is retrieved from resources species array string
     private String mName;
+    private String mFamily;
+    private int mRank;
 
     // Link to drawable resource image(s)
     private String mPhoto;
@@ -17,8 +19,10 @@ public class Specie implements Serializable {
     // Link to text file
     private String mDescription;
 
-    public Specie(String vName, String vPhoto, String vDescription) {
+    public Specie(String vName, String vFamily, int vRank, String vPhoto, String vDescription) {
         mName = vName;
+        mFamily = vFamily;
+        mRank = vRank;
         mPhoto = vPhoto;
         mDescription = vDescription;
     }
@@ -26,6 +30,10 @@ public class Specie implements Serializable {
     public String getName() {
         return mName;
     }
+
+    public String getFamily() { return mFamily; }
+
+    public int getRank() { return mRank; }
 
     public String getPhoto() {
         return mPhoto;

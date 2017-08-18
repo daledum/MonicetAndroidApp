@@ -96,13 +96,13 @@
     <string name="TasmacetusShepherdi">Zifio de Shepherd</string>
     <string name="TursiopsAduncus">Delfín del Indo-Pacífico</string>
     <string name="UrsusMaritimus">Oso polar</string>
-    <string name="BaleenWhales">Ballenas barbadas</string>
-    <string name="BeakedWhales">Zifios</string>
-    <string name="BigDolphins">Grandes delfines</string>
-    <string name="BlackDolphins">Delfines negros</string>
-    <string name="Others">Otros</string>
-    <string name="Porpoises">Marsopas</string>
-    <string name="SmallDolphins">Pequeños delfines</string>
-    <string name="ToothedWhales">Cetáceos dentados/Ballenas dentadas</string>
-    <string name="SeaTurtles">Tortugas marinas</string>
+    <string name="aBaleenWhalesFamily">Ballenas barbadas</string>
+    <string name="cBeakedWhalesFamily">Zifios</string>
+    <string name="dBigDolphinsFamily">Grandes delfines</string>
+    <string name="fBlackDolphinsFamily">Delfines negros</string>
+    <string name="others">Otros</string>
+    <string name="gPorpoisesFamily">Marsopas</string>
+    <string name="eSmallDolphinsFamily">Pequeños delfines</string>
+    <string name="bToothedWhalesFamily">Cetáceos dentados/Ballenas dentadas</string>
+    <string name="hSeaTurtlesFamily">Tortugas marinas</string>
 </resources>

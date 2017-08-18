@@ -30,11 +30,12 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {
     @NonNull
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        final Animal currentAnimal = getItem(position);
 
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_animal, parent, false);
         }
+
+        final Animal currentAnimal = getItem(position);
 
         // set the specie name
         TextView specie = (TextView)convertView.findViewById(R.id.specie_text_view);

@@ -168,14 +168,14 @@
     <string name="TasmacetusShepherdi">Baleia-bicuda-de-shepherd</string>
     <string name="TursiopsAduncus">Roaz-do-índico</string>
     <string name="UrsusMaritimus">Urso-polar</string>
-    <string name="BaleenWhales">Baleias/rorquais</string>
-    <string name="BeakedWhales">Baleias de bico</string>
-    <string name="BigDolphins">Grandes golfinhos</string>
-    <string name="BlackDolphins">Golfinhos negros</string>
-    <string name="Others">Outras</string>
-    <string name="Porpoises">Toninhas/marsuínos/botos</string>
-    <string name="SmallDolphins">Pequenos golfinhos</string>
-    <string name="ToothedWhales">Baleias com dentes</string>
-    <string name="SeaTurtles">Tartarugas marinhas</string>
+    <string name="aBaleenWhalesFamily">Baleias/rorquais</string>
+    <string name="cBeakedWhalesFamily">Baleias de bico</string>
+    <string name="dBigDolphinsFamily">Grandes golfinhos</string>
+    <string name="fBlackDolphinsFamily">Golfinhos negros</string>
+    <string name="others">Outras</string>
+    <string name="gPorpoisesFamily">Toninhas/marsuínos/botos</string>
+    <string name="eSmallDolphinsFamily">Pequenos golfinhos</string>
+    <string name="bToothedWhalesFamily">Baleias com dentes</string>
+    <string name="hSeaTurtlesFamily">Tartarugas marinhas</string>
 
 </resources>

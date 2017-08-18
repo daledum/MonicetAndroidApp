@@ -11,7 +11,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Environment;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -51,11 +50,15 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -67,11 +70,6 @@ import java.util.concurrent.TimeoutException;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.Utils.GPS_SAMPLING_INTERVAL;
-import static net.monicet.monicet.Utils.START_FOREGROUND_SERVICE_FROM_ACTIVITY;
-import static net.monicet.monicet.Utils.TRIP_DURATION;
-import static net.monicet.monicet.Utils.TRIP_START_TIME;
-import static net.monicet.monicet.Utils.USERNAME;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -83,8 +81,13 @@ public class MainActivity extends AppCompatActivity implements
     final Trip[] trips = new Trip[1]; // hack so that I can use inside anonymous classes and deserialize from json file if necessary
     final HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();// To create TRK, GPX, KML, KMZ, PLT files on the server
     final Sighting[] openedSightings = new Sighting[2]; // 'temporary' sightings (one used when opening a sighting and the other when opening its comments dialog)
-    final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();
-    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];
+    final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();//TODO: new specie feature - should drop this
+
+    // new Specie feature //array adapter only take arraylists
+    final ArrayList<Animal> allSeedAnimals = new ArrayList<Animal>();
+    final ArrayList<String> animalFamiliesTranslated = new ArrayList<String>();
+
+    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];// TODO: specie feature add another array adaptor for the family names
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
@@ -109,6 +112,39 @@ public class MainActivity extends AppCompatActivity implements
     private volatile boolean wereSendingMechanismsStarted = false; // Get rid of volatile, if not using a separate thread
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
+
+    protected ArrayList<Animal> getOpenedFamilySeedAnimals(String family) {
+
+        ArrayList<Animal> openedFamilySeedAnimals = new ArrayList<Animal>();
+
+        // If we're getting null, just add all of seed animals to the returned list
+        if (family == null) {
+            for (Animal animal: allSeedAnimals) {
+                openedFamilySeedAnimals.add(animal);
+            }
+        } else {
+            // If the string we receive is Others (meaning the ones not on the user's custom list),
+            // we just add the one with the initial rank to this list)
+            if (family.equals(getString(R.string.others))) {
+                for (Animal animal: allSeedAnimals) {
+                    if (animal.getSpecie().getRank() == Utils.INITIAL_RANK) {
+                        openedFamilySeedAnimals.add(animal);
+                    }
+                }
+            } else {
+                // Then, populate it with animals, if the animals belong to the opened family
+                // and they were on the user's custom list (non-initial rank)
+                for (Animal animal: allSeedAnimals) {
+                    if (animal.getSpecie().getFamily().equals(family) &&
+                            animal.getSpecie().getRank() != Utils.INITIAL_RANK) {
+                        openedFamilySeedAnimals.add(animal);
+                    }
+                }
+            }
+        }
+
+        return openedFamilySeedAnimals;
+    }
 
     protected void removeTemporarySighting() {
         // This is called:
@@ -521,7 +557,7 @@ public class MainActivity extends AppCompatActivity implements
 //    }
 
     @Override
-    public void openSighting(String label, Sighting sighting) {
+    public void openSighting(String label, Sighting sighting, String family) {
         // set openedSighting - to be later used by SAVE
         openedSightings[0] = sighting; // TODO: issues here?
 
@@ -533,7 +569,7 @@ public class MainActivity extends AppCompatActivity implements
         // I can start with the first specie if I clear and setdataall seedanimals (start with null)
 
         // first, clean the seed animals - maybe use INITIAL_VALUE
-        for (Animal seedAnimal: seedAnimals) {
+        for (Animal seedAnimal: allSeedAnimals) {//TODO: new all species feature, before it was seedAnimals
             seedAnimal.setStartQuantity(0);
             seedAnimal.setEndQuantity(0);
         }
@@ -542,7 +578,7 @@ public class MainActivity extends AppCompatActivity implements
         if (animal != null) {
             String specieName = animal.getSpecie().getName();
 
-            for (Animal seedAnimal: seedAnimals) {
+            for (Animal seedAnimal: allSeedAnimals) {//TODO: new all species feature, before it was seedAnimals
                 // set the end quantity for all animals to be the end quantity of the sighting's animal
                 // so that we keep this value when we save
                 seedAnimal.setEndQuantity(animal.getEndQuantity());
@@ -555,7 +591,11 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
+        // TODO: new specie feature
         // let the animal adapter know that the seedAnimals changed
+        arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
+        //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
+        arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(family));
         arrayAdapters[0].notifyDataSetChanged();
 
         // make sighting list view invisible
@@ -599,6 +639,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // update the sightings adapter and the sightings view
         if (trips[0].getNumberOfSightings() == 0) {
+            //NB: this tries to empty the list of sightings (but it can't) inside the trip, but I need it here to clear my adapter
             arrayAdapters[1].clear();
             arrayAdapters[1].addAll(new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null})));
             arrayAdapters[1].notifyDataSetChanged();
@@ -617,12 +658,6 @@ public class MainActivity extends AppCompatActivity implements
             findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
         }
 
-//        // update sighting adapter
-//        arrayAdapters[1].clear();
-//        //TODO: the no sightings bug: here..trips[0].getSightings() does not return null...just an empty arraylist
-//        //move this in the if above...give null to the array if no sightings
-//        arrayAdapters[1].addAll(trips[0].getSightings());//no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
-//        arrayAdapters[1].notifyDataSetChanged();
     }
 
     @Override
@@ -1818,47 +1853,217 @@ public class MainActivity extends AppCompatActivity implements
 
     public void buildSeedAnimalsFromResources() {
 
-        // get the resources (specie_names, descriptions, photos)
-        String[] specie_names = getResources().getStringArray(R.array.speciesArray);
-        // TODO: implement getting the photo ids and description data later
-        String[] photos = new String[30];
-        String[] descriptions = new String[30]; // all descriptions can be in one single text file
-        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
-        Arrays.fill(descriptions, "description");
+        // Old logic starts here//TODO: get rid
+//        // get the resources (specie_names, descriptions, photos)
+//        String[] specie_names = getResources().getStringArray(R.array.speciesArray);
+//        // TODO: implement getting the photo ids and description data later
+//        String[] photos = new String[30];
+//        String[] descriptions = new String[30]; // all descriptions can be in one single text file
+//        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
+//        Arrays.fill(descriptions, "description");
+//
+//        // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
+//        int sizeOfArrays = specie_names.length;
+//
+//        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
+//            Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+//        }
+//
+//        for (int i = 0; i < sizeOfArrays; i++ ) {
+//            Specie specie = new Specie(specie_names[i], "testFamily", 1, photos[i], descriptions[i]);
+//            seedAnimals.add(new Animal(specie));
+//        }
+        // old logic ends here
 
-        // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
-        int sizeOfArrays = specie_names.length;
+        //NEW LOGIC
+        // Stub data coming from the server //TODO: replace this with the file content (get update from server)
+        // I need an array of latin specie names - the order represents their
+        // rank (if spermwhalus is first, then its rank is 0+1 etc)
+        List<String> customSpecieList = new ArrayList<>(Arrays.asList(new String[] {
+                "Sperm whale",
+                "Common dolphin",
+                "Common bottlenose dolphin",
+                "Atlantic spotted dolphin",
+                "Fin whale",
+                "Risso's dolphin",
+                "Short-finned pilot whale",
+                "Striped dolphin",
+                "Sei whale",
+                "Loggerhead turtle",
+                "Blue whale",
+                "False killer whale",
+                "Humpback whale",
+                "Beaked Whale",
+                "Sowerby's beaked whale",
+                "Northern/common minke whale",
+                "Killer whale",
+                "Northern bottlenose whale",
+                "Bryde's whale",
+                "Leatherback turtle",
+                "Harbour porpoise",
+                "Cuvier's beaked whale",
+                "Blainville's beaked whale",
+                "True's beaked whale",
+                "Green turtle",
+                "Long-finned pilot whale",
+                "Rough-toothed dolphin",
+                "Pygmy sperm whale",
+                "Hawksbill turtle",
+                "Kemp’s ridley turtle"
+        }));
 
-        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
-            Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+        //TODO: drop the latin names - when asking the array with species from the server (mention which language you want back)
+
+        final ArrayList<String> animalFamiliesUntranslated = new ArrayList<String>();
+
+        // Using reflection, get all the family names (they contain the word family)
+        // from the names of the xml resource arrays
+        for (Field field: R.array.class.getFields()) {
+            if (field.getName().toLowerCase().contains("family")) {
+                animalFamiliesUntranslated.add(field.getName());
+            }
         }
 
-        for (int i = 0; i < sizeOfArrays; i++ ) {
-            Specie specie = new Specie(specie_names[i], photos[i], descriptions[i]);
-            seedAnimals.add(new Animal(specie));
+        // Sort them alphabetically (observe the first letter of each family name)
+        Collections.sort(animalFamiliesUntranslated);
+
+        // Create a set (to be populated after going through the custom list of species) for storing the custom families
+        Set<String> customFamiliesSet = new HashSet<String>();
+
+        // This is to see if 'Others' element was added (to be used in families array adapter)
+        boolean containsOthers = false; // this is to be initialized once for all families
+
+        // Get the id of the array (eg baleen whales - it's the name of the resource, untranslated)
+        for (String familyNameUntranslated: animalFamiliesUntranslated) {
+
+            int idOfFamilyName = getResources().getIdentifier(familyNameUntranslated, "string", getPackageName());
+            String familyNameTranslated = getResources().getString(idOfFamilyName);
+            // I want to add the translated family name to an arraylist to feed the family names array adaptor
+            // animalFamiliesUntranslated is already ordered and the insertion order is respected, therefore the translated one will be the same
+            animalFamiliesTranslated.add(familyNameTranslated);
+
+            int idOfSpeciesStringArray = getResources().getIdentifier(familyNameUntranslated, "array", getPackageName());
+            // get the String array containing all baleen whale species (they will be translated)
+            String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
+
+            // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
+            int sizeOfArrays2 = speciesPerFamilyTranslated.length;
+
+            // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
+//        String[] photos2 = new String[14];
+//        String[] descriptions2 = new String[14]; // all descriptions can be in one single text file
+//        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
+//        Arrays.fill(descriptions2, "description");
+
+//            if (sizeOfArrays2 != photos2.length || sizeOfArrays2 != descriptions2.length) {
+//                Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+//            }
+            //extra stuff ends here
+
+            for (int i = 0; i < sizeOfArrays2; i++ ) {
+
+                // What I know: the custom list, containing the specie names in latin
+                // What I want: see if the current specie (I need its latin name - see point 1 above) is inside the custom list...
+                // ... if yes, copy its rank to the species rank and add the translated version (if
+                // it's possible to translate the family names above) to a set (initially empty)
+                //..... if not, make its rank 999 and add an 'others' to the set - find a way to do this only once
+                int rank = Utils.INITIAL_RANK;//TODO: remember to reset this after every specie
+
+                if (customSpecieList.contains(speciesPerFamilyTranslated[i])) {//TODO: server specie name in android's language has to match with this
+                    // copy its rank to the species rank
+                    rank = customSpecieList.indexOf(speciesPerFamilyTranslated[i]) + 1; // ranks start from 1
+
+                    // add translated family name to a set //TODO: remember to compare it with translated all family names list
+                    customFamiliesSet.add(familyNameTranslated);
+
+                } else {
+                    if (!containsOthers) {
+                        //should add 'Others' to the animal family translated list at the end
+                        containsOthers = true;
+                    }
+                }
+
+                Specie specie = new Specie(
+                        speciesPerFamilyTranslated[i],
+                        familyNameTranslated,
+                        rank,
+                        "photo",//photos2[i],
+                        "description"//descriptions2[i]
+                );
+
+                allSeedAnimals.add(new Animal(specie));
+            }
+
         }
 
-        // the user will have access to all the species and families - always (they will just be
-        // grouped differently according to the custom list file)
-        // Create global array with all the species, should add family (own language, I know which
-        // one it is when I build the string) and the name of the specie in Latin
+        // TODO: Prepare the arraylist to be fed to the family names array adaptor
+        // you first have all the family names (translated and in the right order):animalFamiliesTranslated
+        // then you have a set containing the custom family names. The user sends you a list of
+        // species (ranked according to number of sightings). You 'extract' the families of those
+        // species (let's say just Baleen whales, in this test case): customFamiliesSet
+        // You just keep the elements that are in both collections (you don't touch others, if
+        // if animalFamiliesTranslated contains it
 
-        // via getResources().getResourceEntryName() get the name of the xml element
-        //getResources().getResourceEntryName(R.array.speciesArray) works too (or R.string.
-        // I need to go through each specie, create an animal, with its EN/ES/PT name and its Latin
-        // name, its family (or group) - check if the EN/ES/PT name of the animal
-        // is in the baleen whale string array and if yes, assign the EN/ES/PT name of the group to
-        // its family
+        // Don't make assumptions about the set or the species you received from the user (order of families etc).
+        // Rely on your sorted animalFamiliesTranslated list
+        // Initially containing all indices, from 0 to size - 1 to 0 (when removing items
+        // via indices, you must remove from the tail towards the head, otherwise, indices change 'live')
 
-        //OR: Go through each array element of the baleen whale string array, let's say, then create an
-        // animal, take the name of the array element (will be in EN/SP/PT), use that to find the
-        //resource name (latin name)??via R getFields, add that to the animal object, together with the EN/ES/PT name
-        // of the string array (to be the family)
+        List<Integer> indicesToRemove = new ArrayList<>();
+        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
+            indicesToRemove.add(i);
+        }
+
+        // The indices of animalFamiliesTranslated are stored from largest to smallest, so,
+        // iterate through animalFamiliesTranslated from last to first
+        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
+            if (customFamiliesSet.contains(animalFamiliesTranslated.get(i))) {
+                // if the custom list has this family, I don't want it removed,
+                // so take this index out of the indicesToRemove set (remember the index is an object inside this list)
+                indicesToRemove.remove(i);
+            }
+        }
+
+        // now remove all the elements with those indices
+        for (Integer index: indicesToRemove) {
+            animalFamiliesTranslated.remove((int)index);
+        }
+
+        // add 'Others' to the list
+        if (containsOthers) { animalFamiliesTranslated.add(getString(R.string.others)); }
+
+        // TODO: animalFamilies translated array list is to be fed to the [2] third array adaptor
+//        I want the animals to be sorted (use comparator for the arraylist) according to rank. Sort the big animal arraylist.
+//                In my animal adapter (which receives the sorted big array of animals),
+// I first send it the translated name of the family (therefore the animal should have the translated name of the family in it),
+// and it filters (if family name matches and rank is not zero), showing the right animals from that specie (sorted by rank).
+//                Maybe I should have an utility method that takes the sorted big animal arraylist
+// and returns another arraylist with just the same family and non-zero rank animals.
+        Collections.sort(allSeedAnimals, new Comparator<Animal>() {
+            @Override
+            public int compare(Animal o1, Animal o2) {
+                //Returns a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
+                return o1.getSpecie().getRank() - o2.getSpecie().getRank();
+            }
+        });
+
+        // Test
+//        for (int i = 0; i < 7; i++) {
+//            Toast.makeText(
+//                    MainActivity.this,
+//                    allSeedAnimals.get(i).getSpecie().getName()+allSeedAnimals.get(i).getSpecie().getRank(),
+//                    Toast.LENGTH_SHORT
+//            ).show();
+//        }
+
+        // TODO: ?
+        // Now remove the first letter and the 'family' ending from each family name
+        // and put a space before each capital letter (except the first one)
 
     }
 
     public void makeAndSetArrayAdapters() {
-        arrayAdapters[0] = new AnimalAdapter(this, seedAnimals);
+        arrayAdapters[0] = new AnimalAdapter(this, getOpenedFamilySeedAnimals(null));//TODO: new all species feature, before it was seedAnimals
 
         // giving it null here, because the trip doesn't have any sightings, yet
         arrayAdapters[1] = new SightingAdapter(
@@ -1978,6 +2183,7 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
+    // TODO: new specie feature (this should show the families adaptor) - and clicking on it should add a new sighting etc (via interface)...or not...only if saved
     public void addButtonLogic() {
         // uses the animal adapter
         findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
@@ -1994,9 +2200,24 @@ public class MainActivity extends AppCompatActivity implements
                 //set coordinates (place)
                 captureCoordinates(trips[0].getLastCreatedSighting().getStartTimeAndPlace());
 
+                //logic up to here stays here
+                // all 3 arguments get sent to the family adapter
+
+                //instead of after ADD button having BACK and SAVE, we must have BACK2
+                //decide on logic division - after ADD - it's fine if you just have a new sighting
+                //after pressing on a family - you know what family your potential animal will belong..Think what BACK button should do
+                // divide some of the logic between BACK and BACK2?
+                // New layout - family adapter String with name of family - one middle button for back, called BACK2?
+                // Animal adapter has the same layout (gets filtered arraylist) and has some changed BACK logic
+                // ADD and SEND visible (sighting adapter) in the beginning, then press ADD: ADD and SEND invisible and BACK2 visible (with family adapter)
+                // Then if BACK2 is pressed, BACK2 is invisible and ADD and SEND are visible (sighting adapter)
+                // If family is pressed, however: BACK and SAVE are visible (with animal adapter) and BACK2 (and family adapter) invisible
+
                 // and link the openedSighting to it (most recently added sighting),
                 // so that the save button knows where to save
-                openSighting(getString(R.string.add_sighting),  trips[0].getLastCreatedSighting());
+                openSighting(getString(R.string.add_sighting),
+                        trips[0].getLastCreatedSighting(),
+                        animalFamiliesTranslated.get(0));//TODO: new specie feature - change this to serve up the proper family
                 //getText(R.string.app_name) + " - " + getText(R.string.add_sighting),//get rid
             }
         });
@@ -2190,7 +2411,7 @@ public class MainActivity extends AppCompatActivity implements
                 // or stop at the end, when you've found zero quantities different from zero from all the species
                 Animal animalToInsertInSighting = null;
 
-                for (Animal seedAnimal : seedAnimals) {
+                for (Animal seedAnimal : allSeedAnimals) {//TODO: new all species feature, before it was seedAnimals
                     if (seedAnimal.getStartQuantity() != 0) {
                         // if it found an animal with the quantity different from 0, assign it to our animal
                         animalToInsertInSighting = seedAnimal;

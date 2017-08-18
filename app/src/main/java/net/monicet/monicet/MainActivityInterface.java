@@ -12,7 +12,8 @@ import static android.R.attr.label;
 public interface MainActivityInterface {
 
     void openSighting(String label,
-                      Sighting sighting);
+                      Sighting sighting,
+                      String family);
 
     void showSightings();
 

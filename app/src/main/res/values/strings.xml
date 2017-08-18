@@ -86,7 +86,18 @@
         Are you sure you want to delete this sighting?
     </string>
 
-    <string-array name="BaleenWhales">
+    <string name="aBaleenWhalesFamily">Baleen whales</string>
+    <string name="bToothedWhalesFamily">Toothed wales</string>
+    <string name="cBeakedWhalesFamily">Beaked wales</string>
+    <string name="dBigDolphinsFamily">Big dolphins</string>
+    <string name="eSmallDolphinsFamily">Small dolphins</string>
+    <string name="fBlackDolphinsFamily">Black dolphins</string>
+    <string name="gPorpoisesFamily">Porpoises</string>
+    <string name="hSeaTurtlesFamily">Sea turtles</string>
+
+    <string name="others">Others</string>
+
+    <string-array name="aBaleenWhalesFamily">
         <item>@string/MegapteraNoveangliae</item>
         <item>@string/BalaenopteraMusculus</item>
         <item>@string/BalaenopteraPhysalus</item>
@@ -103,7 +114,7 @@
         <item>@string/BalaenopteraOmurai</item>
     </string-array>
 
-    <string-array name="ToothedWhales">
+    <string-array name="bToothedWhalesFamily">
         <item>@string/PhyseterMacrocephalus</item>
         <item>@string/KogiaBreviceps</item>
         <item>@string/KogiaSima</item>
@@ -112,7 +123,7 @@
         <item>@string/PeponocephalaElectra</item>
     </string-array>
 
-    <string-array name="BeakedWhales">
+    <string-array name="cBeakedWhalesFamily">
         <item>@string/ZiphiusSp</item>
         <item>@string/ZiphiusCavirostris</item>
         <item>@string/MesoplodonBidens</item>
@@ -138,7 +149,7 @@
         <item>@string/TasmacetusShepherdi</item>
     </string-array>
 
-    <string-array name="BigDolphins">
+    <string-array name="dBigDolphinsFamily">
         <item>@string/TursiopsTruncatus</item>
         <item>@string/StenoBredanensis</item>
         <item>@string/GrampusGriseus</item>
@@ -149,7 +160,7 @@
         <item>@string/TursiopsAduncus</item>
     </string-array>
 
-    <string-array name="SmallDolphins">
+    <string-array name="eSmallDolphinsFamily">
         <item>@string/StenellaFrontalis</item>
         <item>@string/DelphinusDelphis</item>
         <item>@string/StenellaCoeruleoalba</item>
@@ -173,7 +184,7 @@
         <item>@string/StenellaLongirostris</item>
     </string-array>
 
-    <string-array name="BlackDolphins">
+    <string-array name="fBlackDolphinsFamily">
         <item>@string/GlobicephalaMacrorhynchus</item>
         <item>@string/OrcinusOrca</item>
         <item>@string/PseudorcaCrassidens</item>
@@ -181,7 +192,7 @@
         <item>@string/FeresaAttenuata</item>
     </string-array>
 
-    <string-array name="Porpoises">
+    <string-array name="gPorpoisesFamily">
         <item>@string/PhocaenaPhocaena</item>
         <item>@string/PontoporiaBlainvillei</item>
         <item>@string/NeophocaenaPhocaenoides</item>
@@ -191,7 +202,7 @@
         <item>@string/PhocoenoidesDalli</item>
     </string-array>
 
-    <string-array name="SeaTurtles">
+    <string-array name="hSeaTurtlesFamily">
         <item>@string/CarettaCaretta</item>
         <item>@string/DermochelysCoriacea</item>
         <item>@string/CheloniaMydas</item>
@@ -357,16 +368,6 @@
         <item>@string/hawksbill_turtle_36</item>
         <item>@string/kemp_ridley_turtle_37</item>
     </string-array>
-
-    <string name="BaleenWhales">Baleen whales</string>
-    <string name="ToothedWhales">Toothed wales</string>
-    <string name="BeakedWhales">Beaked wales</string>
-    <string name="BigDolphins">Big dolphins</string>
-    <string name="SmallDolphins">Small dolphins</string>
-    <string name="BlackDolphins">Black dolphins</string>
-    <string name="Porpoises">Porpoises</string>
-    <string name="SeaTurtles">Sea turtles</string>
-    <string name="Others">Others</string>
 
     <string name="PinnipediaSp">Seal</string>
     <string name="UrsusMaritimus">Polar bear</string>
