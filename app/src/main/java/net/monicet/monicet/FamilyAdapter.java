@@ -31,15 +31,13 @@ public class FamilyAdapter extends ArrayAdapter<String> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
 
-        //TODO: change list_item_sighting to list_item_family
         if (convertView == null) {
-            convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_sighting, parent, false);
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_family, parent, false);
         }
 
         final String currentFamily = getItem(position);
 
         if (currentFamily != null) {// in case no families are received back from the user's custom list (if no animal was chosen)
-
             TextView familyTxtView =
                     (TextView)convertView.findViewById(R.id.specie_family_text_view);
             familyTxtView.setText(currentFamily);
@@ -55,7 +53,6 @@ public class FamilyAdapter extends ArrayAdapter<String> {
                     );
                 }
             });
-
         }
 
         return convertView;

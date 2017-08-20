@@ -608,6 +608,10 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
         // make "no sightings message" invisible
         findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+        // hide RETURN button
+        findViewById(R.id.fab_return).setVisibility(View.INVISIBLE);
+        // hide families list view
+        findViewById(R.id.list_view_families).setVisibility(View.INVISIBLE);
 
         // make animal list view visible
         findViewById(R.id.list_view_animals).setVisibility(View.VISIBLE);
@@ -618,7 +622,28 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_back).setVisibility(View.VISIBLE);
     }
 
-    // method called by START, BACK, SAVE, DELETE, STOP/END and Comments buttons
+    // method called by the ADD and BACK buttons
+    protected void showFamilies() {
+
+        // make sighting list view invisible
+        findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
+        // make "no sightings message" invisible
+        findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
+        // hide animal list view
+        findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE);
+
+        // make families list view visible
+        findViewById(R.id.list_view_families).setVisibility(View.VISIBLE);
+
+        findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_return).setVisibility(View.VISIBLE);
+
+    }
+
+    // method called by START, RETURN, BACK, SAVE, DELETE, STOP/END and Comments buttons
     @Override
     public void showSightings() {
         // set label
@@ -637,6 +662,10 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_save).setVisibility(View.INVISIBLE);
         // hide animals list view
         findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE); // it was already INVISIBLE, when coming from START
+        // hide RETURN button
+        findViewById(R.id.fab_return).setVisibility(View.INVISIBLE);
+        // hide families list view
+        findViewById(R.id.list_view_families).setVisibility(View.INVISIBLE);
 
         // show ADD button
         findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
@@ -2055,7 +2084,7 @@ public class MainActivity extends AppCompatActivity implements
                 new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null}))
         );
 
-        //TODO: ADD button and BACK (not BACK2) button are the only buttons leading to the family adapter - should share the sighting (same familyAdapter)
+        //TODO: ADD and BACK buttons are the only buttons leading to the family adapter - should share the sighting (same familyAdapter)
         //NEW Logic specie feature
         // get rid of this comment Because I cannot send it the correct new sighting every time the family adapter appears (there is only one constructor)
         // I need to create a new one every time I use it (also when clicking on a sighting - give it current sighting from sightingAdapter)
@@ -2082,6 +2111,9 @@ public class MainActivity extends AppCompatActivity implements
 
         // set sighting adapter to custom list view
         ((ListView) findViewById(R.id.list_view_sightings)).setAdapter(arrayAdapters[1]);
+
+        // set family adapter to custom list view
+        ((ListView) findViewById(R.id.list_view_families)).setAdapter(arrayAdapters[2]);
 
         // buttons - this must come after the adapter initialization procedure
         // START - starts the trip
@@ -2194,13 +2226,14 @@ public class MainActivity extends AppCompatActivity implements
                 captureCoordinates(trips[0].getLastCreatedSighting().getStartTimeAndPlace());
 
                 //logic up to here stays here
-                //DROP THIS - old logic
+                showFamilies();
+                //DROP THIS - old logic - get rid
                 // and link the openedSighting to it (most recently added sighting),
                 // so that the save button knows where to save
                 //TODO: new specie feature - change this to serve up the proper family
-                openSighting(getString(R.string.add_sighting),//getString can be called via context from FamilyAdapter
-                        animalFamiliesTranslated.get(0),
-                        null);
+//                openSighting(getString(R.string.add_sighting),//getString can be called via context from FamilyAdapter
+//                        animalFamiliesTranslated.get(0),
+//                        null);
                 //get rid up to here
             }
         });
@@ -2367,7 +2400,14 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_return).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // stuff here...
+                // Method shared with onPause//TODO: and BACK (in some cases) button?
+                // Nullifying shared with the SAVE button, too
+                // This nullifies the opened sighting and, when coming here after an ADD press (and
+                // not a CLICK on a sighting...which is impossible) remove the last sighting from the trip
+                removeTemporarySighting();
+
+                // prepare views - hide and show what's needed
+                showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
             }
         });
     }
@@ -2380,14 +2420,36 @@ public class MainActivity extends AppCompatActivity implements
                 // maybe move ADD logic to SAVE logic, so here, we do nothing,
                 // like we should, see SAVE button logic for more info
 
-                // Method shared with onPause
-                // Nullifying shared with the SAVE button, too
-                // This nullifies the opened sighting and, when coming here after an ADD press (and
-                // not a CLICK on a sighting) remove the last sighting from the trip
-                removeTemporarySighting();
+                //OLD logic - get rid
+//                // Method shared with onPause and RETURN button
+//                // Nullifying shared with the SAVE button, too
+//                // This nullifies the opened sighting and, when coming here after an ADD press (and
+//                // not a CLICK on a sighting) remove the last sighting from the trip
+//                removeTemporarySighting();
+//
+//                // prepare views - hide and show what's needed
+//                showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
+                //old logic ends here
 
-                // prepare views - hide and show what's needed
-                showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
+                //TODO: new specie feature logic
+                // If arriving here after a family was pressed: I should just go back to the familyAdapter (it should deal with nullifying sightings)
+                //showFamilies();
+                //Else (arriving here after a sighting was pressed...HOW DO I KNOW?) - openSighting is called with a different string
+                // Why should I bother with removeTemporarySightings()?
+                // Just do showSightings();
+                // Back should not kill the openedSightings[0] because it might be reused when choosing a different family in the famAdpt..?
+                //up to here
+
+                if (String.valueOf(getTitle()).equals(getString(R.string.add_sighting))) {// meaning I am here after a family was pressed
+                    // go back to the familyAdapter (it - the RETURN button, more exactly should deal with nullifying sightings)
+                    showFamilies(); // shared between the ADD and BACK buttons
+                } else {
+                    if (String.valueOf(getTitle()).equals(getString(R.string.edit_sighting))) {// meaning I am here after a sighting was pressed
+                        // go back to the sightingAdapter
+                        showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
+                    }
+                }
+
             }
         });
     }

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/larger_height">
+    android:layout_height="@dimen/smaller_height">
 
     <TextView
         android:id="@+id/specie_family_text_view"
