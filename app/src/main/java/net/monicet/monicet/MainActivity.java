@@ -70,6 +70,7 @@ import java.util.concurrent.TimeoutException;
 
 import static android.R.string.no;
 import static java.lang.Math.abs;
+import static net.monicet.monicet.R.string.sighting;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -83,11 +84,11 @@ public class MainActivity extends AppCompatActivity implements
     final Sighting[] openedSightings = new Sighting[2]; // 'temporary' sightings (one used when opening a sighting and the other when opening its comments dialog)
     final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();//TODO: new specie feature - should drop this
 
-    // new Specie feature //array adapter only take arraylists
+    // new Specie feature //array adapters only take arraylists
     final ArrayList<Animal> allSeedAnimals = new ArrayList<Animal>();
     final ArrayList<String> animalFamiliesTranslated = new ArrayList<String>();
 
-    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[2];// TODO: specie feature add another array adaptor for the family names
+    final ArrayAdapter[] arrayAdapters = new ArrayAdapter[3];// TODO: specie feature add another array adaptor for the family names
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
     final BroadcastReceiver dynamicReceiver = new DynamicNetworkStateReceiver(); // or declare the class here, occupying more space
 
@@ -557,9 +558,14 @@ public class MainActivity extends AppCompatActivity implements
 //    }
 
     @Override
-    public void openSighting(String label, Sighting sighting, String family) {
-        // set openedSighting - to be later used by SAVE
-        openedSightings[0] = sighting; // TODO: issues here?
+    public void openSighting(String label, String family, Sighting sighting) {
+        // Set openedSighting - to be later used by SAVE (if receiving null, use the most recent sighting)
+        // If not null (when clicking on a particular sighting inside the sighting adapter, use that sighting)
+        if (sighting == null) {
+            openedSightings[0] = trips[0].getLastCreatedSighting();
+        } else {
+            openedSightings[0] = sighting; // TODO: issues here?
+        }
 
         // set label
         setTitle(label);
@@ -574,7 +580,7 @@ public class MainActivity extends AppCompatActivity implements
             seedAnimal.setEndQuantity(0);
         }
 
-        Animal animal = sighting.getAnimal();
+        Animal animal = openedSightings[0].getAnimal();
         if (animal != null) {
             String specieName = animal.getSpecie().getName();
 
@@ -1853,29 +1859,6 @@ public class MainActivity extends AppCompatActivity implements
 
     public void buildSeedAnimalsFromResources() {
 
-        // Old logic starts here//TODO: get rid
-//        // get the resources (specie_names, descriptions, photos)
-//        String[] specie_names = getResources().getStringArray(R.array.speciesArray);
-//        // TODO: implement getting the photo ids and description data later
-//        String[] photos = new String[30];
-//        String[] descriptions = new String[30]; // all descriptions can be in one single text file
-//        Arrays.fill(photos, "photo"); // remember to give the photos names like SpermWhale_1, CommonDolphin_X
-//        Arrays.fill(descriptions, "description");
-//
-//        // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
-//        int sizeOfArrays = specie_names.length;
-//
-//        if ( sizeOfArrays != photos.length || sizeOfArrays != descriptions.length) {
-//            Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
-//        }
-//
-//        for (int i = 0; i < sizeOfArrays; i++ ) {
-//            Specie specie = new Specie(specie_names[i], "testFamily", 1, photos[i], descriptions[i]);
-//            seedAnimals.add(new Animal(specie));
-//        }
-        // old logic ends here
-
-        //NEW LOGIC
         // Stub data coming from the server //TODO: replace this with the file content (get update from server)
         // I need an array of latin specie names - the order represents their
         // rank (if spermwhalus is first, then its rank is 0+1 etc)
@@ -1950,6 +1933,7 @@ public class MainActivity extends AppCompatActivity implements
             int sizeOfArrays2 = speciesPerFamilyTranslated.length;
 
             // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
+            // TODO: implement getting the photo ids and description data later
 //        String[] photos2 = new String[14];
 //        String[] descriptions2 = new String[14]; // all descriptions can be in one single text file
 //        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
@@ -2071,6 +2055,11 @@ public class MainActivity extends AppCompatActivity implements
                 new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null}))
         );
 
+        //TODO: ADD button and BACK (not BACK2) button are the only buttons leading to the family adapter - should share the sighting (same familyAdapter)
+        //NEW Logic specie feature
+        // get rid of this comment Because I cannot send it the correct new sighting every time the family adapter appears (there is only one constructor)
+        // I need to create a new one every time I use it (also when clicking on a sighting - give it current sighting from sightingAdapter)
+        arrayAdapters[2] = new FamilyAdapter(MainActivity.this, animalFamiliesTranslated);
     }
 
     public void initViews() {
@@ -2106,7 +2095,11 @@ public class MainActivity extends AppCompatActivity implements
         // (this view is displayed at the same time with the Sighting adapter)
         sendButtonLogic();
 
-        // BACK - goes back to the view showing the ADD and SEND buttons (and the Sighting adapter)
+        // RETURN - goes back to the view showing the ADD and SEND buttons (and the Sighting adapter)
+        // (this view is displayed at the same time with the family adapter)
+        returnButtonLogic();
+
+        // BACK - goes back to the view showing the ADD and SEND buttons (and the Sighting adapter)//TODO: change this
         //(this view is displayed at the same time with the Animal adapter)
         backButtonLogic();
 
@@ -2201,24 +2194,14 @@ public class MainActivity extends AppCompatActivity implements
                 captureCoordinates(trips[0].getLastCreatedSighting().getStartTimeAndPlace());
 
                 //logic up to here stays here
-                // all 3 arguments get sent to the family adapter
-
-                //instead of after ADD button having BACK and SAVE, we must have BACK2
-                //decide on logic division - after ADD - it's fine if you just have a new sighting
-                //after pressing on a family - you know what family your potential animal will belong..Think what BACK button should do
-                // divide some of the logic between BACK and BACK2?
-                // New layout - family adapter String with name of family - one middle button for back, called BACK2?
-                // Animal adapter has the same layout (gets filtered arraylist) and has some changed BACK logic
-                // ADD and SEND visible (sighting adapter) in the beginning, then press ADD: ADD and SEND invisible and BACK2 visible (with family adapter)
-                // Then if BACK2 is pressed, BACK2 is invisible and ADD and SEND are visible (sighting adapter)
-                // If family is pressed, however: BACK and SAVE are visible (with animal adapter) and BACK2 (and family adapter) invisible
-
+                //DROP THIS - old logic
                 // and link the openedSighting to it (most recently added sighting),
                 // so that the save button knows where to save
-                openSighting(getString(R.string.add_sighting),
-                        trips[0].getLastCreatedSighting(),
-                        animalFamiliesTranslated.get(0));//TODO: new specie feature - change this to serve up the proper family
-                //getText(R.string.app_name) + " - " + getText(R.string.add_sighting),//get rid
+                //TODO: new specie feature - change this to serve up the proper family
+                openSighting(getString(R.string.add_sighting),//getString can be called via context from FamilyAdapter
+                        animalFamiliesTranslated.get(0),
+                        null);
+                //get rid up to here
             }
         });
     }
@@ -2377,6 +2360,16 @@ public class MainActivity extends AppCompatActivity implements
                 StaticNetworkStateReceiver.class,
                 true
         );
+    }
+
+    public void returnButtonLogic() {
+
+        findViewById(R.id.fab_return).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // stuff here...
+            }
+        });
     }
 
     public void backButtonLogic() {

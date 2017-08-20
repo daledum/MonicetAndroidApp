@@ -153,12 +153,12 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                 @Override
                 public void onClick(View v) {
                     // clicking on quantity or specie name or time
-                    // CLICK on sighting and ADD share the openSighting method (Main Activity):
+                    // CLICK on sighting and ADD button share the openSighting method (Main Activity):
                     mainActivity.openSighting(
                             //too expensive to getMyActivity ?//below was//getContext().getText(R.string.app_name) + " - " + getContext().getText(R.string.edit_sighting)//get rid
                             getContext().getString(R.string.edit_sighting),
-                            currentSighting,
-                            currentSighting.getAnimal().getSpecie().getFamily()
+                            currentSighting.getAnimal().getSpecie().getFamily(),
+                            currentSighting
                     );
                 }
             });

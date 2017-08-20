@@ -139,6 +139,18 @@
                     android:id="@+id/fab_start" />
 
                 <android.support.design.widget.FloatingActionButton
+                    app:srcCompat="@drawable/ic_keyboard_return_creme_24dp"
+                    app:elevation="0dp"
+                    app:fabSize="normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_alignParentBottom="true"
+                    android:clickable="true"
+                    android:visibility="invisible"
+                    android:id="@+id/fab_return" />
+
+                <android.support.design.widget.FloatingActionButton
                     app:srcCompat="@android:drawable/ic_menu_save"
                     app:fabSize="normal"
                     app:elevation="0dp"
@@ -184,6 +196,7 @@
                     android:layout_alignParentBottom="true"
                     android:visibility="invisible"
                     android:id="@+id/fab_send" />
+
             </RelativeLayout>
         </LinearLayout>
 
