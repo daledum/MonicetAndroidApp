@@ -7,6 +7,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageButton;
 import android.widget.NumberPicker;
 import android.widget.TextView;
@@ -21,7 +23,7 @@ import java.util.ArrayList;
 // this receives the seed animals...same 30 animals, with one of them maybe with a non zero quantity
     //it will always receive non null values
 
-public class AnimalAdapter extends ArrayAdapter<Animal> {
+public class AnimalAdapter extends ArrayAdapter<Animal> {//implements Filterable
 
     public AnimalAdapter(Activity context, ArrayList<Animal> animals) {
         super(context, 0, animals);
@@ -76,5 +78,27 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {
 
         return convertView;
     }
+
+//    @NonNull
+//    @Override
+//    public Filter getFilter() {
+//        return super.getFilter();
+//    }
+//
+//    private class AnimalFilter extends Filter {
+//
+//        @Override
+//        protected FilterResults performFiltering(CharSequence constraint) {
+//
+//            FilterResults filterResults = new FilterResults();
+//
+//            return null;
+//        }
+//
+//        @Override
+//        protected void publishResults(CharSequence constraint, FilterResults results) {
+//
+//        }
+//    }
 
 }

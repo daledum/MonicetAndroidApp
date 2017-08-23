@@ -406,6 +406,16 @@ public final class Utils {
         }
     }
 
+//    public static String getSplitName(String name) {
+//
+//        int i = 0;
+//        for (i = name.length() - 1; i >= 0; i--) {
+//            if (Character.isUpperCase(name.charAt(i))) { break; }
+//        }
+//
+//        return name.substring(0, i) + " " + name.substring(i).toLowerCase();
+//    }
+
     // class name
     // this.getClass().getSimpleName(); //this.getLocalClassName();// getBaseContext().getLocalClassName();
     // getApplicationContext().getLocalClassName();//MainActivity.class.getSimpleName();

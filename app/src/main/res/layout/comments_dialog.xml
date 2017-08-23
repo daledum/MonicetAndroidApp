@@ -187,7 +187,7 @@
             android:inputType="textMultiLine"
             android:ems="10"
             android:id="@+id/comments_edit_text"
-            android:hint="Age of animals, position.."
+            android:hint="@string/sighting_comments_hint"
             android:layout_gravity="center"/>
 
     </LinearLayout>

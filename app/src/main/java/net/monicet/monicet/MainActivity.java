@@ -58,6 +58,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -82,9 +83,8 @@ public class MainActivity extends AppCompatActivity implements
     final Trip[] trips = new Trip[1]; // hack so that I can use inside anonymous classes and deserialize from json file if necessary
     final HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();// To create TRK, GPX, KML, KMZ, PLT files on the server
     final Sighting[] openedSightings = new Sighting[2]; // 'temporary' sightings (one used when opening a sighting and the other when opening its comments dialog)
-    final ArrayList<Animal> seedAnimals = new ArrayList<Animal>();//TODO: new specie feature - should drop this
 
-    // new Specie feature //array adapters only take arraylists
+    //array adapters only take arraylists (no point in coding to interface here)
     final ArrayList<Animal> allSeedAnimals = new ArrayList<Animal>();
     final ArrayList<String> animalFamiliesTranslated = new ArrayList<String>();
 
@@ -111,34 +111,64 @@ public class MainActivity extends AppCompatActivity implements
     private volatile boolean wasMinimumAmountOfGpsFixingDone = false;// this depends on the trip's constructor
     private volatile boolean wasSendButtonPressed = false; // Get rid of volatile, if not using a separate thread
     private volatile boolean wereSendingMechanismsStarted = false; // Get rid of volatile, if not using a separate thread
+    private String[] openedFamilies = new String[]{null}; // always handled on the UI thread, no need for volatile
     private CopyOnWriteArrayList<TimeAndPlace> timeAndPlacesWhichNeedCoordinates =
             new CopyOnWriteArrayList<TimeAndPlace>();
 
-    protected ArrayList<Animal> getOpenedFamilySeedAnimals(String family) {
+    protected ArrayList<Animal> getOpenedFamilySeedAnimals(String family, String searchString) {
 
         ArrayList<Animal> openedFamilySeedAnimals = new ArrayList<Animal>();
 
         // If we're getting null, just add all of seed animals to the returned list
         if (family == null) {
-            for (Animal animal: allSeedAnimals) {
-                openedFamilySeedAnimals.add(animal);
+            if (searchString == null) {
+                for (Animal animal: allSeedAnimals) {
+                    openedFamilySeedAnimals.add(animal);
+                }
+            } else {
+                for (Animal animal: allSeedAnimals) {
+                    if (animal.getSpecie().getName().toLowerCase().contains(searchString) ||
+                            animal.getSpecie().getFamily().toLowerCase().contains(searchString)) {
+                        openedFamilySeedAnimals.add(animal);
+                    }
+                }
             }
         } else {
-            // If the string we receive is Others (meaning the ones not on the user's custom list),
+            // If the string we receive is Species not on your list (meaning the ones not on the user's custom list),
             // we just add the one with the initial rank to this list)
-            if (family.equals(getString(R.string.others))) {
-                for (Animal animal: allSeedAnimals) {
-                    if (animal.getSpecie().getRank() == Utils.INITIAL_RANK) {
-                        openedFamilySeedAnimals.add(animal);
+            if (family.equals(getString(R.string.species_not_on_your_list))) {
+                if (searchString == null) {
+                    for (Animal animal: allSeedAnimals) {
+                        if (animal.getSpecie().getRank() == Utils.INITIAL_RANK) {
+                            openedFamilySeedAnimals.add(animal);
+                        }
+                    }
+                } else {
+                    for (Animal animal: allSeedAnimals) {
+                        if (animal.getSpecie().getRank() == Utils.INITIAL_RANK &&
+                                (animal.getSpecie().getName().toLowerCase().contains(searchString) ||
+                                        animal.getSpecie().getFamily().toLowerCase().contains(searchString))) {
+                            openedFamilySeedAnimals.add(animal);
+                        }
                     }
                 }
             } else {
                 // Then, populate it with animals, if the animals belong to the opened family
                 // and they were on the user's custom list (non-initial rank)
-                for (Animal animal: allSeedAnimals) {
-                    if (animal.getSpecie().getFamily().equals(family) &&
-                            animal.getSpecie().getRank() != Utils.INITIAL_RANK) {
-                        openedFamilySeedAnimals.add(animal);
+                if (searchString == null) {
+                    for (Animal animal: allSeedAnimals) {
+                        if (animal.getSpecie().getFamily().equals(family) &&
+                                animal.getSpecie().getRank() != Utils.INITIAL_RANK) {
+                            openedFamilySeedAnimals.add(animal);
+                        }
+                    }
+                } else {
+                    for (Animal animal: allSeedAnimals) {
+                        if (animal.getSpecie().getFamily().equals(family) &&
+                                animal.getSpecie().getRank() != Utils.INITIAL_RANK &&
+                                animal.getSpecie().getName().toLowerCase().contains(searchString)) {
+                            openedFamilySeedAnimals.add(animal);
+                        }
                     }
                 }
             }
@@ -513,10 +543,7 @@ public class MainActivity extends AppCompatActivity implements
         // Check to see whether this activity is in the process of finishing, either because you
         // called finish() on it or someone else has requested that it finished.
 
-        if (!isFinishing()) {
-            removeTemporarySighting();
-            finishAndSave(true);
-        }
+        if (!isFinishing()) { finishAndSave(true); }
     }
 
 //    @Override
@@ -559,6 +586,14 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void openSighting(String label, String family, Sighting sighting) {
+
+        // string used by search specie logic when refreshing the animal adapter with the appropriate animals
+        openedFamilies[0] = family;
+
+        // clear whatever leftover text was inside the search specie box
+        EditText searchBox = (EditText)findViewById(R.id.specie_search);
+        searchBox.setText("");
+
         // Set openedSighting - to be later used by SAVE (if receiving null, use the most recent sighting)
         // If not null (when clicking on a particular sighting inside the sighting adapter, use that sighting)
         if (sighting == null) {
@@ -575,7 +610,7 @@ public class MainActivity extends AppCompatActivity implements
         // I can start with the first specie if I clear and setdataall seedanimals (start with null)
 
         // first, clean the seed animals - maybe use INITIAL_VALUE
-        for (Animal seedAnimal: allSeedAnimals) {//TODO: new all species feature, before it was seedAnimals
+        for (Animal seedAnimal: allSeedAnimals) {
             seedAnimal.setStartQuantity(0);
             seedAnimal.setEndQuantity(0);
         }
@@ -584,7 +619,7 @@ public class MainActivity extends AppCompatActivity implements
         if (animal != null) {
             String specieName = animal.getSpecie().getName();
 
-            for (Animal seedAnimal: allSeedAnimals) {//TODO: new all species feature, before it was seedAnimals
+            for (Animal seedAnimal: allSeedAnimals) {
                 // set the end quantity for all animals to be the end quantity of the sighting's animal
                 // so that we keep this value when we save
                 seedAnimal.setEndQuantity(animal.getEndQuantity());
@@ -597,11 +632,10 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
-        // TODO: new specie feature
         // let the animal adapter know that the seedAnimals changed
         arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
         //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
-        arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(family));
+        arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(family, null));
         arrayAdapters[0].notifyDataSetChanged();
 
         // make sighting list view invisible
@@ -615,6 +649,8 @@ public class MainActivity extends AppCompatActivity implements
 
         // make animal list view visible
         findViewById(R.id.list_view_animals).setVisibility(View.VISIBLE);
+        // make search specie edittext view visible
+        findViewById(R.id.specie_search).setVisibility(View.VISIBLE);
 
         findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
         findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
@@ -631,6 +667,8 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.no_sightings_text_view).setVisibility(View.INVISIBLE);
         // hide animal list view
         findViewById(R.id.list_view_animals).setVisibility(View.INVISIBLE);
+        // hide search specie edittext view
+        findViewById(R.id.specie_search).setVisibility(View.GONE);
 
         // make families list view visible
         findViewById(R.id.list_view_families).setVisibility(View.VISIBLE);
@@ -666,6 +704,8 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_return).setVisibility(View.INVISIBLE);
         // hide families list view
         findViewById(R.id.list_view_families).setVisibility(View.INVISIBLE);
+        // hide search edittext view
+        findViewById(R.id.specie_search).setVisibility(View.GONE);
 
         // show ADD button
         findViewById(R.id.fab_add).setVisibility(View.VISIBLE);
@@ -1105,10 +1145,10 @@ public class MainActivity extends AppCompatActivity implements
             //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
             // here start a thread which gets into fast, fixing mode (short interval),
             // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-            wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
         } else { // permission had not been granted
             // Should we show an explanation?
@@ -1148,10 +1188,10 @@ public class MainActivity extends AppCompatActivity implements
                     startLocationUpdates(defaultGpsMode);
                     // here start a thread which gets into fast, fixing mode (short interval),
                     // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                    wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
+                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
+                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
 
                 } else {
                     // permission denied, boo! Disable the
@@ -1303,7 +1343,7 @@ public class MainActivity extends AppCompatActivity implements
         // onStop happened, thread was interrupted (did not capture lat or long or neither), then onStart came and
         // this method was called. To finish up the coordinates, use mostRecentLocation (it will be the one from just before the interruption).
 
-        // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed BACK)
+        // if the timeAndPlace object still exists (maybe I captured after ADD, but then I pressed RETURN)
         // and if it is unfinished (time check is redundant for the capture threads, it definitely has a time)
         for (TimeAndPlace timeAndPlace: timeAndPlaceList) {
 
@@ -1478,6 +1518,9 @@ public class MainActivity extends AppCompatActivity implements
         if (!executorService.isShutdown()) {
             executorService.shutdownNow();
         }
+
+        // get rid of temporary (unsaved, animal-less) sightings (which are added to the trip when ADD is pressed)
+        removeTemporarySighting();
 
         // Make sure you stop the location updates - which write to the hashmap which is being read
         // while writing to file (otherwise, concurrency error)
@@ -1959,7 +2002,7 @@ public class MainActivity extends AppCompatActivity implements
             String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
 
             // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
-            int sizeOfArrays2 = speciesPerFamilyTranslated.length;
+            int sizeOfArrays = speciesPerFamilyTranslated.length;
 
             // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
             // TODO: implement getting the photo ids and description data later
@@ -1968,12 +2011,12 @@ public class MainActivity extends AppCompatActivity implements
 //        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
 //        Arrays.fill(descriptions2, "description");
 
-//            if (sizeOfArrays2 != photos2.length || sizeOfArrays2 != descriptions2.length) {
+//            if (sizeOfArrays != photos2.length || sizeOfArrays != descriptions2.length) {
 //                Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
 //            }
             //extra stuff ends here
 
-            for (int i = 0; i < sizeOfArrays2; i++ ) {
+            for (int i = 0; i < sizeOfArrays; i++ ) {
 
                 // What I know: the custom list, containing the specie names in latin
                 // What I want: see if the current specie (I need its latin name - see point 1 above) is inside the custom list...
@@ -1998,6 +2041,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 Specie specie = new Specie(
                         speciesPerFamilyTranslated[i],
+                        //"",
                         familyNameTranslated,
                         rank,
                         "photo",//photos2[i],
@@ -2042,8 +2086,8 @@ public class MainActivity extends AppCompatActivity implements
             animalFamiliesTranslated.remove((int)index);
         }
 
-        // add 'Others' to the list
-        if (containsOthers) { animalFamiliesTranslated.add(getString(R.string.others)); }
+        // add 'Species not on your list' option to the list
+        if (containsOthers) { animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list)); }
 
         // TODO: animalFamilies translated array list is to be fed to the [2] third array adaptor
 //        I want the animals to be sorted (use comparator for the arraylist) according to rank. Sort the big animal arraylist.
@@ -2060,23 +2104,34 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        // Test
-//        for (int i = 0; i < 7; i++) {
+        // assign latin names from xml - does not work - error getString via id Resource not found
+//        for (Field field: R.string.class.getDeclaredFields()) {
+//
+//            int idOfSpecie = getResources().getIdentifier(field.getName(), "string", getPackageName());
+//            String specieTranslated = getResources().getString(idOfSpecie);
+//
+//            // if specieTranslated equals specie name of a certain animal, then, specie latin for that animal
+//            // should be field.getName() with a space in the middle eg Specium calastratum
+//            for (Animal animal : allSeedAnimals) {
+//                if (animal.getSpecie().getName().equals(specieTranslated)) {
+//                    animal.getSpecie().setLatinName(Utils.getSplitName(field.getName()));
+//                }
+//            }
+//        }
+//
+//        // Test
+//        for (int i = 0; i < 3; i++) {
 //            Toast.makeText(
 //                    MainActivity.this,
-//                    allSeedAnimals.get(i).getSpecie().getName()+allSeedAnimals.get(i).getSpecie().getRank(),
+//                    allSeedAnimals.get(i).getSpecie().getLatinName(),
 //                    Toast.LENGTH_SHORT
 //            ).show();
 //        }
-
-        // TODO: ?
-        // Now remove the first letter and the 'family' ending from each family name
-        // and put a space before each capital letter (except the first one)
-
+        //test ends here
     }
 
     public void makeAndSetArrayAdapters() {
-        arrayAdapters[0] = new AnimalAdapter(this, getOpenedFamilySeedAnimals(null));//TODO: new all species feature, before it was seedAnimals
+        arrayAdapters[0] = new AnimalAdapter(this, getOpenedFamilySeedAnimals(null, null));
 
         // giving it null here, because the trip doesn't have any sightings, yet
         arrayAdapters[1] = new SightingAdapter(
@@ -2084,10 +2139,6 @@ public class MainActivity extends AppCompatActivity implements
                 new ArrayList<Sighting>(Arrays.asList(new Sighting[]{null}))
         );
 
-        //TODO: ADD and BACK buttons are the only buttons leading to the family adapter - should share the sighting (same familyAdapter)
-        //NEW Logic specie feature
-        // get rid of this comment Because I cannot send it the correct new sighting every time the family adapter appears (there is only one constructor)
-        // I need to create a new one every time I use it (also when clicking on a sighting - give it current sighting from sightingAdapter)
         arrayAdapters[2] = new FamilyAdapter(MainActivity.this, animalFamiliesTranslated);
     }
 
@@ -2139,6 +2190,41 @@ public class MainActivity extends AppCompatActivity implements
         //(this view is displayed at the same time with the Animal adapter)
         saveButtonLogic();
 
+        // search specie filter - is visible only at the same time with animal adapter (even when coming from CLICK on sighting)
+        searchSpecieLogic();
+
+    }
+
+    protected void searchSpecieLogic() {
+
+        final EditText searchBox = (EditText)findViewById(R.id.specie_search);
+        searchBox.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                // if, before inputting characters in the search box, we changed the quantity for a specie
+                // which (after inputting some characters) will not show up on the list of results, then
+                // we want to make that quantity initial again (0) ? - but, if we clicked on a sighting,
+                // we don't want its animal reset
+                //TODO: change message sent to user (when more than one specie has a non-zero) value
+
+                // let the animal adapter know that the seedAnimals changed
+                arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
+                //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
+                arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(
+                        openedFamilies[0], searchBox.getText().toString().toLowerCase()));
+                arrayAdapters[0].notifyDataSetChanged();
+            }
+        });
     }
 
     public void startButtonLogic() {
@@ -2168,19 +2254,6 @@ public class MainActivity extends AppCompatActivity implements
                             }
                         }
 
-                        //get rid from here
-                        // if I'm not in fixing or sampling modes, meaning that I am in one of the user
-                        // modes (the one selected most recently by the user)
-                        // update the location request interval
-                        // I could not have pressed start while in SAMPLING (START and sightings only use SAMPLING)
-//                        if (mLocationRequest.getInterval() != GpsMode.FIXING.getIntervalInMillis() &&
-//                                mLocationRequest.getInterval() != GpsMode.SAMPLING.getIntervalInMillis()) {
-//                            startLocationUpdates(trips[0].getGpsMode());
-//                        }
-                        //else, if I am in fixing or sampling mode (doInitialFix and captureCoordinates
-                        // will get the mode into the new user mode at the end
-                        //get rid up to here
-
                         // b) - time
                         trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
                         // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
@@ -2208,7 +2281,6 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
-    // TODO: new specie feature (this should show the families adaptor) - and clicking on it should add a new sighting etc (via interface)...or not...only if saved
     public void addButtonLogic() {
         // uses the animal adapter
         findViewById(R.id.fab_add).setOnClickListener(new View.OnClickListener() {
@@ -2225,16 +2297,7 @@ public class MainActivity extends AppCompatActivity implements
                 //set coordinates (place)
                 captureCoordinates(trips[0].getLastCreatedSighting().getStartTimeAndPlace());
 
-                //logic up to here stays here
                 showFamilies();
-                //DROP THIS - old logic - get rid
-                // and link the openedSighting to it (most recently added sighting),
-                // so that the save button knows where to save
-                //TODO: new specie feature - change this to serve up the proper family
-//                openSighting(getString(R.string.add_sighting),//getString can be called via context from FamilyAdapter
-//                        animalFamiliesTranslated.get(0),
-//                        null);
-                //get rid up to here
             }
         });
     }
@@ -2253,29 +2316,6 @@ public class MainActivity extends AppCompatActivity implements
                     ).show();
 
                 } else {
-
-                    // maybe get rid of this from here
-//                    final Thread sendSightingsAndShutdownTask = new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    findViewById(R.id.fab_add).setVisibility(View.INVISIBLE);
-//                                    findViewById(R.id.fab_send).setVisibility(View.INVISIBLE);
-//
-//                                    Toast.makeText(
-//                                            MainActivity.this,
-//                                            R.string.send_wait_message,
-//                                            Toast.LENGTH_LONG
-//                                    ).show();
-//                                }
-//                            });
-//                            finishAndSave(true);
-//                        }
-//                    });
-                    //get rid up to here, maybe
 
                     AlertDialog.Builder comAlertDialogBuilder =
                             new AlertDialog.Builder(MainActivity.this);
@@ -2400,11 +2440,11 @@ public class MainActivity extends AppCompatActivity implements
         findViewById(R.id.fab_return).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Method shared with onPause//TODO: and BACK (in some cases) button?
+                // Method shared with onPause and Android's back button
                 // Nullifying shared with the SAVE button, too
                 // This nullifies the opened sighting and, when coming here after an ADD press (and
                 // not a CLICK on a sighting...which is impossible) remove the last sighting from the trip
-                removeTemporarySighting();
+                removeTemporarySighting();//TODO: what if execService tries to write to the sighting after it was removed)
 
                 // prepare views - hide and show what's needed
                 showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
@@ -2420,17 +2460,6 @@ public class MainActivity extends AppCompatActivity implements
                 // maybe move ADD logic to SAVE logic, so here, we do nothing,
                 // like we should, see SAVE button logic for more info
 
-                //OLD logic - get rid
-//                // Method shared with onPause and RETURN button
-//                // Nullifying shared with the SAVE button, too
-//                // This nullifies the opened sighting and, when coming here after an ADD press (and
-//                // not a CLICK on a sighting) remove the last sighting from the trip
-//                removeTemporarySighting();
-//
-//                // prepare views - hide and show what's needed
-//                showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
-                //old logic ends here
-
                 //TODO: new specie feature logic
                 // If arriving here after a family was pressed: I should just go back to the familyAdapter (it should deal with nullifying sightings)
                 //showFamilies();
@@ -2440,11 +2469,18 @@ public class MainActivity extends AppCompatActivity implements
                 // Back should not kill the openedSightings[0] because it might be reused when choosing a different family in the famAdpt..?
                 //up to here
 
-                if (String.valueOf(getTitle()).equals(getString(R.string.add_sighting))) {// meaning I am here after a family was pressed
+                if (String.valueOf(getTitle()).equals(getString(R.string.add_sighting))) {
+                    // meaning I am here after a family was pressed
                     // go back to the familyAdapter (it - the RETURN button, more exactly should deal with nullifying sightings)
                     showFamilies(); // shared between the ADD and BACK buttons
                 } else {
-                    if (String.valueOf(getTitle()).equals(getString(R.string.edit_sighting))) {// meaning I am here after a sighting was pressed
+                    if (String.valueOf(getTitle()).equals(getString(R.string.edit_sighting))) {
+                        // meaning I am here after a sighting was pressed
+
+                        // openedSighting should no longer point to our opened sighting
+                        // Java is Pass-by-value/Call by sharing - therefore the referred object will not be nullified
+                        openedSightings[0] = null;
+
                         // go back to the sightingAdapter
                         showSightings(); // shared between the START, RETURN, SAVE, BACK and DELETE buttons
                     }

@@ -42,37 +42,6 @@
     <string name="delete_trip">ABRA</string>
     <string name="open_trip">APAGUE</string>
 
-    <string name="sperm_whale_1">Cachalote</string>
-    <string name="kemp_ridley_turtle_37">Tartaruga de Kemp</string>
-    <string name="humpback_whale_5">Baleia de bossa</string>
-    <string name="hawksbill_turtle_36">Tartaruga de escamas</string>
-    <string name="atlantic_spotted_dolphin_22">Golfinho pintado</string>
-    <string name="beaked_whale_6">Baleia de bico</string>
-    <string name="blainville_beaked_whale_12">Baleia de bico de Blainville</string>
-    <string name="blue_whale_4">Baleia azul</string>
-    <string name="bryde_whale_10">Baleia de Bryde</string>
-    <string name="common_bottlenose_dolphin_21">Roaz</string>
-    <string name="common_dolphin_20">Golfinho comum</string>
-    <string name="cuvier_beaked_whale_11">Zifio</string>
-    <string name="false_killer_whale_17">Falsa orca</string>
-    <string name="fin_whale_2">Baleia comum/Baleia fin/Rorqual comum</string>
-    <string name="green_turtle_35">Tartaruga verde</string>
-    <string name="killer_whale_18">Orca</string>
-    <string name="leatherback_turtle_34">Tartaruga de couro</string>
-    <string name="loggerhead_turtle_33">Tartaruga careta</string>
-    <string name="long_finned_pilot_whale_19">Baleia piloto de barbatana comprida</string>
-    <string name="northern_bottlenose_whale_9">Botinhoso</string>
-    <string name="northern_minke_whale_8">Baleia anã</string>
-    <string name="pygmy_sperm_whale_14">Cachalote pigmeu</string>
-    <string name="risso_dolphin_23">Golfinho de risso</string>
-    <string name="rough_toothed_dolphin_25">Caldeirão/Dente rugoso</string>
-    <string name="sei_whale_3">Baleia sardinheira</string>
-    <string name="short_finned_pilot_whale_16">Baleia piloto de barbatana curta</string>
-    <string name="sowerby_beaked_whale_7">Baleia de bico de Sowerby</string>
-    <string name="striped_dolphin_24">Golfinho riscado</string>
-    <string name="true_beaked_whale_13">Baleia de bico de True</string>
-    <string name="harbour_porpoise_27">Toninha comum</string>
-
     <string name="StenellaFrontalis">Golfinho pintado</string>
     <string name="TursiopsTruncatus">Roaz</string>
     <string name="StenoBredanensis">Caldeirão/Dente-Rugoso</string>
@@ -177,5 +146,8 @@
     <string name="eSmallDolphinsFamily">Pequenos golfinhos</string>
     <string name="bToothedWhalesFamily">Baleias com dentes</string>
     <string name="hSeaTurtlesFamily">Tartarugas marinhas</string>
+    <string name="sighting_comments_hint">Idade dos cetáceos, posição etc.</string>
+    <string name="search">Procura</string>
+    <string name="species_not_on_your_list">Espécies que não estão na sua lista</string>
 
 </resources>
