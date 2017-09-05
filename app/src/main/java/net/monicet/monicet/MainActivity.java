@@ -1,6 +1,8 @@
 package net.monicet.monicet;
 
 import android.Manifest;
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,6 +13,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -58,7 +61,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -70,8 +72,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static android.R.string.no;
+import static android.accounts.AccountManager.newChooseAccountIntent;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.R.string.sighting;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -101,7 +103,6 @@ public class MainActivity extends AppCompatActivity implements
     private volatile double mostRecentLocationLongitude = Utils.INITIAL_VALUE;
     private final GpsMode defaultGpsMode = GpsMode.USER_30_MIN;
 
-    private final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     // single thread executor for capturing gps coordinates
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -242,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements
     public void onBackPressed() {
         if (wasMinimumAmountOfGpsFixingDone) {
             finishAndSave(true);
-        } else {// if gos fixing wasn't done, nothing to save actually
+        } else {// if gps fixing wasn't done, nothing to save actually
             // no foreground service was started in this case
             finishAndSave(false);
         }
@@ -265,6 +266,9 @@ public class MainActivity extends AppCompatActivity implements
                     Utils.stopForegroundService(MainActivity.this, false);
                 }
                 finishAndSave(false);
+                // finish and save will kill the thread that might be writing to shared prefs, so no issues here
+                // remove account name from shared preferences, so that user chooses another one when they start a new trip
+                Utils.clearAccountNameFromSharedPrefs(MainActivity.this);
                 //MainActivity.super.onBackPressed();//this probably calls finish
             }
         });
@@ -390,7 +394,7 @@ public class MainActivity extends AppCompatActivity implements
 
     protected void initTripAndViews() {
 
-        // This method must be called before mGoogleApiClient.connect();
+        // This method must be called before mGoogleApiClient.connect();//it connects really quickly
         // Otherwise it tries to do minimum amount of GPS fixing again
 
         File tempTripFile = getTempTripFile();
@@ -442,11 +446,10 @@ public class MainActivity extends AppCompatActivity implements
 
             // these two only if it wasn't deserialized (otherwise, the deserialized trip already contains this data)
             setTripIdAndFileNamesAndExtensions();
-            // set user name (user's email address)
-            trips[0].setUserName(Utils.getUserCredentials(this));
+
+            //trips[0].setUserName(Utils.getUserCredentials(this));//TODO: user account feature, get rid
 
             initViews();
-
         }
 
     }
@@ -483,14 +486,6 @@ public class MainActivity extends AppCompatActivity implements
             finishAndSave(false);
         }
 
-        //test starts here
-//        Toast.makeText(
-//                MainActivity.this,
-//                "onCreate",
-//                Toast.LENGTH_SHORT
-//        ).show();
-        //test ends here
-
         if (areGooglePlayServicesInstalled()) {
             // if google play services are OK
 
@@ -499,12 +494,8 @@ public class MainActivity extends AppCompatActivity implements
             createLocationRequest();
             buildGoogleApiClient();
 
-            // TODO: now gps, maybe use SettingsAPI
-            if (!isGpsProviderEnabled()) { showTurnOnGpsProviderDialog(); }//testing
-
             //TODO: now remove after testing, gps, add start moment of trip
-            //trip.addRouteData(timeWhenApplicationStartedInMillis, 9.9, 9.9);// get rid
-            routeData.put(timeWhenApplicationStartedInMillis, new double[]{9.9, 9.9});
+//            routeData.put(timeWhenApplicationStartedInMillis, new double[]{9.9, 9.9});
             //up to here
 
         } else {
@@ -545,44 +536,6 @@ public class MainActivity extends AppCompatActivity implements
 
         if (!isFinishing()) { finishAndSave(true); }
     }
-
-//    @Override
-//    protected void onStart() {
-//        super.onStart();
-//
-//        // If executor service has been made null (I'm coming here after onStop())
-//        // make a new one
-//        if (executorService == null) {
-//            executorService = Executors.newSingleThreadExecutor(); // this is for future coordinate capturing tasks
-//        }
-//
-//        mGoogleApiClient.connect();
-//    }
-//
-//    @Override
-//    protected void onStop() {
-//
-//        // this might come after .shutdown() or shutdownNow() on the same object
-//        if (!executorService.isShutdown()) {
-//            executorService.shutdownNow();
-//        }
-//        executorService = null;
-//
-//        // if threads were interrupted - they might have left the interval in Sampling mode
-//        // interval (and distance) get turned back on to their original state in onStart (when
-//        // google api client connects..in onConnected)
-//        stopLocationUpdates();
-//
-//        if (mGoogleApiClient.isConnected()) {
-//            mGoogleApiClient.disconnect();
-//        }
-//
-//        // Finish off any timeAndPlaces left without coordinates when threads were interrupted (exec shutdown)
-//        // this will finish up objects in timeAndPlacesWhichNeedCoordinates, too
-//        finishTimeAndPlaces(getAllTimeAndPlaces());
-//
-//        super.onStop();
-//    }
 
     @Override
     public void openSighting(String label, String family, Sighting sighting) {
@@ -1111,9 +1064,8 @@ public class MainActivity extends AppCompatActivity implements
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            // go back to the user/default gps mode and restart location updates with the new interval
-                            //startLocationUpdates(trips[0].getGpsMode());//old logic, pre fgr service, get rid
-                            startLocationUpdates(defaultGpsMode);//new logic
+                            // go back to default gps mode and restart location updates with the new interval
+                            startLocationUpdates(defaultGpsMode);
                         }
                     });
                 }
@@ -1129,81 +1081,66 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onConnected(@Nullable Bundle bundle) {
 
-        // I check every time the Google API client connects - because user can revoke permission on newer Android APIs
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        // this method fires in another thread and is very fast... is called after trip deserialization
+
+
+//        // Get GPS permission if not already granted
+//        // check every time the app is launched - because user can revoke permission on newer Android APIs
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
+//                PackageManager.PERMISSION_GRANTED) {
+//            Intent intent = new Intent(this, GetGpsPermissionActivity.class);
+//            startActivity(intent);
+//        }
+//
+//        // Turn on GPS, if it's off
+//        if (!isGpsProviderEnabled()) {
+//            Intent intent = new Intent(this, TurnGpsOnActivity.class);
+//            startActivity(intent);
+//        }
+        // Get GPS permission if not already granted
+        // check every time the app is launched - because user can revoke permission on newer Android APIs
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
                 PackageManager.PERMISSION_GRANTED) {
+            Intent intent = new Intent(this, GetGpsPermissionActivity.class);
+            startActivity(intent);
+        } else {// meaning GPS permission had been granted
+            // Turn on GPS, if it's off
+            if (!isGpsProviderEnabled()) {
+                Intent intent = new Intent(this, TurnGpsOnActivity.class);
+                startActivity(intent);
+            } else {//meaning GPS permission had been granted and GPS is on
+                //get user account from user and set username
+                if (trips[0].getUserName().isEmpty()) {
 
-            // permission had already been granted
-            // onStop kills threads. If it killed the doInitialGpsFix thread before the 5
-            // onLocationChanged calls, then the app was called, so it did not return to onStart (where onConnected is called)
-            // Therefore I am here (in onStart) and this means that the fixing was not done, so, do it
-            // But if onStop killed other threads after the Gps fixing was done (boolean true), I don't want to refix in onStart
-            // If app was killed, I want it to re-fix (boolean will be false by default)
-            // If app was not killed and it's just coming back from a break, don't re-fix (boolean is true)//TODO: new change this...save it to file
-            //startLocationUpdates(trips[0].getGpsMode());//old, pre fgr logic, get rid
-            startLocationUpdates(defaultGpsMode);
-            //TODO: change this logic now. If temp file exists minimum = true before googleapi.connect
-            // here start a thread which gets into fast, fixing mode (short interval),
-            // waits for X number of onLocationChanged calls and after that, Y number of minutes
-            fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                    String accountName = Utils.readAccountNameFromSharedPrefs(this);
 
-            //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-            //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
-
-        } else { // permission had not been granted
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-
-            } else {
-
-                // No explanation needed, we can request the permission.
-
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-                // app-defined int constant. The callback method gets the result of the request.
-            }
-        }
-
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        //super.onRequestPermissionsResult(requestCode, permissions, grantResults);// this was here by default
-
-        switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the location-related task you need to do.
-                    //startLocationUpdates(trips[0].getGpsMode());//old, pre fgr service logic, get rid
-                    startLocationUpdates(defaultGpsMode);
-                    // here start a thread which gets into fast, fixing mode (short interval),
-                    // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                    fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
-
-                    //wasMinimumAmountOfGpsFixingDone = true;//TODO: get rid
-                    //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);//get rid
-
-                } else {
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    trips[0].setGpsMode(null);
-                    finish();
+                    if (accountName == null) {
+                        Intent intent = new Intent(this, GetAccountActivity.class);
+                        startActivity(intent);
+                    } else {
+                        trips[0].setUserName(accountName);
+                        // Cancel and back buttons go to main activity which asks for the
+                        // account again. Home button exits and app restart starts from scratch.
+                    }
                 }
-                return;
-            }
 
-            // other 'case' lines to check for other
-            // permissions this app might request
+                // onStop kills threads. If it killed the doInitialGpsFix thread before the 5
+                // onLocationChanged calls, then the app was called, so it did not return to onStart (where onConnected is called)
+                // Therefore I am here (in onStart) and this means that the fixing was not done, so, do it
+                // But if onStop killed other threads after the Gps fixing was done (boolean true), I don't want to refix in onStart
+                // If app was killed, I want it to re-fix (boolean will be false by default)
+                // If app was not killed and it's just coming back from a break, don't re-fix (boolean is true)
+
+                startLocationUpdates(defaultGpsMode);
+
+                // here start a thread which gets into fast, fixing mode (short interval),
+                // waits for X number of onLocationChanged calls and after that, Y number of minutes
+                //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+
+                wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+                findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+
+            }
         }
     }
 
@@ -1251,8 +1188,8 @@ public class MainActivity extends AppCompatActivity implements
                 new double[]{location.getLatitude(), location.getLongitude()});
 
         //TEST TODO: now remove
-        routeData.put(System.currentTimeMillis() - 1000,
-                new double[]{location.getLatitude(), (double) mLocationRequest.getInterval()});
+//        routeData.put(System.currentTimeMillis() - 1000,
+//                new double[]{location.getLatitude(), (double) mLocationRequest.getInterval()});
         //remove up to here
     }
 
@@ -1397,30 +1334,6 @@ public class MainActivity extends AppCompatActivity implements
         LocationManager lm = (LocationManager) MainActivity.this.
                 getSystemService(Context.LOCATION_SERVICE);
         return lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-    }
-
-    private void showTurnOnGpsProviderDialog() {
-        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
-
-        comAlertDialogBuilder.setTitle(R.string.turn_on_gps_dialog_title);
-        comAlertDialogBuilder.setMessage(R.string.turn_on_gps_dialog_message);
-
-        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                Intent myIntent = new Intent( Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                MainActivity.this.startActivity(myIntent);
-            }
-        });
-        comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // dialog.dismiss();
-            }
-        });
-
-        comAlertDialogBuilder.create();
-        comAlertDialogBuilder.show();
     }
 
     protected void fixGpsSignal(final int numberOfCalls, final int numberOfMinutes) {
@@ -1583,7 +1496,6 @@ public class MainActivity extends AppCompatActivity implements
 
         // finish() might call onPause. If it does, isFinishing will be true, so, this method won't be called again.
         finish();
-        // TODO: finish() stop application from being in the foreground (exit)...kills the activity and? eventually the app
     }
 
     protected void saveTripToFile(String status, File finishedTripFileWithoutExtension) {
@@ -2236,47 +2148,51 @@ public class MainActivity extends AppCompatActivity implements
                 // (if selected set gpsmode to continuous, trip is on SLOW by default)
                 // start of onCreate - Google Play Services might not be installed or no permission for GPS usage
                 // normally we should not get to this point if no Google Play Services
-                if (isGpsProviderEnabled()) {
-                    // if GPS has connected and fixed on a location - capture coordinate
-                    if (mGoogleApiClient.isConnected() && wasMinimumAmountOfGpsFixingDone) {
-                        //here get the user interval
-                        NumberPicker intervalNumberPicker = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
-                        int indexOfInterval = intervalNumberPicker.getValue();
-                        //also get rid of 1 MINUTE
-                        //long intervalToCompareWith = (indexOfInterval == 0) ? Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
-                        long intervalToCompareWith = indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
 
-                        for (GpsMode gpsMode: GpsMode.values()) {
-                            if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
-                                // set the user mode with the newly selected user mode
-                                trips[0].setGpsMode(gpsMode);
-                                break;
-                            }
+                // if GPS has connected and fixed on a location - capture coordinate
+                if (mGoogleApiClient.isConnected() && wasMinimumAmountOfGpsFixingDone) {
+
+                    // remove account name from shared preferences, so that user chooses another one when they start a new trip
+                    Utils.clearAccountNameFromSharedPrefs(MainActivity.this);
+                    //Obs: clearing it in fixGpsSignal could have caused problems with parallel threads writing to shared prefs
+                    // and would have complicated my no gps test mode from onConnected
+
+                    //here get the user interval
+                    NumberPicker intervalNumberPicker = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                    int indexOfInterval = intervalNumberPicker.getValue();
+                    //also get rid of 1 MINUTE
+                    //long intervalToCompareWith = (indexOfInterval == 0) ? Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+                    long intervalToCompareWith = indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
+
+                    for (GpsMode gpsMode: GpsMode.values()) {
+                        if (gpsMode.getIntervalInMillis() == intervalToCompareWith) {
+                            // set the user mode with the newly selected user mode
+                            trips[0].setGpsMode(gpsMode);
+                            break;
                         }
-
-                        // b) - time
-                        trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-                        // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
-                        captureCoordinates(trips[0].getStartTimeAndPlace());
-
-                        // get the duration from the user - to be used by the background gps sampling
-                        // service, via the foreground service and alarm
-                        NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
-                        trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
-
-                        startForegroundService();
-
-                        // deal with the views//TODO: no sightings bug...I save, I return then press START
-                        showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
-                    } else {
-                        Toast.makeText(
-                                MainActivity.this,
-                                R.string.gps_fix_message,
-                                Toast.LENGTH_LONG
-                        ).show();
                     }
 
-                } else { showTurnOnGpsProviderDialog(); }
+                    // b) - time
+                    trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+                    // and gps coords // TODO: if it hasn't finished fixing the gps signal, this will be 0 and 0
+                    captureCoordinates(trips[0].getStartTimeAndPlace());
+
+                    // get the duration from the user - to be used by the background gps sampling
+                    // service, via the foreground service and alarm
+                    NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
+                    trips[0].setDuration(durationNumberPicker.getValue() * Utils.ONE_HOUR_IN_MILLIS);
+
+                    startForegroundService();
+
+                    // deal with the views//TODO: no sightings bug...I save, I return then press START
+                    showSightings(); // shared between the START, SAVE, BACK and DELETE buttons
+                } else {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.gps_fix_message,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
             }
         });
     }
@@ -2346,6 +2262,7 @@ public class MainActivity extends AppCompatActivity implements
                     comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
+
                             wasSendButtonPressed = true;
 
                             stopForegroundService(MainActivity.this, true);

@@ -44,24 +44,24 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {//implements Filterable
         specie.setText(String.valueOf(currentAnimal.getSpecie().getName()));
 
         // set the photo button for that specie and implement logic when clicked
-        ImageButton photo = (ImageButton)convertView.findViewById(R.id.photo_imageButton);
-        photo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO: open image for that particular specie
-                Toast.makeText(getContext(), currentAnimal.getSpecie().getPhoto(), Toast.LENGTH_SHORT).show();
-            }
-        });
+//        ImageButton photo = (ImageButton)convertView.findViewById(R.id.photo_imageButton);
+//        photo.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                // TODO: open image for that particular specie
+//                Toast.makeText(getContext(), currentAnimal.getSpecie().getPhoto(), Toast.LENGTH_SHORT).show();
+//            }
+//        });
 
         // set the description button for that specie and implement logic when clicked
-        ImageButton description = (ImageButton)convertView.findViewById(R.id.description_imageButton);
-        description.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO: open description for that particular specie
-                Toast.makeText(getContext(), currentAnimal.getSpecie().getDescription(), Toast.LENGTH_SHORT).show();
-            }
-        });
+//        ImageButton description = (ImageButton)convertView.findViewById(R.id.description_imageButton);
+//        description.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                // TODO: open description for that particular specie
+//                Toast.makeText(getContext(), currentAnimal.getSpecie().getDescription(), Toast.LENGTH_SHORT).show();
+//            }
+//        });
 
         final NumberPicker quantity = (NumberPicker)convertView.findViewById(R.id.animal_quantity_number_picker);
         quantity.setMinValue(0);

@@ -1,5 +1,7 @@
 package net.monicet.monicet;
 
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.support.annotation.NonNull;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
@@ -42,11 +44,12 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
             //convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item_sighting, parent, false);//TODO: Alex test this
 
             // show the STOP/END/FINISH image button
-            ImageButton endImgBtn =
+            final ImageButton endImgBtn =
                     (ImageButton)convertView.findViewById(R.id.end_finish_imageButton);
             endImgBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    endImgBtn.setBackgroundColor(Color.GRAY);
                     // TODO: new rule - end quantity can be set only on long sightings in comments only
                     // after the end button was pressed, after that, in comments you can change anything and the
                     // comments listener will update the views (via runonuithread?)

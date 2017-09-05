@@ -9,8 +9,9 @@
     <ImageButton
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        app:srcCompat="@drawable/ic_stop_brown_24dp"
+        app:srcCompat="@drawable/ic_stop_brown_48dp"
         android:id="@+id/end_finish_imageButton"
+        android:background="@android:color/transparent"
         android:layout_weight="1"/>
 
     <LinearLayout
@@ -78,8 +79,9 @@
     <ImageButton
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        app:srcCompat="@drawable/ic_comment_black_24dp"
+        app:srcCompat="@drawable/ic_comment_black_48dp"
         android:id="@+id/comments_imageButton"
+        android:background="@android:color/transparent"
         android:layout_weight="1"/>
 
     <ImageButton
@@ -87,6 +89,7 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        app:srcCompat="@android:drawable/ic_delete" />
+        android:background="@android:color/transparent"
+        app:srcCompat="@drawable/ic_clear_red_48dp" />
 
 </LinearLayout>

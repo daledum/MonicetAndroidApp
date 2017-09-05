@@ -15,7 +15,7 @@
     <string name="start_trip">Inicie a viagem</string>
     <string name="add_sighting">Adicione avistamento</string>
     <string name="checkbox_tracking_text">Seleccione esta caixa para ativar o modo de amostragem GPS contínuo, que usa muita bateria.</string>
-    <string name="only_one_animal_message">Por favor, selecione apenas uma espécie.\nApenas um número pode ser diferente de zero.</string>
+    <string name="only_one_animal_message">Por favor, selecione apenas uma espécie.\nApenas um número pode ser diferente de zero.\nDefina para zero as outras quantidades que não são iguais a zero</string>
     <string name="edit_sighting">Alterar avistamento</string>
     <string name="my_sightings">Meus avistamentos</string>
     <string name="sighting_finished_confirmation_message">O avistamento foi terminado.</string>

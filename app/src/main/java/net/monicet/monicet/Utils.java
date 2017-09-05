@@ -5,6 +5,7 @@ import android.accounts.AccountManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -61,6 +62,7 @@ public final class Utils {
     public static final String ADD_EXTENSION = "addExtension";
     public static final String TIME_ACTIVITY_SAMPLED_GPS = "timeActivitySampledGps";
     public static final String DELETE_TRIP = "delete";
+    public static final String ACCOUNT_NAME = "accountName";
 
     public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
             ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
@@ -375,6 +377,27 @@ public final class Utils {
         context.startService(stopIntent);
     }
 
+    public static void writeAccountNameToSharedPrefs(Context context, String accountName) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(ACCOUNT_NAME, accountName);
+        editor.apply();
+    }
+
+    public static void clearAccountNameFromSharedPrefs(Context context) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(ACCOUNT_NAME, null);
+        editor.apply();
+    }
+
+    public static String readAccountNameFromSharedPrefs(Context context) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        // default null is returned if prefs don't exist (no app run yet etc)
+        // or if user did not give us their account yet or if app cleared the account name
+        return sharedPref.getString(ACCOUNT_NAME, null);
+    }
+
     public static String getUserCredentials(Context context) {
         String emailAddresses = "";
 
@@ -383,13 +406,16 @@ public final class Utils {
         //Account[] accounts = AccountManager.get(context).getAccountsByType("com.google");//this doesn't work
 
         for (Account account : accounts) {
-            if (emailPattern.matcher(account.name).matches()) {
-                emailAddresses += account.name + ",";
-            }
+//            if (emailPattern.matcher(account.name).matches()) {
+//                emailAddresses += account.name + ",";
+//            }
+            emailAddresses += account.toString() + ",";//account.name + ",";//testing to see if it picks up anything - might need to add permission (contacts for android 6)
+            //alternative would be to use accountpicker - must include gps common (probably the whole thing) plus activity might be covered by intent
         }
 
         //return emailAddresses.substring(0, emailAddresses.length() - 1);//TODO: reinstate this
-        return "marc.fern@gmail.com";
+        return emailAddresses;
+        //return "marc.fern@gmail.com";
     }
 
     public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,

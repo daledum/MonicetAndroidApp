@@ -20,29 +20,29 @@
         tools:text="Sperm whale"
         android:layout_weight="7"/>
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:id="@+id/specie_details"
-        android:layout_weight="1">
+    <!--<LinearLayout-->
+        <!--android:orientation="vertical"-->
+        <!--android:layout_width="0dp"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:gravity="center"-->
+        <!--android:id="@+id/specie_details"-->
+        <!--android:layout_weight="1">-->
 
-        <ImageButton
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:srcCompat="@drawable/ic_crop_original_black_24dp"
-            android:id="@+id/photo_imageButton"
-            android:layout_weight="1"/>
+        <!--<ImageButton-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="0dp"-->
+            <!--app:srcCompat="@drawable/ic_crop_original_black_24dp"-->
+            <!--android:id="@+id/photo_imageButton"-->
+            <!--android:layout_weight="1"/>-->
 
-        <ImageButton
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:srcCompat="@android:drawable/ic_dialog_info"
-            android:id="@+id/description_imageButton"
-            android:layout_weight="1" />
+        <!--<ImageButton-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="0dp"-->
+            <!--app:srcCompat="@android:drawable/ic_dialog_info"-->
+            <!--android:id="@+id/description_imageButton"-->
+            <!--android:layout_weight="1" />-->
 
-    </LinearLayout>
+    <!--</LinearLayout>-->
 
 
 </LinearLayout>

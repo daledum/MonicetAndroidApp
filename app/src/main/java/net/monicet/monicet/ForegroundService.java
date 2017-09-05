@@ -297,7 +297,10 @@ public class ForegroundService extends Service {
 
                     // could not extract the user name from the file, therefore we'll use the
                     // current user name of the device running the service now
-                    if (userName == null) {
+                    if (userName == null) {//TODO: should be safe to use shared prefs, they're not being used at this time (alarm or mainAct which has a username)
+                        //TODO: using trip file (which might not exist now) - new logic (it might get
+                        // deleted before being re-written...just take the user quickly)
+                        //TODO: use tempTrip file
                         userName = Utils.getUserCredentials(this).trim();
                     }
 

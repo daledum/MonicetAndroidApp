@@ -56,7 +56,7 @@
         How many did you see at the end of the sighting?
     </string>
     <string name="only_one_animal_message">
-        Please, select only one specie.\nOnly one number can be different from zero.
+        Please, select only one specie.\nOnly one number can be different from zero.\nPlease set to zero the other quantities that are not equal to zero.
     </string>
     <string name="no_animals_to_save_message">
         There is nothing to save.\nPlease, modify the number of animals that you\'ve seen.
