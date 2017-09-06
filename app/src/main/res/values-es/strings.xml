@@ -109,4 +109,5 @@
     <string name="search">Busca</string>
     <string name="species_not_on_your_list">Especies que no están en su lista</string>
     <string name="only_one_animal_message">Seleccione una sola especie.\nSólo un número puede ser diferente de cero.\nEstablezca en cero las otras cantidades que no son iguales a cero.</string>
+    <string name="email_account">Por favor, elija una cuenta de correo electrónico</string>
 </resources>

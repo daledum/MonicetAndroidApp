@@ -17,7 +17,12 @@ public class GetAccountActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_get_account);
 
-        // what if onActivityResult fires (returning the account) after onConnected? //TODO: ?
+        Toast.makeText(
+                this,
+                R.string.email_account,
+                Toast.LENGTH_LONG
+        ).show();
+
         // get user name (user's email address) and set it inside onActivityResult
         Intent getAccountsIntent = AccountManager.get(this).newChooseAccountIntent(
                 null, null, null, false, null, null, null, null
@@ -38,7 +43,9 @@ public class GetAccountActivity extends AppCompatActivity {
                 //this might return null
                 String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                 if (accountName != null) {
-                    Utils.writeAccountNameToSharedPrefs(this, accountName);
+                    if (accountName.contains("@")) {
+                        Utils.writeAccountNameToSharedPrefs(this, accountName);
+                    }
                 }
             }
         }

@@ -265,10 +265,16 @@ public class MainActivity extends AppCompatActivity implements
                     // the foreground service (and the alarm). Another would be to delete trip, via notification)
                     Utils.stopForegroundService(MainActivity.this, false);
                 }
-                finishAndSave(false);
-                // finish and save will kill the thread that might be writing to shared prefs, so no issues here
-                // remove account name from shared preferences, so that user chooses another one when they start a new trip
+
+                // Remove account name from shared preferences, so that user chooses another one when they start a new trip
+                // Warning: do this before finishandsave, which kills the activity. Plus, make sure that no other threads
+                // are writing to shared preferences (threads are live at this moment). This could coincide with
+                // background gps service reading from shared prefs to see how long the trip should be. It shouldn't be an issue,
+                // considering we are deleting the trip (we might need the account for a new trip, though, if specs change).
+                // If specs change and we don't clear the account unless user wants to, the method call below will not happen anyway.
                 Utils.clearAccountNameFromSharedPrefs(MainActivity.this);
+
+                finishAndSave(false);
                 //MainActivity.super.onBackPressed();//this probably calls finish
             }
         });
@@ -1135,10 +1141,10 @@ public class MainActivity extends AppCompatActivity implements
 
                 // here start a thread which gets into fast, fixing mode (short interval),
                 // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-                findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+                //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+                //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
             }
         }

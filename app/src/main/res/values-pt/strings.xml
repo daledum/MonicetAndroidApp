@@ -149,5 +149,6 @@
     <string name="sighting_comments_hint">Idade dos cetáceos, posição etc.</string>
     <string name="search">Procura</string>
     <string name="species_not_on_your_list">Espécies que não estão na sua lista</string>
+    <string name="email_account">Por favor, escolha uma conta de e-mail.</string>
 
 </resources>

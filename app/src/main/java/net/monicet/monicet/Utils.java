@@ -398,7 +398,7 @@ public final class Utils {
         return sharedPref.getString(ACCOUNT_NAME, null);
     }
 
-    public static String getUserCredentials(Context context) {
+    public static String getUserCredentials(Context context) {//TODO: get rid, eventually (gps intent service last one to use this)
         String emailAddresses = "";
 
         Pattern emailPattern = Patterns.EMAIL_ADDRESS;
