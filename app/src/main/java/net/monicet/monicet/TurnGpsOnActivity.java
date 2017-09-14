@@ -41,7 +41,7 @@ public class TurnGpsOnActivity extends AppCompatActivity {
             }
         });
 
-        comAlertDialogBuilder.create();
+        //comAlertDialogBuilder.create();//TODO: redundant get rid
         comAlertDialogBuilder.show();
     }
 

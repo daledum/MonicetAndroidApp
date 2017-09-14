@@ -20,7 +20,7 @@ public class GetAccountActivity extends AppCompatActivity {
         Toast.makeText(
                 this,
                 R.string.email_account,
-                Toast.LENGTH_LONG
+                Toast.LENGTH_SHORT
         ).show();
 
         // get user name (user's email address) and set it inside onActivityResult

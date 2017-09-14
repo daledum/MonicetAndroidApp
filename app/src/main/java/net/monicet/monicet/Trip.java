@@ -19,6 +19,10 @@ public class Trip implements Serializable {
     private TimeAndPlace endTimeAndPlace;
     private volatile GpsMode gpsMode;
     private long duration;
+    private String skipper;
+    private String guide;
+    private String company;
+    private String boat;
 
     public class MyFile {
         private String fileTitle;
@@ -50,6 +54,10 @@ public class Trip implements Serializable {
         //mRouteData = new HashMap<Long,double[]>();// get rid
         gpsMode = GpsMode.USER_5_MIN;
         duration = 4 * Utils.ONE_HOUR_IN_MILLIS;
+        skipper = "";
+        guide = "";
+        company = "";
+        boat = "";
 
         tripFile = new MyFile();
         routeFile = new MyFile();
@@ -86,5 +94,17 @@ public class Trip implements Serializable {
 
     public long getDuration() { return duration; }
     public void setDuration(long vDuration) { duration = vDuration; }
+
+    public String getSkipper() { return skipper; }
+    public void setSkipper(String vSkipper) { skipper = vSkipper; }
+
+    public String getGuide() { return guide; }
+    public void setGuide(String vGuide) { guide = vGuide; }
+
+    public String getCompany() { return company; }
+    public void setCompany(String vCompany) { company = vCompany; }
+
+    public String getBoat() { return boat; }
+    public void setBoat(String vBoat) { boat = vBoat; }
 
 }

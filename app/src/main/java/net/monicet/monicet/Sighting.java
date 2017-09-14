@@ -1,9 +1,8 @@
 package net.monicet.monicet;
 
-import android.util.Log;
-
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by ubuntu on 23-01-2017.
@@ -21,6 +20,11 @@ public class Sighting implements Serializable {
 
     private String userComments;
 
+    private String behavior;
+    final private Map<String, Integer> association;
+    private String seaState;
+    private String visibility;
+
     public Sighting() {
         animal = null;
         startTimeAndPlace = new TimeAndPlace();
@@ -28,6 +32,10 @@ public class Sighting implements Serializable {
         userStartTimeAndPlace = new TimeAndPlace();
         userEndTimeAndPlace = new TimeAndPlace();
         userComments = "";
+        behavior = "";
+        association = new HashMap<>();
+        seaState = "";
+        visibility = "";
     }
 
     //this could return null
@@ -59,4 +67,14 @@ public class Sighting implements Serializable {
     public String getUserComments() { return userComments; }
     public void setUserComments(String vUserComments) { userComments = vUserComments; }
 
+    public String getBehavior() { return behavior; }
+    public void setBehavior(String vBehaviour) { behavior = vBehaviour; }
+
+    public Map<String, Integer> getAssociation() { return association; }
+
+    public String getSeaState() { return seaState; }
+    public void setSeaState(String vSeaState) { seaState = vSeaState; }
+
+    public String getVisibility() { return visibility; }
+    public void setVisibility(String vVisibility) { visibility = vVisibility; }
 }

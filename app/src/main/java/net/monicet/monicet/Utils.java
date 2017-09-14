@@ -398,24 +398,21 @@ public final class Utils {
         return sharedPref.getString(ACCOUNT_NAME, null);
     }
 
+    // this requires read contacts permission
     public static String getUserCredentials(Context context) {//TODO: get rid, eventually (gps intent service last one to use this)
         String emailAddresses = "";
 
-        Pattern emailPattern = Patterns.EMAIL_ADDRESS;
-        Account[] accounts = AccountManager.get(context).getAccounts();//this only works pre ICS
-        //Account[] accounts = AccountManager.get(context).getAccountsByType("com.google");//this doesn't work
-
-        for (Account account : accounts) {
+//        Pattern emailPattern = Patterns.EMAIL_ADDRESS;
+//        Account[] accounts = AccountManager.get(context).getAccounts();
+//
+//        for (Account account : accounts) {
 //            if (emailPattern.matcher(account.name).matches()) {
 //                emailAddresses += account.name + ",";
 //            }
-            emailAddresses += account.toString() + ",";//account.name + ",";//testing to see if it picks up anything - might need to add permission (contacts for android 6)
-            //alternative would be to use accountpicker - must include gps common (probably the whole thing) plus activity might be covered by intent
-        }
-
-        //return emailAddresses.substring(0, emailAddresses.length() - 1);//TODO: reinstate this
-        return emailAddresses;
-        //return "marc.fern@gmail.com";
+//        }
+//
+//        return emailAddresses.substring(0, emailAddresses.length() - 1);
+        return "test@test.test";//test - get rid
     }
 
     public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,

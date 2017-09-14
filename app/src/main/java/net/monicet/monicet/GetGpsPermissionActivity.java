@@ -20,7 +20,7 @@ public class GetGpsPermissionActivity extends AppCompatActivity {
         
         // Request GPS permission
         ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},//{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.READ_CONTACTS},
                 MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
         // app-defined int constant. The callback method gets the result of the request.
     }

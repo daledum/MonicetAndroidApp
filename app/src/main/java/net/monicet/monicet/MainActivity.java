@@ -1,8 +1,6 @@
 package net.monicet.monicet;
 
 import android.Manifest;
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -13,11 +11,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
-import android.net.Uri;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -33,6 +28,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.NumberPicker;
 import android.widget.Toast;
@@ -73,6 +69,7 @@ import java.util.concurrent.TimeoutException;
 
 import static android.R.string.no;
 import static android.accounts.AccountManager.newChooseAccountIntent;
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
 import static java.lang.Math.abs;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
@@ -224,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.delete, menu);
+        getMenuInflater().inflate(R.menu.toolbar, menu);
         return super.onCreateOptionsMenu(menu);//return true;//?
     }
 
@@ -234,6 +231,9 @@ public class MainActivity extends AppCompatActivity implements
             case R.id.toolbar_delete_action:
                 deleteToolbarMenuButtonPressedDialog();
                 return true;// code might not reach this line
+            case R.id.toolbar_trip_details_action:
+                tripDescToolbarMenuButtonPressedDialog();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -285,7 +285,35 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        comAlertDialogBuilder.create();
+        comAlertDialogBuilder.show();
+    }
+
+    protected void tripDescToolbarMenuButtonPressedDialog() {
+
+        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
+
+        comAlertDialogBuilder.setTitle(R.string.trip_desc_dialog_title);
+
+        // set the view
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View rootView = layoutInflater.inflate(R.layout.trip_description_dialog, null);
+        comAlertDialogBuilder.setView(rootView);
+
+        comAlertDialogBuilder.setCancelable(false);
+
+        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //xml
+            }
+        });
+        comAlertDialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //MainActivity.super.onBackPressed();//this probably calls finish
+            }
+        });
+
         comAlertDialogBuilder.show();
     }
 
@@ -572,6 +600,7 @@ public class MainActivity extends AppCompatActivity implements
         for (Animal seedAnimal: allSeedAnimals) {
             seedAnimal.setStartQuantity(0);
             seedAnimal.setEndQuantity(0);
+            seedAnimal.setAge("");
         }
 
         Animal animal = openedSightings[0].getAnimal();
@@ -582,6 +611,8 @@ public class MainActivity extends AppCompatActivity implements
                 // set the end quantity for all animals to be the end quantity of the sighting's animal
                 // so that we keep this value when we save
                 seedAnimal.setEndQuantity(animal.getEndQuantity());
+                // do the the same for the age
+                seedAnimal.setAge(animal.getAge());
 
                 if (specieName.equals(seedAnimal.getSpecie().getName())) {
                     // this is the same animal (with the same specie as this sighting's animal)
@@ -697,269 +728,331 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void showSightingCommentsDialog(final Sighting sighting) {
 
-        // Save the state of the sighting into the temporary sighting
-        // Cloning the relevant data into the temp sighting. It is a snapshot of the way
-        // the sighting was at the beginning of this method (user for reinstating if CANCEL is pressed).
-        openedSightings[1] = new Sighting();
-        cloneSighting(openedSightings[1], sighting);
-
         // TODO: take other smartphone gps reading (from trip, sighting, animal)
         // and compare the sign (if near the 0 degree point, don't do this check)
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        final AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
 
-        View rootView = layoutInflater.inflate(R.layout.comments_dialog, null);
+        // set the view
+        final LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View rootView = layoutInflater.inflate(R.layout.sighting_description_dialog, null);
+        comAlertDialogBuilder.setView(rootView);
 
-        // take the system's time
-        // this is giving me the time when they edited the comments the last time
-        // This won't interfere with the finishTimeAndPlaces method. getAllTimeAndPlaces doesn't return user TimeAndPlaces
-        sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
-
-        // take and set the user's latitude
-        // first element of the array: degrees; second: minutes; third: seconds
-        final double[] latitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
-
-        final EditText latitudeDegrees = (EditText)rootView.findViewById(R.id.lat_degrees_edit_text);
-        latitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLatitude()));
-        latitudeDegrees.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                latitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
-                        latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
-                );
-                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
-                        latitudeDegreesMinutesAndSeconds[0],
-                        latitudeDegreesMinutesAndSeconds[1],
-                        latitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-
-        final EditText latitudeMinutes = (EditText)rootView.findViewById(R.id.lat_minutes_edit_text);
-        latitudeMinutes.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                latitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
-                        latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
-                        latitudeDegreesMinutesAndSeconds[0],
-                        latitudeDegreesMinutesAndSeconds[1],
-                        latitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-        final EditText latitudeSeconds = (EditText)rootView.findViewById(R.id.lat_seconds_edit_text);
-        latitudeSeconds.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                 latitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
-                        latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
-                        latitudeDegreesMinutesAndSeconds[0],
-                        latitudeDegreesMinutesAndSeconds[1],
-                        latitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-        // take and set the user's longitude
-        final double[] longitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
-
-        final EditText longitudeDegrees = (EditText)rootView.findViewById(R.id.long_degrees_edit_text);
-        longitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLongitude()));
-        longitudeDegrees.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                longitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
-                        longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
-                );
-                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
-                        longitudeDegreesMinutesAndSeconds[0],
-                        longitudeDegreesMinutesAndSeconds[1],
-                        longitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-        final EditText longitudeMinutes = (EditText)rootView.findViewById(R.id.long_minutes_edit_text);
-        longitudeMinutes.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                longitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
-                        longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
-                        longitudeDegreesMinutesAndSeconds[0],
-                        longitudeDegreesMinutesAndSeconds[1],
-                        longitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-        final EditText longitudeSeconds = (EditText)rootView.findViewById(R.id.long_seconds_edit_text);
-        longitudeSeconds.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                longitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
-                        longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
-                );
-                sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
-                        longitudeDegreesMinutesAndSeconds[0],
-                        longitudeDegreesMinutesAndSeconds[1],
-                        longitudeDegreesMinutesAndSeconds[2]
-                ));
-            }
-        });
-
-        final NumberPicker startQuantity = (NumberPicker)rootView.
-                findViewById(R.id.start_animal_quantity_number_picker);
-        startQuantity.setMinValue(0);
-        startQuantity.setMaxValue(Utils.MAX_VALUE);
-        startQuantity.setValue(openedSightings[1].getAnimal().getStartQuantity());
-
-        startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-            @Override
-            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                sighting.getAnimal().setStartQuantity(startQuantity.getValue());
-            }
-        });
-
-        final NumberPicker endQuantity = (NumberPicker)rootView.
-                findViewById(R.id.end_animal_quantity_number_picker);
-        endQuantity.setMinValue(0);
-        endQuantity.setMaxValue(Utils.MAX_VALUE);
-        endQuantity.setValue(openedSightings[1].getAnimal().getEndQuantity());
-        if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
-            endQuantity.setVisibility(View.VISIBLE);
-        }
-
-        endQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-            @Override
-            public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
-                sighting.getAnimal().setEndQuantity(endQuantity.getValue());
-            }
-        });
-
-        // take and set the user's comments
-        final EditText comments = (EditText)rootView.findViewById(R.id.comments_edit_text);
-        comments.setText(openedSightings[1].getUserComments());
-        comments.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                sighting.setUserComments(comments.getText().toString());
-            }
-        });
-
-        AlertDialog.Builder comAlertDialogBuilder = new AlertDialog.Builder(this);
-
-        // So that we cannot click outside of the dialog. The only way out is OK, CANCEL or an interruption.
-        // Writing into this dialog saves on the spot (live) to the sighting belonging to the trip.
-        // However, if CANCEL is pressed, all changes are discarded. All other scenarions (OK, interruption):
-        // changes are kept
+        // So that we cannot click outside of the dialog. The only way out is CANCEL or an interruption.
         comAlertDialogBuilder.setCancelable(false);
 
         comAlertDialogBuilder.setTitle(R.string.comments_message_title);
 
-        comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                // Set the temp sighting to null (If app interrupted, it's not getting nulified.
-                // This should not cause an issue, app gets killed, anyway)
-                openedSightings[1] = null;
-                // refresh the views (maybe the final quantity was changed)
-                showSightings();
-            }
-        });
         comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
-                // Make all values like they were when dialog was opened.
-                // Copy back values from temp sighting into our sighting.
-                cloneSighting(sighting, openedSightings[1]);
-
-                openedSightings[1] = null;
-                showSightings();
+                //dialog.dismiss();
             }
         });
 
-        comAlertDialogBuilder.setView(rootView);
-        comAlertDialogBuilder.create();
-        comAlertDialogBuilder.show();
+        final AlertDialog sightingDescription = comAlertDialogBuilder.show();
+
+        abstract class MyOnClickListener implements View.OnClickListener {
+
+            int layoutResourceId; //used to instantiate root view
+            int titleResourceId; // used to populate the title of the dialog
+
+            MyOnClickListener(int vLayoutResourceId, int vTitleResourceId) {
+                super();//this doesn't actually do anything in this case?
+                layoutResourceId = vLayoutResourceId;
+                titleResourceId = vTitleResourceId;
+            }
+
+            @Override
+            public void onClick(View v) {
+
+                sightingDescription.dismiss();//or cancel()
+
+                // Save the state of the sighting into the temporary sighting
+                // Cloning the relevant data into the temp sighting. It is a snapshot of the way
+                // the sighting was at the beginning of this method (user for reinstating if CANCEL is pressed).
+                openedSightings[1] = new Sighting();
+                cloneSighting(openedSightings[1], sighting);
+
+                // take the system's time
+                // this is giving me the time when they edited the comments the last time
+                // This won't interfere with the finishTimeAndPlaces method. getAllTimeAndPlaces doesn't return user TimeAndPlaces
+                sighting.getUserEndTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
+
+                View rootView = layoutInflater.inflate(layoutResourceId, null);
+
+                caseByCaseLogic(rootView);
+
+                comAlertDialogBuilder.setView(rootView);
+
+                comAlertDialogBuilder.setCancelable(false);
+                comAlertDialogBuilder.setTitle(titleResourceId);
+                comAlertDialogBuilder.setNegativeButton(no, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Make all values like they were when dialog was opened.
+                        // Copy back values from temp sighting into our sighting.
+                        cloneSighting(sighting, openedSightings[1]);
+
+                        openedSightings[1] = null;
+                        showSightings();
+                    }
+                });
+
+                comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        // Set the temp sighting to null (If app interrupted, it's not getting nulified.
+                        // This should not cause an issue, app gets killed, anyway)
+                        openedSightings[1] = null;
+                        // refresh the views (maybe the final quantity was changed)
+                        showSightings();
+                    }
+                });
+
+                comAlertDialogBuilder.show();
+            }
+
+            abstract void caseByCaseLogic(View view);
+        }
+
+        ImageButton animalDescription = (ImageButton)rootView.findViewById(R.id.animal_description_imageButton);
+        animalDescription.setOnClickListener(new MyOnClickListener(R.layout.animal_description_dialog,
+                R.string.animal_description_dialog_title) {
+            @Override
+            void caseByCaseLogic(View view) {
+
+                final NumberPicker startQuantity = (NumberPicker)view.
+                        findViewById(R.id.start_animal_quantity_number_picker);
+                startQuantity.setMinValue(0);
+                startQuantity.setMaxValue(Utils.MAX_VALUE);
+                startQuantity.setValue(openedSightings[1].getAnimal().getStartQuantity());
+
+                startQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+                    @Override
+                    public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                        sighting.getAnimal().setStartQuantity(startQuantity.getValue());
+                    }
+                });
+
+                final NumberPicker endQuantity = (NumberPicker)view.
+                        findViewById(R.id.end_animal_quantity_number_picker);
+                endQuantity.setMinValue(0);
+                endQuantity.setMaxValue(Utils.MAX_VALUE);
+                endQuantity.setValue(openedSightings[1].getAnimal().getEndQuantity());
+                if (sighting.getEndTimeAndPlace().getTimeInMillis() != Utils.INITIAL_VALUE) {
+                    endQuantity.setVisibility(View.VISIBLE);
+                }
+
+                endQuantity.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+                    @Override
+                    public void onValueChange(NumberPicker picker, int oldVal, int newVal) {
+                        sighting.getAnimal().setEndQuantity(endQuantity.getValue());
+                    }
+                });
+
+                //TODO: extra animal stuff here
+
+            }
+        });
+
+        ImageButton weatherDescription = (ImageButton)rootView.findViewById(R.id.weather_description_imageButton);
+        weatherDescription.setOnClickListener(new MyOnClickListener(R.layout.weather_description_dialog,
+                R.string.weather_description_dialog_title) {
+            @Override
+            void caseByCaseLogic(View view) {
+                //TODO: weather stuff here
+            }
+        });
+
+        ImageButton sightingComments = (ImageButton)rootView.findViewById(R.id.sighting_comments_imageButton);
+        sightingComments.setOnClickListener(new MyOnClickListener(R.layout.sighting_comments_dialog,
+                R.string.sighting_comments_dialog_title) {
+            @Override
+            void caseByCaseLogic(View view) {
+
+                // take and set the user's latitude
+                // first element of the array: degrees; second: minutes; third: seconds
+                final double[] latitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
+
+                final EditText latitudeDegrees = (EditText)view.findViewById(R.id.lat_degrees_edit_text);
+                latitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLatitude()));
+                latitudeDegrees.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        latitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
+                                latitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LATITUDE
+                        );
+                        sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                                latitudeDegreesMinutesAndSeconds[0],
+                                latitudeDegreesMinutesAndSeconds[1],
+                                latitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+
+                final EditText latitudeMinutes = (EditText)view.findViewById(R.id.lat_minutes_edit_text);
+                latitudeMinutes.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        latitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
+                                latitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                        );
+                        sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                                latitudeDegreesMinutesAndSeconds[0],
+                                latitudeDegreesMinutesAndSeconds[1],
+                                latitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+                final EditText latitudeSeconds = (EditText)view.findViewById(R.id.lat_seconds_edit_text);
+                latitudeSeconds.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        latitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
+                                latitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                        );
+                        sighting.getUserEndTimeAndPlace().setLatitude(Utils.convertDegMinSecToDecimal(
+                                latitudeDegreesMinutesAndSeconds[0],
+                                latitudeDegreesMinutesAndSeconds[1],
+                                latitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+                // take and set the user's longitude
+                final double[] longitudeDegreesMinutesAndSeconds = new double[]{0, 0, 0};
+
+                final EditText longitudeDegrees = (EditText)view.findViewById(R.id.long_degrees_edit_text);
+                longitudeDegrees.setText(String.valueOf(openedSightings[1].getUserEndTimeAndPlace().getLongitude()));
+                longitudeDegrees.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        longitudeDegreesMinutesAndSeconds[0] = Utils.parseGpsToDouble(
+                                longitudeDegrees.getText().toString(), GpsEdgeValue.DEGREES_LONGITUDE
+                        );
+                        sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                                longitudeDegreesMinutesAndSeconds[0],
+                                longitudeDegreesMinutesAndSeconds[1],
+                                longitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+                final EditText longitudeMinutes = (EditText)view.findViewById(R.id.long_minutes_edit_text);
+                longitudeMinutes.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        longitudeDegreesMinutesAndSeconds[1] = Utils.parseGpsToDouble(
+                                longitudeMinutes.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                        );
+                        sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                                longitudeDegreesMinutesAndSeconds[0],
+                                longitudeDegreesMinutesAndSeconds[1],
+                                longitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+                final EditText longitudeSeconds = (EditText)view.findViewById(R.id.long_seconds_edit_text);
+                longitudeSeconds.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        longitudeDegreesMinutesAndSeconds[2] = Utils.parseGpsToDouble(
+                                longitudeSeconds.getText().toString(), GpsEdgeValue.MINUTES_OR_SECONDS
+                        );
+                        sighting.getUserEndTimeAndPlace().setLongitude(Utils.convertDegMinSecToDecimal(
+                                longitudeDegreesMinutesAndSeconds[0],
+                                longitudeDegreesMinutesAndSeconds[1],
+                                longitudeDegreesMinutesAndSeconds[2]
+                        ));
+                    }
+                });
+
+                // take and set the user's comments
+                final EditText comments = (EditText)view.findViewById(R.id.comments_edit_text);
+                comments.setText(openedSightings[1].getUserComments());
+                comments.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        sighting.setUserComments(comments.getText().toString());
+                    }
+                });
+            }
+        });
+
     }
 
     @Override
@@ -984,7 +1077,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        comAlertDialogBuilder.create();
+        //comAlertDialogBuilder.create();//TODO: redundant get rid
         comAlertDialogBuilder.show();
     }
 
@@ -2284,7 +2377,7 @@ public class MainActivity extends AppCompatActivity implements
                         }
                     });
 
-                    comAlertDialogBuilder.create();
+                    //comAlertDialogBuilder.create();//TODO: redundant get rid
                     comAlertDialogBuilder.show();
                 }
             }

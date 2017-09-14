@@ -10,6 +10,17 @@
     <string name="trip_was_started">A trip was started</string>
     <string name="open_trip">OPEN</string>
     <string name="delete_trip">DELETE</string>
+    <string name="trip_description">DESCRIPTION</string>
+
+    <string name="animal_description_dialog_title">
+        Cetacean description
+    </string>
+    <string name="weather_description_dialog_title">
+        Weather description
+    </string>
+    <string name="sighting_comments_dialog_title">
+        Other details and comments
+    </string>
 
     <string name="delete_trip_dialog_title">
         Delete trip
@@ -216,7 +227,6 @@
         <item>@string/LepidochelysKempii</item>
         <item>@string/LepidochelysOlivacea</item>
         <item>@string/NatatorDepressus</item>
-
     </string-array>
 
     <string name="StenellaFrontalis">Atlantic spotted dolphin</string>
@@ -319,5 +329,107 @@
     <string-array name="Others">
         <item>@string/UrsusMaritimus</item>
     </string-array>
+
+    <string name="association">Association</string>
+
+    <string name="adults_same_specie">Adults from the same specie</string>
+    <string name="juveniles_same_specie">Juveniles from the same specie</string>
+    <string name="calves_same_specie">Calves from the same specie</string>
+    <string name="birds">Birds</string>
+    <string name="tuna">Tuna</string>
+    <string name="manta_rays_or_sharks">Manta rays or sharks</string>
+    <string name="other_species_cetaceans">Cetaceans from other species</string>
+    <string name="other_animals">Other animals</string>
+
+    <string-array name="association">
+        <item>@string/adults_same_specie</item>
+        <item>@string/juveniles_same_specie</item>
+        <item>@string/calves_same_specie</item>
+        <item>@string/birds</item>
+        <item>@string/tuna</item>
+        <item>@string/manta_rays_or_sharks</item>
+        <item>@string/other_species_cetaceans</item>
+        <item>@string/other_animals</item>
+    </string-array>
+
+    <string name="behavior">Behavior</string>
+
+    <string name="rest">Rest</string>
+    <string name="movement">Movement</string>
+    <string name="feeding">Feeding</string>
+    <string name="socialization">Socialization</string>
+
+    <string-array name="behaviour">
+        <item>@string/rest</item>
+        <item>@string/movement</item>
+        <item>@string/feeding</item>
+        <item>@string/socialization</item>
+    </string-array>
+
+    <string name="age">Age</string>
+
+    <string name="adults">Adults</string>
+    <string name="juveniles">Juveniles</string>
+    <string name="calves">Calves</string>
+
+    <string-array name="age">
+        <item>@string/adults</item>
+        <item>@string/juveniles</item>
+        <item>@string/calves</item>
+    </string-array>
+
+    <string name="sea_state">Sea state (first 7 numbers from the Beaufort wind force scale)</string>
+
+    <string name="level0_calm">
+        Wave height: 0 m. Sea like a mirror.
+    </string>
+    <string name="level1_light_air">
+        Wave height: 0–0.2 m. Ripples with appearance of scales are formed, without foam crests.
+    </string>
+    <string name="level2_light_breeze">
+        Wave height: 0.2–0.5 m. Small wavelets still short but more pronounced; crests have a glassy appearance but do not break.
+    </string>
+    <string name="level3_gentle_breeze">
+        Wave height: 0.5–1 m. Large wavelets; crests begin to break; foam of glassy appearance; perhaps scattered white horses.
+    </string>
+    <string name="level4_breeze">
+        Wave height: 1–2 m. Small waves becoming longer; fairly frequent white horses.
+    </string>
+    <string name="level5_fresh_breeze">
+        Wave height: 2–3 m. Moderate waves taking a more pronounced long form; many white horses are formed; chance of some spray.
+    </string>
+    <string name="level6_strong_breeze">
+        Wave height: 3–4 m. Large waves begin to form; the white foam crests are more extensive everywhere; probably some spray.
+    </string>
+
+    <string-array name="sea_state">
+        <item>@string/level0_calm</item>
+        <item>@string/level1_light_air</item>
+        <item>@string/level2_light_breeze</item>
+        <item>@string/level3_gentle_breeze</item>
+        <item>@string/level4_breeze</item>
+        <item>@string/level5_fresh_breeze</item>
+        <item>@string/level6_strong_breeze</item>
+    </string-array>
+
+    <string name="visibility">Visibility</string>
+
+    <string name="very_bad_less_than_1km">Very Bad (less than 1 km)</string>
+    <string name="bad_1_to_5km">Bad (1 to 5 km)</string>
+    <string name="good_5_to_10km">Good (5 to 10 km)</string>
+    <string name="very_good_more_than_10km">Very good (more than 10 km)</string>
+
+    <string-array name="visibility">
+        <item>@string/very_bad_less_than_1km</item>
+        <item>@string/bad_1_to_5km</item>
+        <item>@string/good_5_to_10km</item>
+        <item>@string/very_good_more_than_10km</item>
+    </string-array>
+
+    <string name="company">Company</string>
+    <string name="boat">Boat</string>
+    <string name="skipper">Skipper</string>
+    <string name="guide">Guide</string>
+    <string name="trip_desc_dialog_title">Trip details</string>
 
 </resources>
