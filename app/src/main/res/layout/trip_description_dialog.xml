@@ -19,6 +19,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingRight="@dimen/activity_horizontal_margin"
                 android:id="@+id/company_text_view"
                 android:text="@string/company" />
 
@@ -41,6 +42,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingRight="@dimen/activity_horizontal_margin"
                 android:id="@+id/boat_message_text_view"
                 android:text="@string/boat" />
 
@@ -63,6 +65,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingRight="@dimen/activity_horizontal_margin"
                 android:id="@+id/skipper_message_text_view"
                 android:text="@string/skipper" />
 
@@ -85,6 +88,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:paddingRight="@dimen/activity_horizontal_margin"
                 android:id="@+id/guide_message_text_view"
                 android:text="@string/guide" />
 

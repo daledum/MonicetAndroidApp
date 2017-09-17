@@ -359,12 +359,12 @@
     <string name="feeding">Feeding</string>
     <string name="socialization">Socialization</string>
 
-    <string-array name="behaviour">
-        <item>@string/rest</item>
-        <item>@string/movement</item>
-        <item>@string/feeding</item>
-        <item>@string/socialization</item>
-    </string-array>
+    <!--<string-array name="behaviour">-->
+        <!--<item>@string/rest</item>-->
+        <!--<item>@string/movement</item>-->
+        <!--<item>@string/feeding</item>-->
+        <!--<item>@string/socialization</item>-->
+    <!--</string-array>-->
 
     <string name="age">Age</string>
 
@@ -372,11 +372,11 @@
     <string name="juveniles">Juveniles</string>
     <string name="calves">Calves</string>
 
-    <string-array name="age">
-        <item>@string/adults</item>
-        <item>@string/juveniles</item>
-        <item>@string/calves</item>
-    </string-array>
+    <!--<string-array name="age">-->
+        <!--<item>@string/adults</item>-->
+        <!--<item>@string/juveniles</item>-->
+        <!--<item>@string/calves</item>-->
+    <!--</string-array>-->
 
     <string name="sea_state">Sea state (first 7 numbers from the Beaufort wind force scale)</string>
 
@@ -402,15 +402,15 @@
         Wave height: 3–4 m. Large waves begin to form; the white foam crests are more extensive everywhere; probably some spray.
     </string>
 
-    <string-array name="sea_state">
-        <item>@string/level0_calm</item>
-        <item>@string/level1_light_air</item>
-        <item>@string/level2_light_breeze</item>
-        <item>@string/level3_gentle_breeze</item>
-        <item>@string/level4_breeze</item>
-        <item>@string/level5_fresh_breeze</item>
-        <item>@string/level6_strong_breeze</item>
-    </string-array>
+    <!--<string-array name="sea_state">-->
+        <!--<item>@string/level0_calm</item>-->
+        <!--<item>@string/level1_light_air</item>-->
+        <!--<item>@string/level2_light_breeze</item>-->
+        <!--<item>@string/level3_gentle_breeze</item>-->
+        <!--<item>@string/level4_breeze</item>-->
+        <!--<item>@string/level5_fresh_breeze</item>-->
+        <!--<item>@string/level6_strong_breeze</item>-->
+    <!--</string-array>-->
 
     <string name="visibility">Visibility</string>
 
@@ -419,17 +419,19 @@
     <string name="good_5_to_10km">Good (5 to 10 km)</string>
     <string name="very_good_more_than_10km">Very good (more than 10 km)</string>
 
-    <string-array name="visibility">
-        <item>@string/very_bad_less_than_1km</item>
-        <item>@string/bad_1_to_5km</item>
-        <item>@string/good_5_to_10km</item>
-        <item>@string/very_good_more_than_10km</item>
-    </string-array>
+    <!--<string-array name="visibility">-->
+        <!--<item>@string/very_bad_less_than_1km</item>-->
+        <!--<item>@string/bad_1_to_5km</item>-->
+        <!--<item>@string/good_5_to_10km</item>-->
+        <!--<item>@string/very_good_more_than_10km</item>-->
+    <!--</string-array>-->
 
     <string name="company">Company</string>
     <string name="boat">Boat</string>
     <string name="skipper">Skipper</string>
     <string name="guide">Guide</string>
     <string name="trip_desc_dialog_title">Trip details</string>
+
+    <string name="start_trip_first_message">Press the START button first, please.</string>
 
 </resources>

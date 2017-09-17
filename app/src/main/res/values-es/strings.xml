@@ -145,4 +145,10 @@
     <string name="company">Empresa</string>
     <string name="guide">Guía</string>
     <string name="trip_desc_dialog_title">Detalles del viaje</string>
+    <string name="start_trip_first_message">Primero empuje el botón INICIAR, por favor.</string>
+    <string name="association">Asociación</string>
+    <string name="behavior">Comportamiento</string>
+    <string name="feeding">Alimentación</string>
+    <string name="movement">Movimiento</string>
+    <string name="socialization">Socialización</string>
 </resources>

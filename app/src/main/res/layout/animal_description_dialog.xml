@@ -7,37 +7,66 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/start_animal_quantity_instructions"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:text="@string/start_animal_quantity_message" />
+
+            <NumberPicker
+                android:id="@+id/start_animal_quantity_number_picker"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/larger_height"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/end_animal_quantity_instructions"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_margin="5dp"
+                android:text="@string/end_animal_quantity_message" />
+
+            <NumberPicker
+                android:id="@+id/end_animal_quantity_number_picker"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/larger_height"
+                android:visibility="invisible"
+                android:layout_weight="1" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/start_animal_quantity_instructions"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:id="@+id/age_text_view"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="5dp"
-            android:text="@string/start_animal_quantity_message" />
+            android:layout_gravity="center"
+            android:text="@string/age" />
 
-        <NumberPicker
-            android:id="@+id/start_animal_quantity_number_picker"
-            android:layout_width="0dp"
-            android:layout_height="@dimen/larger_height"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/end_animal_quantity_instructions"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+        <RadioGroup
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="5dp"
-            android:text="@string/end_animal_quantity_message" />
-
-        <NumberPicker
-            android:id="@+id/end_animal_quantity_number_picker"
-            android:layout_width="0dp"
-            android:layout_height="@dimen/larger_height"
-            android:visibility="invisible"
-            android:layout_weight="1" />
+            android:orientation="horizontal">
+            <RadioButton android:id="@+id/adults_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/adults" />
+            <RadioButton android:id="@+id/juveniles_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/juveniles" />
+            <RadioButton android:id="@+id/calves_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/calves" />
+        </RadioGroup>
 
     </LinearLayout>
-
 </ScrollView>

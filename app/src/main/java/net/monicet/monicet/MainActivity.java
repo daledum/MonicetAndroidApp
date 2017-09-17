@@ -27,10 +27,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.NumberPicker;
+import android.widget.RadioButton;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -57,6 +59,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -67,9 +70,10 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static android.R.attr.resource;
+import static android.R.attr.value;
 import static android.R.string.no;
 import static android.accounts.AccountManager.newChooseAccountIntent;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
 import static java.lang.Math.abs;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
@@ -232,7 +236,15 @@ public class MainActivity extends AppCompatActivity implements
                 deleteToolbarMenuButtonPressedDialog();
                 return true;// code might not reach this line
             case R.id.toolbar_trip_details_action:
-                tripDescToolbarMenuButtonPressedDialog();
+                if (wasStartButtonPressed()) {
+                    tripDescToolbarMenuButtonPressedDialog();
+                } else {
+                    Toast.makeText(
+                            MainActivity.this,
+                            R.string.start_trip_first_message,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -299,21 +311,110 @@ public class MainActivity extends AppCompatActivity implements
         View rootView = layoutInflater.inflate(R.layout.trip_description_dialog, null);
         comAlertDialogBuilder.setView(rootView);
 
-        comAlertDialogBuilder.setCancelable(false);
+        // take and set the company, boat, skipper and guide names
+        // but, first save their initial values, in case the user clicks on CANCEL
+        final String initialCompany = trips[0].getCompany();
+        final String initialBoat = trips[0].getBoat();
+        final String initialSkipper = trips[0].getSkipper();
+        final String initialGuide = trips[0].getGuide();
+
+        // company
+        final EditText company = (EditText)rootView.findViewById(R.id.company_edit_text);
+        company.setText(trips[0].getCompany());
+        company.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                trips[0].setCompany(company.getText().toString());
+            }
+        });
+        // boat
+        final EditText boat = (EditText)rootView.findViewById(R.id.boat_edit_text);
+        boat.setText(trips[0].getBoat());
+        boat.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                trips[0].setBoat(boat.getText().toString());
+            }
+        });
+        // skipper
+        final EditText skipper = (EditText)rootView.findViewById(R.id.skipper_edit_text);
+        skipper.setText(trips[0].getSkipper());
+        skipper.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                trips[0].setSkipper(skipper.getText().toString());
+            }
+        });
+        // guide
+        final EditText guide = (EditText)rootView.findViewById(R.id.guide_edit_text);
+        guide.setText(trips[0].getGuide());
+        guide.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                trips[0].setGuide(guide.getText().toString());
+            }
+        });
 
         comAlertDialogBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                //xml
+                //dialog.dismiss();
             }
         });
+
         comAlertDialogBuilder.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 //MainActivity.super.onBackPressed();//this probably calls finish
+                // reinstate initial values
+                trips[0].setCompany(initialCompany);
+                trips[0].setBoat(initialBoat);
+                trips[0].setSkipper(initialSkipper);
+                trips[0].setGuide(initialGuide);
             }
         });
 
+        comAlertDialogBuilder.setCancelable(false);
         comAlertDialogBuilder.show();
     }
 
@@ -337,6 +438,13 @@ public class MainActivity extends AppCompatActivity implements
         destination.setAnimal(source.getAnimal());
 
         destination.setUserComments(source.getUserComments());
+
+        // then behavior, association, sea state, visibility
+        destination.setBehavior(source.getBehavior());
+        destination.getAssociations().clear();// this is fine even if the map is empty
+        destination.getAssociations().putAll(source.getAssociations());
+        destination.setSeaState(source.getSeaState());
+        destination.setVisibility(source.getVisibility());
     }
 
     protected File getTempTripFile() {
@@ -816,6 +924,36 @@ public class MainActivity extends AppCompatActivity implements
             abstract void caseByCaseLogic(View view);
         }
 
+        abstract class MyRadioButtonLogic {
+
+            private final View rootView;
+            private int layoutResourceId; //used to instantiate the view for that radio button
+            private final String initialValue; // so that we know which radio button should already be checked
+
+            MyRadioButtonLogic(View vRootView, int vLayoutResourceId, String vInitialValue) {
+                rootView = vRootView;
+                layoutResourceId = vLayoutResourceId;
+                initialValue = vInitialValue;
+            }
+
+            void commonLogic() {
+
+                final RadioButton radioButton = (RadioButton)rootView.findViewById(layoutResourceId);
+                if (initialValue.equals(radioButton.getText().toString())) {
+                    //If the radio button is already checked, this method will not toggle the radio button.
+                    radioButton.toggle();
+                }
+                radioButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        caseByCaseLogic(radioButton.getText().toString());
+                    }
+                });
+            }
+
+            abstract void caseByCaseLogic(String value);
+        }
+
         ImageButton animalDescription = (ImageButton)rootView.findViewById(R.id.animal_description_imageButton);
         animalDescription.setOnClickListener(new MyOnClickListener(R.layout.animal_description_dialog,
                 R.string.animal_description_dialog_title) {
@@ -851,8 +989,55 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
 
-                //TODO: extra animal stuff here
 
+                final String initialAnimalAge = sighting.getAnimal().getAge();
+
+                // version using abstract class
+//                MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
+//                        view, R.id.adults_radioBtn, initialAnimalAge) {
+//                    @Override
+//                    void caseByCaseLogic(String value) {
+//                        sighting.getAnimal().setAge(value);
+//                    }
+//                };
+//                buttonLogic.commonLogic();
+
+                final RadioButton adultsButton = (RadioButton)view.findViewById(R.id.adults_radioBtn);
+                if (initialAnimalAge.equals(adultsButton.getText().toString())) {
+                    //If the radio button is already checked, this method will not toggle the radio button.
+                    adultsButton.toggle();
+                }
+                adultsButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sighting.getAnimal().setAge(adultsButton.getText().toString());
+                    }
+                });
+
+                final RadioButton juvenilesButton = (RadioButton)view.findViewById(R.id.juveniles_radioBtn);
+                if (initialAnimalAge.equals(juvenilesButton.getText().toString())) {
+                    juvenilesButton.toggle();
+                }
+                juvenilesButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sighting.getAnimal().setAge(juvenilesButton.getText().toString());
+                    }
+                });
+
+                final RadioButton calvesButton = (RadioButton)view.findViewById(R.id.calves_radioBtn);
+                if (initialAnimalAge.equals(calvesButton.getText().toString())) {
+                    calvesButton.toggle();
+                }
+                calvesButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        sighting.getAnimal().setAge(calvesButton.getText().toString());
+                    }
+                });
+
+                // behaviour
+                // association - multiple checkboxes
             }
         });
 
@@ -861,7 +1046,62 @@ public class MainActivity extends AppCompatActivity implements
                 R.string.weather_description_dialog_title) {
             @Override
             void caseByCaseLogic(View view) {
-                //TODO: weather stuff here
+
+                // visibility
+                final String initialVisibility = sighting.getVisibility();
+                // sea state
+                final String initialSeaState = sighting.getSeaState();
+
+//                final RadioButton veryBadVisibRadioBtn =
+//                        (RadioButton)view.findViewById(R.id.very_bad_visib_radioBtn);
+//                if (veryBadVisibRadioBtn.getText().toString().equals(initialVisibility)) {
+//                    veryBadVisibRadioBtn.toggle();
+//                }
+//                veryBadVisibRadioBtn.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        sighting.setVisibility(veryBadVisibRadioBtn.getText().toString());
+//                    }
+//                });
+
+                int[] resourceIds = new int[] {
+                        R.id.very_bad_visib_radioBtn,
+                        R.id.bad_visib_radioBtn,
+                        R.id.good_visib_radioBtn,
+                        R.id.very_good_visib_radioBtn
+                };
+
+                for (int id: resourceIds) {
+                    MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
+                            view, id, initialVisibility) {
+                        @Override
+                        void caseByCaseLogic(String value) {
+                            sighting.setVisibility(value);
+                        }
+                    };
+                    buttonLogic.commonLogic();
+                }
+
+                resourceIds = new int[] {
+                        R.id.level0_sea_state_radioBtn,
+                        R.id.level1_sea_state_radioBtn,
+                        R.id.level2_sea_stat_radioBtn,
+                        R.id.level3_sea_state_radioBtn,
+                        R.id.level4_sea_state_radioBtn,
+                        R.id.level5_sea_state_radioBtn,
+                        R.id.level6_sea_state_radioBtn
+                };
+                for (int id: resourceIds) {
+                    MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
+                            view, id, initialSeaState) {
+                        @Override
+                        void caseByCaseLogic(String value) {
+                            sighting.setSeaState(value);
+                        }
+                    };
+                    buttonLogic.commonLogic();
+                }
+
             }
         });
 
@@ -1234,10 +1474,10 @@ public class MainActivity extends AppCompatActivity implements
 
                 // here start a thread which gets into fast, fixing mode (short interval),
                 // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-                //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+                wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+                findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
 
             }
         }

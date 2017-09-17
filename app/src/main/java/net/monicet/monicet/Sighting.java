@@ -21,7 +21,7 @@ public class Sighting implements Serializable {
     private String userComments;
 
     private String behavior;
-    final private Map<String, Integer> association;
+    final private Map<String, Integer> associations;
     private String seaState;
     private String visibility;
 
@@ -33,7 +33,7 @@ public class Sighting implements Serializable {
         userEndTimeAndPlace = new TimeAndPlace();
         userComments = "";
         behavior = "";
-        association = new HashMap<>();
+        associations = new HashMap<>();
         seaState = "";
         visibility = "";
     }
@@ -67,10 +67,12 @@ public class Sighting implements Serializable {
     public String getUserComments() { return userComments; }
     public void setUserComments(String vUserComments) { userComments = vUserComments; }
 
+    // TODO: If logic is changed and one sighting will no longer be limited to having a single animal:
+    // move the behaviour and associations fields to the Animal object
     public String getBehavior() { return behavior; }
     public void setBehavior(String vBehaviour) { behavior = vBehaviour; }
 
-    public Map<String, Integer> getAssociation() { return association; }
+    public Map<String, Integer> getAssociations() { return associations; }
 
     public String getSeaState() { return seaState; }
     public void setSeaState(String vSeaState) { seaState = vSeaState; }
