@@ -20,7 +20,6 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
                 android:text="@string/start_animal_quantity_message" />
-
             <NumberPicker
                 android:id="@+id/start_animal_quantity_number_picker"
                 android:layout_width="0dp"
@@ -34,7 +33,6 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="5dp"
                 android:text="@string/end_animal_quantity_message" />
-
             <NumberPicker
                 android:id="@+id/end_animal_quantity_number_picker"
                 android:layout_width="0dp"
@@ -49,7 +47,6 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/age" />
-
         <RadioGroup
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -67,6 +64,177 @@
                 android:layout_height="wrap_content"
                 android:text="@string/calves" />
         </RadioGroup>
+
+        <TextView
+            android:id="@+id/behavior_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/behavior" />
+        <RadioGroup
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <RadioButton android:id="@+id/rest_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/rest" />
+            <RadioButton android:id="@+id/movement_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/movement" />
+            <RadioButton android:id="@+id/feeding_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/feeding" />
+            <RadioButton android:id="@+id/socialization_radioBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/socialization" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/association_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/association" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/adults_same_specie_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/adults_same_specie"/>
+            <EditText
+                android:id="@+id/adults_same_specie_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/juveniles_same_specie_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/juveniles_same_specie"/>
+            <EditText
+                android:id="@+id/juveniles_same_specie_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/calves_same_specie_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/calves_same_specie"/>
+            <EditText
+                android:id="@+id/calves_same_specie_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/birds_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/birds"/>
+            <EditText
+                android:id="@+id/birds_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/tuna_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tuna"/>
+            <EditText
+                android:id="@+id/tuna_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/manta_rays_or_sharks_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/manta_rays_or_sharks"/>
+            <EditText
+                android:id="@+id/manta_rays_or_sharks_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/other_species_cetaceans_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/other_species_cetaceans"/>
+            <EditText
+                android:id="@+id/other_species_cetaceans_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <CheckBox
+                android:id="@+id/other_animals_check_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/other_animals"/>
+            <EditText
+                android:id="@+id/other_animals_edit_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

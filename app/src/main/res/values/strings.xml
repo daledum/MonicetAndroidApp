@@ -341,16 +341,16 @@
     <string name="other_species_cetaceans">Cetaceans from other species</string>
     <string name="other_animals">Other animals</string>
 
-    <string-array name="association">
-        <item>@string/adults_same_specie</item>
-        <item>@string/juveniles_same_specie</item>
-        <item>@string/calves_same_specie</item>
-        <item>@string/birds</item>
-        <item>@string/tuna</item>
-        <item>@string/manta_rays_or_sharks</item>
-        <item>@string/other_species_cetaceans</item>
-        <item>@string/other_animals</item>
-    </string-array>
+    <!--<string-array name="association">-->
+        <!--<item>@string/adults_same_specie</item>-->
+        <!--<item>@string/juveniles_same_specie</item>-->
+        <!--<item>@string/calves_same_specie</item>-->
+        <!--<item>@string/birds</item>-->
+        <!--<item>@string/tuna</item>-->
+        <!--<item>@string/manta_rays_or_sharks</item>-->
+        <!--<item>@string/other_species_cetaceans</item>-->
+        <!--<item>@string/other_animals</item>-->
+    <!--</string-array>-->
 
     <string name="behavior">Behavior</string>
 

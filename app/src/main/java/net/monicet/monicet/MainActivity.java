@@ -28,6 +28,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -70,11 +71,13 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static android.R.attr.id;
 import static android.R.attr.resource;
 import static android.R.attr.value;
 import static android.R.string.no;
 import static android.accounts.AccountManager.newChooseAccountIntent;
 import static java.lang.Math.abs;
+import static net.monicet.monicet.R.string.calves;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -992,52 +995,211 @@ public class MainActivity extends AppCompatActivity implements
 
                 final String initialAnimalAge = sighting.getAnimal().getAge();
 
-                // version using abstract class
-//                MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
-//                        view, R.id.adults_radioBtn, initialAnimalAge) {
+                int[] resourceIds = new int[] {
+                        R.id.adults_radioBtn,
+                        R.id.juveniles_radioBtn,
+                        R.id.calves_radioBtn
+                };
+
+                for (int id: resourceIds) {
+                    MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
+                            view, id, initialAnimalAge) {
+                        @Override
+                        void caseByCaseLogic(String value) { sighting.getAnimal().setAge(value); }
+                    };
+                    buttonLogic.commonLogic();
+                }
+
+                // non-DRY version
+//                final RadioButton adultsButton = (RadioButton)view.findViewById(R.id.adults_radioBtn);
+//                if (initialAnimalAge.equals(adultsButton.getText().toString())) {
+//                    //If the radio button is already checked, this method will not toggle the radio button.
+//                    adultsButton.toggle();
+//                }
+//                adultsButton.setOnClickListener(new View.OnClickListener() {
 //                    @Override
-//                    void caseByCaseLogic(String value) {
-//                        sighting.getAnimal().setAge(value);
+//                    public void onClick(View v) {
+//                        sighting.getAnimal().setAge(adultsButton.getText().toString());
 //                    }
-//                };
-//                buttonLogic.commonLogic();
-
-                final RadioButton adultsButton = (RadioButton)view.findViewById(R.id.adults_radioBtn);
-                if (initialAnimalAge.equals(adultsButton.getText().toString())) {
-                    //If the radio button is already checked, this method will not toggle the radio button.
-                    adultsButton.toggle();
-                }
-                adultsButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        sighting.getAnimal().setAge(adultsButton.getText().toString());
-                    }
-                });
-
-                final RadioButton juvenilesButton = (RadioButton)view.findViewById(R.id.juveniles_radioBtn);
-                if (initialAnimalAge.equals(juvenilesButton.getText().toString())) {
-                    juvenilesButton.toggle();
-                }
-                juvenilesButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        sighting.getAnimal().setAge(juvenilesButton.getText().toString());
-                    }
-                });
-
-                final RadioButton calvesButton = (RadioButton)view.findViewById(R.id.calves_radioBtn);
-                if (initialAnimalAge.equals(calvesButton.getText().toString())) {
-                    calvesButton.toggle();
-                }
-                calvesButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        sighting.getAnimal().setAge(calvesButton.getText().toString());
-                    }
-                });
+//                });
+//
+//                final RadioButton juvenilesButton = (RadioButton)view.findViewById(R.id.juveniles_radioBtn);
+//                if (initialAnimalAge.equals(juvenilesButton.getText().toString())) {
+//                    juvenilesButton.toggle();
+//                }
+//                juvenilesButton.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        sighting.getAnimal().setAge(juvenilesButton.getText().toString());
+//                    }
+//                });
+//
+//                final RadioButton calvesButton = (RadioButton)view.findViewById(R.id.calves_radioBtn);
+//                if (initialAnimalAge.equals(calvesButton.getText().toString())) {
+//                    calvesButton.toggle();
+//                }
+//                calvesButton.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        sighting.getAnimal().setAge(calvesButton.getText().toString());
+//                    }
+//                });
 
                 // behaviour
+                final String initialBehaviour = sighting.getBehavior();
+                resourceIds = new int[] {
+                        R.id.rest_radioBtn,
+                        R.id.movement_radioBtn,
+                        R.id.feeding_radioBtn,
+                        R.id.socialization_radioBtn
+                };
+
+                for (int id: resourceIds) {
+                    MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
+                            view, id, initialBehaviour) {
+                        @Override
+                        void caseByCaseLogic(String value) { sighting.setBehavior(value); }
+                    };
+                    buttonLogic.commonLogic();
+                }
+
                 // association - multiple checkboxes
+                // check to see which ones should be ticked - it's a map containing String - Integer pairs (Integer, like String is immutable)
+                // I want to look at all the map before any clicking is done
+                final Map<String, Integer> initialAssociations = new HashMap<>();
+
+                for (Map.Entry<String, Integer> entry : sighting.getAssociations().entrySet()) {
+                    initialAssociations.put(entry.getKey(), entry.getValue());
+                }
+
+                class MyAssociationLogic {
+
+                    private final View rootView;
+                    private int layoutResourceId; //used to get the first view
+                    private int layoutResourceId2; //used to get the second view
+
+                    MyAssociationLogic(View vRootView, int vLayoutResourceId, int vLayoutResourceId2) {
+                        rootView = vRootView;
+                        layoutResourceId = vLayoutResourceId;
+                        layoutResourceId2 = vLayoutResourceId2;
+                    }
+
+                    void commonLogic() {
+
+                        final CheckBox association = (CheckBox)rootView.findViewById(layoutResourceId);
+                        final EditText quantity = (EditText)rootView.findViewById(layoutResourceId2);
+
+                        // if the text is inside the initial keySet, then check it
+                        for (Map.Entry<String, Integer> entry : initialAssociations.entrySet()) {
+                            if (entry.getKey().equals(association.getText().toString())) {
+                                association.setChecked(true);
+                                //and also set the number to the editText
+                                quantity.setText(entry.getValue().toString());
+                            }
+                        }
+
+                        association.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // checkBox should disable the editText - so that the hasmmap is not
+                                // changed from 2 places at the same time
+                                quantity.setEnabled(false);
+
+                                if (association.isChecked()) {
+                                    // meaning it was unchecked before and now it was checked
+                                    // then, write to map
+                                    if (quantity.getText().toString().isEmpty()) {
+                                        sighting.getAssociations().put(association.getText().toString(),
+                                                Utils.ASSOCIATED_INDIV_INITIAL_VALUE);
+                                    } else {
+                                        sighting.getAssociations().put(
+                                                association.getText().toString(),
+                                                Integer.valueOf(quantity.getText().toString()));
+                                    }
+                                } else {
+                                    // meaning it was checked before and now it is unchecked
+                                    // remove from map
+                                    sighting.getAssociations().remove(association.getText().toString());
+                                }
+
+                                // and re-enable edit text
+                                quantity.setEnabled(true);
+                            }
+                        });
+
+                        quantity.addTextChangedListener(new TextWatcher() {
+                            @Override
+                            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                                // editText should disable the checkBox - so that the hasmmap is not changed from 2 places at the same time
+                                association.setEnabled(false);
+                            }
+
+                            @Override
+                            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                            }
+
+                            @Override
+                            public void afterTextChanged(Editable s) {
+
+                                // if checkBox was enabled, only
+                                if (association.isChecked()) {
+                                    // then, write to map, if duplicate key, value is updated (for hashmaps)
+
+                                    if (s.toString().isEmpty()) {
+                                        // if user deleted the edit text number, just write 1 to object
+                                        sighting.getAssociations().put(association.getText().toString(),
+                                                Utils.ASSOCIATED_INDIV_INITIAL_VALUE);
+                                    } else {// string is not empty (view can only take numbers)
+
+                                        // if smaller then 1, put 1
+                                        if (Integer.valueOf(s.toString()) < Utils.ASSOCIATED_INDIV_INITIAL_VALUE) {
+                                            sighting.getAssociations().put(
+                                                    association.getText().toString(),
+                                                    Utils.ASSOCIATED_INDIV_INITIAL_VALUE
+                                            );
+                                        } else {// meaning that it's 1 or bigger and it's not the empty string
+                                            if (Integer.valueOf(s.toString()) <= Utils.MAX_VALUE) {
+                                                sighting.getAssociations().put(
+                                                        association.getText().toString(),
+                                                        Integer.valueOf(quantity.getText().toString())//shouldn't it just be s.toString()?
+                                                );
+                                            } else {
+                                                // larger than the maximum allowed, so, set to max
+                                                sighting.getAssociations().put(
+                                                        association.getText().toString(),
+                                                        Utils.MAX_VALUE
+                                                );
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                                // and re-enable edit text
+                                association.setEnabled(true);
+                            }
+                        });
+                    }
+                }
+
+                int[][] layoutResourceIds = new int[][] {
+                        {R.id.adults_same_specie_check_box, R.id.adults_same_specie_edit_text},
+                        {R.id.juveniles_same_specie_check_box, R.id.juveniles_same_specie_edit_text},
+                        {R.id.calves_same_specie_check_box, R.id.calves_same_specie_edit_text},
+                        {R.id.birds_check_box, R.id.birds_edit_text},
+                        {R.id.tuna_check_box, R.id.tuna_edit_text},
+                        {R.id.manta_rays_or_sharks_check_box, R.id.manta_rays_or_sharks_edit_text},
+                        {R.id.other_species_cetaceans_check_box, R.id.other_species_cetaceans_edit_text},
+                        {R.id.other_animals_check_box, R.id.other_animals_edit_text}
+                };
+
+                for (int[] resourceCouple: layoutResourceIds) {
+                    MyAssociationLogic myAssociationLogic =
+                            new MyAssociationLogic(view, resourceCouple[0], resourceCouple[1]);
+                    myAssociationLogic.commonLogic();
+                }
+
             }
         });
 
@@ -1075,9 +1237,7 @@ public class MainActivity extends AppCompatActivity implements
                     MyRadioButtonLogic buttonLogic = new MyRadioButtonLogic(
                             view, id, initialVisibility) {
                         @Override
-                        void caseByCaseLogic(String value) {
-                            sighting.setVisibility(value);
-                        }
+                        void caseByCaseLogic(String value) { sighting.setVisibility(value); }
                     };
                     buttonLogic.commonLogic();
                 }

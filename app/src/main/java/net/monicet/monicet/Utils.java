@@ -52,6 +52,7 @@ public final class Utils {
     public static final int INITIAL_VALUE = 0; // was -1
     public static final int MAX_VALUE = 199;
     public static final int INITIAL_RANK = 999;
+    public static final int ASSOCIATED_INDIV_INITIAL_VALUE = 1;
 
     public static final String PREFS_NAME = "MonicetPrefsFile";
     public static final String GPS_SAMPLING_INTERVAL = "interval";
