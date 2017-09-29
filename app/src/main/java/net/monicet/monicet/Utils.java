@@ -1,7 +1,5 @@
 package net.monicet.monicet;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -10,21 +8,21 @@ import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Environment;
-import android.util.Log;
-import android.util.Patterns;
 
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Created by ubuntu on 07-02-2017.
@@ -64,6 +62,14 @@ public final class Utils {
     public static final String TIME_ACTIVITY_SAMPLED_GPS = "timeActivitySampledGps";
     public static final String DELETE_TRIP = "delete";
     public static final String ACCOUNT_NAME = "accountName";
+    public static final String UNKNOWN_USER = "unknown@unknown.unknown";
+    public static final String LATIN_NAME_DELIMITER = "=";
+
+    public static final String DESTINATION_URL = "http://infohive.org.uk/monicet/send/";
+    public static final String SERVER_URL = "http://infohive.org.uk/monicet/";
+    public static final String DESTINATION_FOLDER = "send/";
+    public static final String CUSTOM_SPECIE_ORDER_FILENAME = "customSpecieOrder.csv";
+    public static final String PERMANENT_FILES_DIR = "donotremove/";
 
     public static final String START_FOREGROUND_SERVICE_FROM_ACTIVITY =
             ".START_FOREGROUND_SERVICE_FROM_ACTIVITY";
@@ -214,144 +220,345 @@ public final class Utils {
             }
         };
 
-        // check if the directory exists and if so, if it has any of our files
-        if (dir.exists() && dir.listFiles(fileFilter).length > 0) {
+        // firstly, check that there is an Internet connection
+        if (isConnected(context)) {
+            // secondly, check if the directory exists
+            if (dir.exists()) {
+                // thirdly, if it has any of our files
+                if (dir.listFiles(fileFilter).length > 0) {
 
-            // secondly, check that there is an Internet connection
-            boolean isConnected;
-            if (context != null) { // TODO: remove this or keep it as a backup
-                ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-                isConnected = activeNetwork != null && activeNetwork.isConnectedOrConnecting();
-            } else {
-                // assume it's connected
-                isConnected = true;
-            }
+                    ArrayList<String> namesOfFilesToDelete = new ArrayList<String>();
+                    boolean wasSentOk = true;
 
-            if (isConnected) {
+                    while (wasSentOk && dir.listFiles(fileFilter).length > 0) { // if new files are created while we send and delete the old ones
 
-                ArrayList<String> namesOfFilesToDelete = new ArrayList<String>();
-                boolean wasSentOk = true;
+                        File[] files = dir.listFiles(fileFilter);
 
-                while (wasSentOk && dir.listFiles(fileFilter).length > 0) { // if new files are created while we send and delete the old ones
+                        // this is done file by file
+                        sending:
+                        for (int i = 0; i < files.length; i++) {
+                            wasSentOk = false;
 
-                    File[] files = dir.listFiles(fileFilter);
+                            // Establish a connection
+                            // an error can appear here
+                            HttpURLConnection connection = null;
+                            URL url = null;
+                            int result = 0;//was Integer
 
-                    // this is done file by file
-                    sending:
-                    for (int i = 0; i < files.length; i++) {
-                        wasSentOk = false;
+                            //DataOutputStream outputStream = null;//? get rid
+                            //String lineEnd = "\r\n";
+                            //String twoHyphens = "--";
+                            //String boundary =  "*****";
 
-                        // Establish a connection
-                        // an error can appear here
-                        HttpURLConnection connection = null;
-                        URL url = null;
-                        int result = 0;//was Integer
+                            int bytesRead, bytesAvailable, bufferSize;
+                            byte[] buffer;
+                            int maxBufferSize = 1*1024*1024;
 
-                        //DataOutputStream outputStream = null;//? get rid
-                        //String lineEnd = "\r\n";
-                        //String twoHyphens = "--";
-                        //String boundary =  "*****";
-
-                        int bytesRead, bytesAvailable, bufferSize;
-                        byte[] buffer;
-                        int maxBufferSize = 1*1024*1024;
-
-                        try {
-                            url = new URL("http://infohive.org.uk/monicet/send/");
-                        } catch (MalformedURLException e) {
-                            e.printStackTrace();
-                        }
-
-                        if (url != null) {
                             try {
-                                connection = (HttpURLConnection) url.openConnection();
-                                connection.setDoInput (true); // setdoinput is true by default
-                                connection.setDoOutput (true);// set it for output
-                                connection.setUseCaches (false);
-                                connection.setInstanceFollowRedirects(false);
-                                connection.setRequestMethod("POST");
-                                connection.setRequestProperty("Connection", "Keep-Alive");
+                                url = new URL(SERVER_URL + DESTINATION_FOLDER);//was new URL(DESTINATION_URL)
+                            } catch (MalformedURLException e) {
+                                e.printStackTrace();
+                            }
 
-                                //connection.setRequestProperty("Content-Type", "multipart/formdata;boundary=" + boundary);
+                            if (url != null) {
+                                try {
+                                    connection = (HttpURLConnection) url.openConnection();
+                                    connection.setDoInput (true); // setdoinput is true by default
+                                    connection.setDoOutput (true);// set it for output
+                                    connection.setUseCaches (false);
+                                    connection.setInstanceFollowRedirects(false);
+                                    connection.setRequestMethod("POST");
+                                    connection.setRequestProperty("Connection", "Keep-Alive");
 
-                                // check that the file still exists - check this as late as possible
-                                if (files[i].exists()) {
-                                    DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+                                    //connection.setRequestProperty("Content-Type", "multipart/formdata;boundary=" + boundary);
 
-                                    //outputStream.writeBytes(twoHyphens + boundary + lineEnd);
-                                    //outputStream.writeBytes("Content-Disposition: form-data;name=\"uploadedfile\";filename=\""
-                                            ////+ dir//dir + files[i].getName()//maybe put a toast what getpath shows (with extension or not?)
-                                            //+ files[i].getPath()
-                                            //+"\""
-                                            //+ lineEnd);
-                                    //outputStream.writeBytes(lineEnd);
+                                    // check that the file still exists - check this as late as possible
+                                    if (files[i].exists()) {
+                                        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
 
-                                    FileInputStream fileInputStream = new FileInputStream(files[i]);
-                                    bytesAvailable = fileInputStream.available();
-                                    bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                                    buffer = new byte[bufferSize];
+                                        //outputStream.writeBytes(twoHyphens + boundary + lineEnd);
+                                        //outputStream.writeBytes("Content-Disposition: form-data;name=\"uploadedfile\";filename=\""
+                                        ////+ dir//dir + files[i].getName()//maybe put a toast what getpath shows (with extension or not?)
+                                        //+ files[i].getPath()
+                                        //+"\""
+                                        //+ lineEnd);
+                                        //outputStream.writeBytes(lineEnd);
 
-                                    // Read file
-                                    bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                                    while (bytesRead > 0)
-                                    {
-                                        outputStream.write(buffer, 0, bufferSize);
+                                        FileInputStream fileInputStream = new FileInputStream(files[i]);
                                         bytesAvailable = fileInputStream.available();
                                         bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                                        buffer = new byte[bufferSize];
+
+                                        // Read file
                                         bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+                                        while (bytesRead > 0)
+                                        {
+                                            outputStream.write(buffer, 0, bufferSize);
+                                            bytesAvailable = fileInputStream.available();
+                                            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                                            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+                                        }
+
+                                        //outputStream.writeBytes(lineEnd);
+                                        //outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+                                        // TODO: does it really need a line end
+
+                                        // get the result
+                                        result = connection.getResponseCode();//int responseCode = connection.getResponseCode();
+
+                                        fileInputStream.close();
+                                        outputStream.flush();
+                                        outputStream.close();
                                     }
 
-                                    //outputStream.writeBytes(lineEnd);
-                                    //outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-                                    // TODO: does it really need a line end
-
-                                    // get the result
-                                    result = connection.getResponseCode();//int responseCode = connection.getResponseCode();
-
-                                    fileInputStream.close();
-                                    outputStream.flush();
-                                    outputStream.close();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (connection != null) {
+                                        connection.disconnect();
+                                    }
                                 }
+                            }
 
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } finally {
-                                if (connection != null) {
-                                    connection.disconnect();
+                            if (result == HttpURLConnection.HTTP_OK) {
+                                if (files[i].exists()) {
+                                    namesOfFilesToDelete.add(files[i].getName());
                                 }
+                                wasSentOk = true;
+                            } else {
+                                break sending; // exit the loop if there are problems, wasSentOk is false, so the outer while will stop
                             }
                         }
 
-                        if (result == HttpURLConnection.HTTP_OK) {
-                            if (files[i].exists()) {
-                                namesOfFilesToDelete.add(files[i].getName());
-                            }
-                            wasSentOk = true;
-                        } else {
-                            break sending; // exit the loop if there are problems, wasSentOk is false, so the outer while will stop
-                        }
-                    }
+                        for (int i = 0; i < files.length; i++) {
+                            // or deleteFile("filename");//myContext.deleteFile(fileName);
+                            if (namesOfFilesToDelete.contains(files[i].getName())) {
 
-                    for (int i = 0; i < files.length; i++) {
-                        // or deleteFile("filename");//myContext.deleteFile(fileName);
-                        if (namesOfFilesToDelete.contains(files[i].getName())) {
-
-                            namesOfFilesToDelete.remove(files[i].getName());
-                            if (files[i].exists()) {
-                                files[i].delete();
+                                namesOfFilesToDelete.remove(files[i].getName());
+                                if (files[i].exists()) {
+                                    files[i].delete();
+                                }
                             }
                         }
                     }
                 }
             }
+
+            // in this case I am connected to the Internet (but a connection does not exist)
+            downloadFile(context, CUSTOM_SPECIE_ORDER_FILENAME);// returns the file or null
         }
 
         // method is successful if it has sent and therefore deleted all the files
         // returns true if directory doesn't exist or there aren't any of our files in it
         // returns false if directory exists and it has at least one of our files in it
         return !(dir.exists() && dir.listFiles(fileFilter).length > 0);
+    }
+
+    public static boolean isConnected(Context context) {
+        if (context != null) {
+            ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            return (activeNetwork != null && activeNetwork.isConnectedOrConnecting());
+        } else {
+            // assume it's connected if we get a null context
+            return true;
+        }
+    }
+
+    public static File getFile(Context context, String fileName) {
+
+        File file = null;
+        File dir = new File(getDirectory(context));
+
+        if (dir.exists()) {
+            File permanentFilesDir = new File(dir, PERMANENT_FILES_DIR);
+            if (permanentFilesDir.exists()) {
+                file = new File(permanentFilesDir, fileName);
+                if (file.exists()) {
+                    return file;
+                }
+            }
+        }
+
+        return file;
+    }
+
+//    public static boolean deleteFile(Context context, String fileName) {
+//
+//        File dir = new File(getDirectory(context));
+//
+//        if (dir.exists()) {
+//            File permanentFilesDir = new File(dir, PERMANENT_FILES_DIR);
+//            if (permanentFilesDir.exists()) {
+//                File file = new File(permanentFilesDir, fileName);
+//                if (file.exists()) {
+//                    return file.delete();
+//                }
+//            }
+//        }
+//
+//        return true;
+//    }
+
+    private static File newlyCreatedFile(File dir, String fileName) {
+
+        File file = new File(dir, fileName);
+
+        try {
+            //createNewFile atomically creates a new, empty file named by this abstract pathname
+            // if and only if a file with this name does not yet exist.
+            // Returns true if the named file does not exist and was successfully created;
+            // false if the named file already exists
+            file.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return file;
+    }
+
+    // This method, in case the file with fileName already exists, it returns it
+    public static File createFile(Context context, String fileName) {
+
+        File file = null;
+        File dir = new File(getDirectory(context));
+
+        if (dir.exists()) {
+            File permanentFilesDir = new File(dir, PERMANENT_FILES_DIR);
+            if (permanentFilesDir.exists()) {
+                file = newlyCreatedFile(permanentFilesDir, fileName);
+            } else {
+                if (permanentFilesDir.mkdirs()) {
+                    file = newlyCreatedFile(permanentFilesDir, fileName);
+                }
+            }
+        } else {
+            if (dir.mkdirs()) {
+                File permanentFilesDir = new File(dir, PERMANENT_FILES_DIR);
+                if (permanentFilesDir.mkdirs()) {
+                    file = newlyCreatedFile(permanentFilesDir, fileName);
+                }
+            }
+        }
+
+        return file;
+    }
+
+    public static File downloadFile(Context context, String fileName) {
+
+        HttpURLConnection connection = null;
+        URL url;
+        InputStream input = null;
+        OutputStream output = null;
+        File file = null;
+
+        try {
+            url = new URL(SERVER_URL + fileName);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+            url = null;
+        }
+
+        if (url != null) {
+            try {
+
+                connection = (HttpURLConnection)url.openConnection();
+                connection.setReadTimeout((int)ONE_SECOND_IN_MILLIS * 5);
+                connection.setConnectTimeout((int)ONE_SECOND_IN_MILLIS * 5);
+                connection.connect();//redundant?
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return null;//"it's not HTTP OK";
+                }
+
+                input = connection.getInputStream();
+
+                //                File dir = new File(getDirectory(context));
+//                if (!dir.exists()) {
+//                    dir.mkdirs();
+//                }
+//
+//                File permanentFilesDir = new File(dir, PERMANENT_FILES_DIR);
+//                if (!permanentFilesDir.exists()) {
+//                    permanentFilesDir.mkdirs();
+//                }
+//
+//                file = new File(permanentFilesDir, fileName);
+//
+//                if (!file.exists()) { // if the file doesn't already exist, then create it
+//                    try {
+//                        file.createNewFile();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                        return "could not create file when file did not exist before";//return null;//this was thrown
+//                    }
+//                } else { // the file already exists
+//                    // delete it first (safe to delete it here, the download is going smoothly)
+//                    if (!file.delete()) {
+//                        // if we could not delete it from the first try - maybe it
+//                        // was being updated by a different service - we try again
+//                        file.delete();
+//                    }
+//                    // then we try to re-create it
+//                    try {
+//                        file.createNewFile();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                        return "could not create file when file already existed";//return null;
+//                    }
+//                }
+
+                // see if the file already is present on the mobile device
+                file = getFile(context, fileName);
+                if (file == null) {
+                    //it does not exist, so we create a new one
+                    file = createFile(context, fileName);
+                } else {
+                    // it exists, so we delete it and put the new one on top
+                    // safe to delete it here when the download is going smoothly
+                    if (!file.delete()) {
+                        // if we could not delete it from the first try - maybe it
+                        // was being updated by a different service - we try again
+                        file.delete();
+                    }
+
+                    // then we try to re-create it
+                    file = createFile(context, fileName);
+                }
+
+                if (file != null) {
+
+                    output = new FileOutputStream(file);
+
+                    byte data[] = new byte[4096];
+                    int count;
+                    while ((count = input.read(data)) != -1) {
+                        output.write(data, 0, count);
+                    }
+                }
+            } catch (IOException e) { // this will catch timeoutexceptions, too
+                e.printStackTrace();
+                return null;//"IOException main download method";
+            } finally {
+                try {
+                    if (output != null) {
+                        output.close();
+                    }
+                    if (input != null) {
+                        input.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        }
+
+        return file; //"end of method";
     }
 
     public static void setComponentState(Context context, Class componentClass, boolean enabled) {
@@ -413,7 +620,7 @@ public final class Utils {
 //        }
 //
 //        return emailAddresses.substring(0, emailAddresses.length() - 1);
-        return "test@test.test";//test - get rid
+        return UNKNOWN_USER;//test - get rid
     }
 
     public static void writeTimeAndCoordinates(BufferedWriter bufferedWriter,

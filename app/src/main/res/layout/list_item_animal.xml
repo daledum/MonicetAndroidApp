@@ -12,13 +12,32 @@
         android:layout_height="match_parent"
         android:layout_weight="2"/>
 
-    <TextView
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:orientation="vertical"
         android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:id="@+id/specie_text_view"
-        tools:text="Sperm whale"
-        android:layout_weight="7"/>
+        android:layout_weight="7"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:id="@+id/specie_text_view"
+            tools:text="Sperm whale"
+            android:textStyle="bold"
+            android:layout_weight="4"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:gravity="center"
+            android:id="@+id/specie_latin_text_view"
+            tools:text="Physeter macrocephalus"
+            android:textStyle="italic"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
 
     <!--<LinearLayout-->
         <!--android:orientation="vertical"-->

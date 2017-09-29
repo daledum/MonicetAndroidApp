@@ -26,14 +26,15 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.NumberPicker;
 import android.widget.RadioButton;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -45,6 +46,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
@@ -71,20 +73,18 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static android.R.attr.id;
-import static android.R.attr.resource;
-import static android.R.attr.value;
 import static android.R.string.no;
 import static android.accounts.AccountManager.newChooseAccountIntent;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.R.string.calves;
+import static net.monicet.monicet.Utils.PERMANENT_FILES_DIR;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
         MainActivityInterface,
         LocationListener,//TODO: now try LocationCallback and use setmaxwaittime for batching
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener,
+        AdapterView.OnItemSelectedListener {
 
     final Trip[] trips = new Trip[1]; // hack so that I can use inside anonymous classes and deserialize from json file if necessary
     final HashMap<Long,double[]> routeData = new HashMap<Long,double[]>();// To create TRK, GPX, KML, KMZ, PLT files on the server
@@ -93,6 +93,10 @@ public class MainActivity extends AppCompatActivity implements
     //array adapters only take arraylists (no point in coding to interface here)
     final ArrayList<Animal> allSeedAnimals = new ArrayList<Animal>();
     final ArrayList<String> animalFamiliesTranslated = new ArrayList<String>();
+
+    final String[] userListSpeciesTitles = new String[1];//get specific language, file should have also latin names and rank
+    // use default and default-azores if no file present
+    // try to download it in the beginning
 
     final ArrayAdapter[] arrayAdapters = new ArrayAdapter[3];// TODO: specie feature add another array adaptor for the family names
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
@@ -132,8 +136,9 @@ public class MainActivity extends AppCompatActivity implements
                 }
             } else {
                 for (Animal animal: allSeedAnimals) {
-                    if (animal.getSpecie().getName().toLowerCase().contains(searchString) ||
-                            animal.getSpecie().getFamily().toLowerCase().contains(searchString)) {
+                    if (animal.getSpecie().getName().toLowerCase().contains(searchString.trim().toLowerCase())
+                            || animal.getSpecie().getLatinName().toLowerCase().contains(searchString.trim().toLowerCase())
+                            || animal.getSpecie().getFamily().toLowerCase().contains(searchString.trim().toLowerCase())) {
                         openedFamilySeedAnimals.add(animal);
                     }
                 }
@@ -151,8 +156,9 @@ public class MainActivity extends AppCompatActivity implements
                 } else {
                     for (Animal animal: allSeedAnimals) {
                         if (animal.getSpecie().getRank() == Utils.INITIAL_RANK &&
-                                (animal.getSpecie().getName().toLowerCase().contains(searchString) ||
-                                        animal.getSpecie().getFamily().toLowerCase().contains(searchString))) {
+                                (animal.getSpecie().getName().toLowerCase().contains(searchString.trim().toLowerCase())
+                                        || animal.getSpecie().getLatinName().toLowerCase().contains(searchString.trim().toLowerCase())
+                                        || animal.getSpecie().getFamily().toLowerCase().contains(searchString.trim().toLowerCase()))) {
                             openedFamilySeedAnimals.add(animal);
                         }
                     }
@@ -171,7 +177,9 @@ public class MainActivity extends AppCompatActivity implements
                     for (Animal animal: allSeedAnimals) {
                         if (animal.getSpecie().getFamily().equals(family) &&
                                 animal.getSpecie().getRank() != Utils.INITIAL_RANK &&
-                                animal.getSpecie().getName().toLowerCase().contains(searchString)) {
+                                (animal.getSpecie().getName().toLowerCase().contains(searchString.trim().toLowerCase())
+                                        || animal.getSpecie().getLatinName().toLowerCase().contains(searchString.trim().toLowerCase()))
+                                ) {
                             openedFamilySeedAnimals.add(animal);
                         }
                     }
@@ -552,7 +560,7 @@ public class MainActivity extends AppCompatActivity implements
             // True means trips[0] was successfully assigned to the deserialized trip (from the saved json file)
             wasTripDeserializedSuccessfully = parseTripFromFile(tempTripFile);
 
-            // in both cases (if parsing was successful or not):
+            // in both cases (if parsing was successful or not)://TODO: new feature - keep tempTrip file (delete below if not deserialized succesfully)
             // delete the temp trip file
             if (tempTripFile.exists()) {
                 tempTripFile.delete();
@@ -789,12 +797,15 @@ public class MainActivity extends AppCompatActivity implements
         //setTitle(getText(R.string.app_name) +  " - " + getText(R.string.my_sightings));//get rid
         setTitle(getText(R.string.my_sightings));
 
+        // TODO: maybe instead of INVISIBLE use GONE for first screen
         // hide START button
-        findViewById(R.id.fab_start).setVisibility(View.INVISIBLE);
+        findViewById(R.id.fab_start).setVisibility(View.GONE);//was INVISIBLE
         // hide user GPS interval box
-        findViewById(R.id.gps_user_interval_box).setVisibility(View.INVISIBLE);
+        findViewById(R.id.gps_user_interval_box).setVisibility(View.GONE);
         // hide user GPS duration box
-        findViewById(R.id.gps_user_duration_box).setVisibility(View.INVISIBLE);
+        findViewById(R.id.gps_user_duration_box).setVisibility(View.GONE);
+        // hide user list of species box
+        findViewById(R.id.user_list_species_box).setVisibility(View.GONE);
         // hide BACK button
         findViewById(R.id.fab_back).setVisibility(View.INVISIBLE);
         // hide SAVE button
@@ -1795,6 +1806,25 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    protected void userListSpeciesLogic() {
+        //TODO: get the adapter data for the spinner
+        // go to the local file...if it does not exist - I should give it the "all species" and "azores" options
+        // so, I look into the file - it has the species, etc, but also the name of the user lists
+
+        // the user list species spinner
+        Spinner spinner = (Spinner)findViewById(R.id.user_list_species_spinner);
+        // the array adapter for the spinner
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_spinner_item,
+                new String[]{"test123", "456", "7", "1", "2", "4", "123", "456", "7", "1", "2", "4"}
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+
+        spinner.setOnItemSelectedListener(this);
+
+    }
     protected void gpsUserIntervalLogic() {
 
         List<Long> intervalValues = new ArrayList<Long>(GpsMode.values().length);
@@ -1862,7 +1892,7 @@ public class MainActivity extends AppCompatActivity implements
                     task.cancel(false);
                 }
 
-                // in case this is a fresh start (and not a temp file reopened, temp files get saved only after initial GPS fix
+                // in case this is a fresh start and not a temp file reopened, temp files get saved only after initial GPS fix
                 if (!wasMinimumAmountOfGpsFixingDone) {
                     while (onLocationChangedNumberOfCalls < numberOfCalls) {
                         // Wait for onLocationChanged to be called 5 times
@@ -1955,7 +1985,7 @@ public class MainActivity extends AppCompatActivity implements
         finishTimeAndPlaces(getAllTimeAndPlaces());
 
         if(save) {
-            // NB tempTrip files are not kept (deleted in onCreate)
+            // NB tempTrip files are not kept (deleted in onCreate)//TODO: temp trip change keep them and delete before re-saving, I should delete tempTrip file here?
             // In the case the minimum GPS signal fixing was done (if it wasn't done, don't bother to save temp files)
             if (wasMinimumAmountOfGpsFixingDone) {
                 // NB Important to keep this order. Save data first and then start sending mechanisms.
@@ -2345,40 +2375,42 @@ public class MainActivity extends AppCompatActivity implements
         // Stub data coming from the server //TODO: replace this with the file content (get update from server)
         // I need an array of latin specie names - the order represents their
         // rank (if spermwhalus is first, then its rank is 0+1 etc)
+        //TODO: translate to latin
         List<String> customSpecieList = new ArrayList<>(Arrays.asList(new String[] {
-                "Sperm whale",
-                "Common dolphin",
-                "Common bottlenose dolphin",
-                "Atlantic spotted dolphin",
-                "Fin whale",
-                "Risso's dolphin",
-                "Short-finned pilot whale",
-                "Striped dolphin",
-                "Sei whale",
-                "Loggerhead turtle",
-                "Blue whale",
-                "False killer whale",
-                "Humpback whale",
-                "Beaked Whale",
-                "Sowerby's beaked whale",
-                "Northern/common minke whale",
-                "Killer whale",
-                "Northern bottlenose whale",
-                "Bryde's whale",
-                "Leatherback turtle",
-                "Harbour porpoise",
-                "Cuvier's beaked whale",
-                "Blainville's beaked whale",
-                "True's beaked whale",
-                "Green turtle",
-                "Long-finned pilot whale",
-                "Rough-toothed dolphin",
-                "Pygmy sperm whale",
-                "Hawksbill turtle",
-                "Kemp’s ridley turtle"
+                "Physeter macrocephalus",//was "Sperm whale",
+                "Delphinus delphis",
+                "Tursiops truncatus",
+                "Stenella frontalis",
+                "Balaenoptera physalus",
+                "Grampus griseus",
+                "Globicephala macrorhynchus",
+                "Stenella coeruleoalba",
+                "Balaenoptera borealis",
+                "Caretta caretta",
+                "Balaenoptera musculus",
+                "Pseudorca crassidens",
+                "Megaptera noveangliae",
+                "Ziphius sp",
+                "Mesoplodon bidens",
+                "Balaenoptera acutorostrata",
+                "Orcinus orca",
+                "Hyperoodon ampullatus",
+                "Balaenoptera edeni",
+                "Dermochelys coriacea",
+                "Phocaena phocaena",
+                "Ziphius cavirostris",
+                "Mesoplodon densirostris",
+                "Mesoplodon mirus",
+                "Chelonia mydas",
+                "Globicephala melas",
+                "Steno bredanensis",
+                "Kogia breviceps",
+                "Eretmochelys imbricata",
+                "Lepidochelys kempii"
         }));
 
-        //TODO: drop the latin names - when asking the array with species from the server (mention which language you want back)
+        //TODO: latin names, then order name then rank, two rows (first column says specie name, name of order/rank)
+        //TODO: use the whole name - see if latin is inside - also assign latin to latinName and before = to normal specie name
 
         final ArrayList<String> animalFamiliesUntranslated = new ArrayList<String>();
 
@@ -2409,7 +2441,7 @@ public class MainActivity extends AppCompatActivity implements
             animalFamiliesTranslated.add(familyNameTranslated);
 
             int idOfSpeciesStringArray = getResources().getIdentifier(familyNameUntranslated, "array", getPackageName());
-            // get the String array containing all baleen whale species (they will be translated)
+            // get the String array containing all (eg baleen whale) species (they will be translated)
             String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
 
             // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
@@ -2436,9 +2468,12 @@ public class MainActivity extends AppCompatActivity implements
                 //..... if not, make its rank 999 and add an 'others' to the set - find a way to do this only once
                 int rank = Utils.INITIAL_RANK;//TODO: remember to reset this after every specie
 
-                if (customSpecieList.contains(speciesPerFamilyTranslated[i])) {//TODO: server specie name in android's language has to match with this
+                //TODO: here, I want to check if the latin name from my custom list contains the 'trimmed down' specie name
+                //TODO: server specie name in android's language has to perfectly match with this (watch lower and upper cases)
+                if (customSpecieList.contains(speciesPerFamilyTranslated[i].
+                        substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1))) {
                     // copy its rank to the species rank
-                    rank = customSpecieList.indexOf(speciesPerFamilyTranslated[i]) + 1; // ranks start from 1
+                    rank = customSpecieList.indexOf(speciesPerFamilyTranslated[i]) + 1; // ranks start from 1//TODO: be careful with indices when working with csv files
 
                     // add translated family name to a set //TODO: remember to compare it with translated all family names list
                     customFamiliesSet.add(familyNameTranslated);
@@ -2451,8 +2486,10 @@ public class MainActivity extends AppCompatActivity implements
                 }
 
                 Specie specie = new Specie(
-                        speciesPerFamilyTranslated[i],
-                        //"",
+                        speciesPerFamilyTranslated[i].
+                                substring(0, speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER)),
+                        speciesPerFamilyTranslated[i].
+                                substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1),
                         familyNameTranslated,
                         rank,
                         "photo",//photos2[i],
@@ -2561,6 +2598,8 @@ public class MainActivity extends AppCompatActivity implements
         setTitle(getText(R.string.start_trip));
         getSupportActionBar().setIcon(R.mipmap.ic_launcher_whale_tail_blue);
 
+        userListSpeciesLogic();
+
         gpsUserIntervalLogic();
 
         NumberPicker durationNumberPicker = (NumberPicker) findViewById(R.id.gps_user_duration_number_picker);
@@ -2632,7 +2671,7 @@ public class MainActivity extends AppCompatActivity implements
                 arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
                 //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
                 arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(
-                        openedFamilies[0], searchBox.getText().toString().toLowerCase()));
+                        openedFamilies[0], searchBox.getText().toString()));
                 arrayAdapters[0].notifyDataSetChanged();
             }
         });
@@ -2657,7 +2696,7 @@ public class MainActivity extends AppCompatActivity implements
                     // and would have complicated my no gps test mode from onConnected
 
                     //here get the user interval
-                    NumberPicker intervalNumberPicker = (NumberPicker) findViewById(R.id.gps_user_interval_number_picker);
+                    NumberPicker intervalNumberPicker = (NumberPicker)findViewById(R.id.gps_user_interval_number_picker);
                     int indexOfInterval = intervalNumberPicker.getValue();
                     //also get rid of 1 MINUTE
                     //long intervalToCompareWith = (indexOfInterval == 0) ? Utils.ONE_MINUTE_IN_MILLIS : indexOfInterval * Utils.FIVE_MINUTES_IN_MILLIS;
@@ -2670,6 +2709,72 @@ public class MainActivity extends AppCompatActivity implements
                             break;
                         }
                     }
+
+                    //here get the user list of species//TODO: new feature user list species
+                    // just use a global that will be set by whatever was set by the user (default?)
+                    // this list will tell the animal adapter what to use - this should change the
+                    // array adapter and the seedAnimals - look at buildseedanimals from resources
+                    //test
+                    //test starts here//TODO: remove this from send button logic
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Utils.downloadFile(MainActivity.this,Utils.CUSTOM_SPECIE_ORDER_FILENAME); //TODO: use result?
+//                        }
+//                    }).start();
+//                    Toast.makeText(
+//                            MainActivity.this,
+//                            "result is " + trips[0].getCompany(),
+//                            Toast.LENGTH_LONG
+//                    ).show();
+                    //test ends here
+
+                    File file = Utils.getFile(MainActivity.this, Utils.CUSTOM_SPECIE_ORDER_FILENAME);
+                    if (file != null) {
+                        try {
+                            BufferedReader in = new BufferedReader(new FileReader(file));
+
+                            try {
+                                String line = in.readLine();
+
+                                int indexOfComma = line.indexOf(",");
+                                if (indexOfComma != -1) {
+                                    Toast.makeText(
+                                            MainActivity.this,
+                                            "first word is:" + line.substring(0, indexOfComma).trim(),
+                                            Toast.LENGTH_LONG
+                                    ).show();
+                                }
+                            } catch(IOException e) {
+                                e.printStackTrace();
+                                Toast.makeText(
+                                        MainActivity.this,
+                                        "IOException",
+                                        Toast.LENGTH_LONG
+                                ).show();
+                            }
+
+                            try {
+                                in.close();
+                            } catch(IOException ex) {
+                                ex.printStackTrace();
+                            }
+                        } catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "File not found exception",
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        }
+                    } else {//TODO: this runs
+                        Toast.makeText(
+                                MainActivity.this,
+                                "File not found",
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+                    //test up to here
 
                     // b) - time
                     trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
@@ -2979,6 +3084,25 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
         });
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        // An item was selected. You can retrieve the selected item using
+        // parent.getItemAtPosition(pos)
+        //TODO: new feature - set global String here to be used inside start button logic
+        //TODO: NB this fires in the beginning with the default value (reset value)
+        userListSpeciesTitles[0] = parent.getItemAtPosition(position).toString();
+//        Toast.makeText(MainActivity.this,
+//                userListSpeciesTitles[0],
+//                Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Callback method to be invoked when the selection disappears from this view.
+        // The selection can disappear for instance when touch is activated or when the adapter becomes empty.
+        //parent 	AdapterView: The AdapterView that now contains no selected item.
     }
 
     // no argument for this one, trip is a class variable

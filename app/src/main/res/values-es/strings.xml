@@ -1,101 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Monicet</string>
-    <string name="StenellaFrontalis">Delfín pintado</string>
-    <string name="TursiopsTruncatus">Delfín mular o de nariz de botella</string>
-    <string name="StenoBredanensis">Delfín de hocico estrecho/dientes rugosos</string>
-    <string name="GlobicephalaMacrorhynchus">Calderón tropical/de aleta corta</string>
-    <string name="DelphinusDelphis">Delfín común</string>
-    <string name="StenellaCoeruleoalba">Delfín listado</string>
-    <string name="GrampusGriseus">Delfín gris</string>
-    <string name="PhyseterMacrocephalus">Cachalote</string>
-    <string name="OrcinusOrca">Orca</string>
-    <string name="PseudorcaCrassidens">Falsa orca</string>
-    <string name="ZiphiusSp">Zifio</string>
-    <string name="ZiphiusCavirostris">Zifio de Cuvier</string>
-    <string name="MesoplodonBidens">Zifio de Sowerby</string>
-    <string name="MegapteraNoveangliae">Yubarta/Ballena jorobada</string>
-    <string name="HyperoodonAmpullatus">Zifio calderón boreal/Ballena de pico boreal</string>
-    <string name="KogiaBreviceps">Cachalote pigmeo</string>
-    <string name="BalaenopteraMusculus">Rorcual/ballena azul</string>
-    <string name="BalaenopteraPhysalus">Rorcual común/ballena de aleta</string>
-    <string name="BalaenopteraBorealis">Rorcual sei o norteño o de Rudolphi</string>
-    <string name="BalaenopteraEdeni">Rorcual de Bryde</string>
-    <string name="BalaenopteraAcutorostrata">Rorcual aliblanco/ballena  enana o de minke común</string>
-    <string name="CarettaCaretta">Tortuga boba o caguama</string>
-    <string name="DermochelysCoriacea">Tortuga laúd/canal/cana/baula/tinglar</string>
-    <string name="CheloniaMydas">Tortuga verde</string>
-    <string name="EretmochelysImbricata">Tortuga carey</string>
-    <string name="LepidochelysKempii">Tortuga lora o bastarda o golfina</string>
-    <string name="MesoplodonDensirostris">Zifio de Blainville</string>
-    <string name="MesoplodonMirus">Zifio de True</string>
-    <string name="GlobicephalaMelas">Calderón común/ballena piloto de aleta larga</string>
-    <string name="PhocaenaPhocaena">Marsopa común</string>
-    <string name="BalaenaMysticetus">Ballena de Groenlandia o boreal</string>
-    <string name="EnhydraLutris">Nutria marina</string>
-    <string name="BalaenopteraBonaerensis">Rorcual austral o Minke antártico</string>
-    <string name="BalaenopteraOmurai">Rorcual de Omura</string>
-    <string name="BerardiusArnuxii">Zifio o delfín picudo de Arnoux</string>
-    <string name="BerardiusBairdii">Zifio o berardio de Baird</string>
-    <string name="CapereaMarginata">Ballena franca pigmea o enana</string>
-    <string name="CephalorhynchusCommersonii">Delfín pío o de Commerson/tonina overa</string>
-    <string name="CephalorhynchusEutropia">Delfín chileno o negro/tonina</string>
-    <string name="CephalorhynchusHeavisidii">Delfín de Heaviside</string>
-    <string name="CephalorhynchusHectori">Delfín de Héctor o de cabeza blanca</string>
-    <string name="DelphinapterusLeucas">Beluga</string>
-    <string name="EschrichtiusRobustus">Ballena gris</string>
-    <string name="EubalaenaAustralis">Ballena franca austral</string>
-    <string name="EubalaenaGlacialis">Ballena de los vascos o franca glacial</string>
-    <string name="EubalaenaJaponica">Ballena franca del Pacífico norte</string>
-    <string name="FeresaAttenuata">Orca pigmea</string>
-    <string name="HyperoodonPlanifrons">Zifio calderón austral/Ballena de pico austral</string>
-    <string name="IndopacetusPacificus">Zifio de Longman/Zifio Indo-Pacífico</string>
-    <string name="KogiaSima">Cachalote enano</string>
-    <string name="LagenodelphisHosei">Delfín de Fraser</string>
-    <string name="LagenorhynchusAcutus">Delfín de flancos blancos o delfín del Atlántico</string>
-    <string name="LagenorhynchusAustralis">Delfín austral o antártico</string>
-    <string name="LagenorhynchusCruciger">Delfín cruzado</string>
-    <string name="LagenorhynchusObliquidens">Delfín del Pacífico de lados blancos</string>
-    <string name="LagenorhynchusObscurus">Delfín oscuro o de Fitzroy</string>
-    <string name="LepidochelysOlivacea">Tortuga olivácea o golfina</string>
-    <string name="LissodelphisBorealis">Delfín septentrional sin aleta</string>
-    <string name="LissodelphisPeronii">Delfín meridional sin aleta o liso del sur</string>
-    <string name="LontraFelina">Gato de mar/chungungo/chinguno/huallaque/chinchimén</string>
-    <string name="MesoplodonBowdoini">Zifio de Andrew</string>
-    <string name="MesoplodonCarlhubbsi">Zifio de Hubbs</string>
-    <string name="MesoplodonEuropaeus">Zifio de Gervais o europeo</string>
-    <string name="MesoplodonGinkgodens">Zifio de Ginkgo o japonés</string>
-    <string name="MesoplodonGrayi">Zifio de Gray o delfín picudo de Gray</string>
-    <string name="MesoplodonHectori">Zifio de Hector</string>
-    <string name="MesoplodonHotaula">Zifio de pico puntiagudo o de Deraniyagala</string>
-    <string name="MesoplodonLayardii">Zifio de Layard</string>
-    <string name="MesoplodonPerrini">Zifio de Perrin</string>
-    <string name="MesoplodonPeruvianus">Zifio peruano o menor</string>
-    <string name="MesoplodonStejnegeri">Zifio de Stejneger o del mar de Bering</string>
-    <string name="MesoplodonTraversii">Zifio de Travers</string>
-    <string name="MonodonMonoceros">Narval</string>
-    <string name="NatatorDepressus">Tortuga plana</string>
-    <string name="NeophocaenaPhocaenoides">Marsopa sin aleta o negra</string>
-    <string name="OrcaellaBrevirostris">Delfín del río Irawadi</string>
-    <string name="OrcaellaHeinsohni">Delfín beluga de Heinsohn o delfín de aleta chata australiano</string>
-    <string name="PeponocephalaElectra">Delfín de cabeza de melón</string>
-    <string name="PhocoenaDioptrica">Marsopa de anteojos</string>
-    <string name="PhocoenaSinus">Vaquita marina/chochito</string>
-    <string name="PhocoenaSpinipinnis">Marsopa negra o espinosa</string>
-    <string name="PhocoenoidesDalli">Marsopa de Dall</string>
-    <string name="PinnipediaSp">Foca/morsa y oso/lobo/león marino</string>
-    <string name="PontoporiaBlainvillei">Franciscana o delfín del Plata</string>
-    <string name="SotaliaGuianensis">Delfín costero</string>
-    <string name="SousaChinensis">Delfín rosado de Hong Kong</string>
-    <string name="SousaPlumbea">Delfín giboso índico</string>
-    <string name="SousaSahulensis">Delfín jorobado australiano</string>
-    <string name="SousaTeuszii">Delfín giboso atlántico</string>
-    <string name="StenellaAttenuata">Delfín manchado tropical</string>
-    <string name="StenellaClymene">Delfín clímene</string>
-    <string name="StenellaLongirostris">Delfín girador o acróbata de hocico largo</string>
-    <string name="TasmacetusShepherdi">Zifio de Shepherd</string>
-    <string name="TursiopsAduncus">Delfín del Indo-Pacífico</string>
-    <string name="UrsusMaritimus">Oso polar</string>
+    <string name="StenellaFrontalis">Delfín pintado=Stenella frontalis</string>
+    <string name="TursiopsTruncatus">Delfín mular o de nariz de botella=Tursiops truncatus</string>
+    <string name="StenoBredanensis">Delfín de hocico estrecho/dientes rugosos=Steno bredanensis</string>
+    <string name="GlobicephalaMacrorhynchus">Calderón tropical/de aleta corta=Globicephala macrorhynchus</string>
+    <string name="DelphinusDelphis">Delfín común=Delphinus delphis</string>
+    <string name="StenellaCoeruleoalba">Delfín listado=Stenella coeruleoalba</string>
+    <string name="GrampusGriseus">Delfín gris=Grampus griseus</string>
+    <string name="PhyseterMacrocephalus">Cachalote=Physeter macrocephalus</string>
+    <string name="OrcinusOrca">Orca=Orcinus orca</string>
+    <string name="PseudorcaCrassidens">Falsa orca=Pseudorca crassidens</string>
+    <string name="ZiphiusSp">Zifio=Ziphius sp</string>
+    <string name="ZiphiusCavirostris">Zifio de Cuvier=Ziphius cavirostris</string>
+    <string name="MesoplodonBidens">Zifio de Sowerby=Mesoplodon bidens</string>
+    <string name="MegapteraNoveangliae">Yubarta/Ballena jorobada=Megaptera noveangliae</string>
+    <string name="HyperoodonAmpullatus">Zifio calderón boreal/Ballena de pico boreal=Hyperoodon ampullatus</string>
+    <string name="KogiaBreviceps">Cachalote pigmeo=Kogia breviceps</string>
+    <string name="BalaenopteraMusculus">Rorcual/ballena azul=Balaenoptera musculus</string>
+    <string name="BalaenopteraPhysalus">Rorcual común/ballena de aleta=Balaenoptera physalus</string>
+    <string name="BalaenopteraBorealis">Rorcual sei o norteño o de Rudolphi=Balaenoptera borealis</string>
+    <string name="BalaenopteraEdeni">Rorcual de Bryde=Balaenoptera edeni</string>
+    <string name="BalaenopteraAcutorostrata">Rorcual aliblanco/ballena  enana o de minke común=Balaenoptera acutorostrata</string>
+    <string name="CarettaCaretta">Tortuga boba o caguama=Caretta caretta</string>
+    <string name="DermochelysCoriacea">Tortuga laúd/canal/cana/baula/tinglar=Dermochelys coriacea</string>
+    <string name="CheloniaMydas">Tortuga verde=Chelonia mydas</string>
+    <string name="EretmochelysImbricata">Tortuga carey=Eretmochelys imbricata</string>
+    <string name="LepidochelysKempii">Tortuga lora o bastarda o golfina=Lepidochelys kempii</string>
+    <string name="MesoplodonDensirostris">Zifio de Blainville=Mesoplodon densirostris</string>
+    <string name="MesoplodonMirus">Zifio de True=Mesoplodon mirus</string>
+    <string name="GlobicephalaMelas">Calderón común/ballena piloto de aleta larga=Globicephala melas</string>
+    <string name="PhocaenaPhocaena">Marsopa común=Phocaena phocaena</string>
+    <string name="BalaenaMysticetus">Ballena de Groenlandia o boreal=Balaena mysticetus</string>
+    <string name="EnhydraLutris">Nutria marina=Enhydra lutris</string>
+    <string name="BalaenopteraBonaerensis">Rorcual austral o Minke antártico=Balaenoptera bonaerensis</string>
+    <string name="BalaenopteraOmurai">Rorcual de Omura=Balaenoptera omurai</string>
+    <string name="BerardiusArnuxii">Zifio o delfín picudo de Arnoux=Berardius arnuxii</string>
+    <string name="BerardiusBairdii">Zifio o berardio de Baird=Berardius bairdii</string>
+    <string name="CapereaMarginata">Ballena franca pigmea o enana=Caperea marginata</string>
+    <string name="CephalorhynchusCommersonii">Delfín pío o de Commerson/tonina overa=Cephalorhynchus commersonii</string>
+    <string name="CephalorhynchusEutropia">Delfín chileno o negro/tonina=Cephalorhynchus eutropia</string>
+    <string name="CephalorhynchusHeavisidii">Delfín de Heaviside=Cephalorhynchus heavisidii</string>
+    <string name="CephalorhynchusHectori">Delfín de Héctor o de cabeza blanca=Cephalorhynchus hectori</string>
+    <string name="DelphinapterusLeucas">Beluga=Delphinapterus leucas</string>
+    <string name="EschrichtiusRobustus">Ballena gris=Eschrichtius robustus</string>
+    <string name="EubalaenaAustralis">Ballena franca austral=Eubalaena australis</string>
+    <string name="EubalaenaGlacialis">Ballena de los vascos o franca glacial=Eubalaena glacialis</string>
+    <string name="EubalaenaJaponica">Ballena franca del Pacífico norte=Eubalaena japonica</string>
+    <string name="FeresaAttenuata">Orca pigmea=Feresa attenuata</string>
+    <string name="HyperoodonPlanifrons">Zifio calderón austral/Ballena de pico austral=Hyperoodon planifrons</string>
+    <string name="IndopacetusPacificus">Zifio de Longman/Zifio Indo-Pacífico=Indopacetus pacificus</string>
+    <string name="KogiaSima">Cachalote enano=Kogia sima</string>
+    <string name="LagenodelphisHosei">Delfín de Fraser=Lagenodelphis hosei</string>
+    <string name="LagenorhynchusAcutus">Delfín de flancos blancos o delfín del Atlántico=Lagenorhynchus acutus</string>
+    <string name="LagenorhynchusAustralis">Delfín austral o antártico=Lagenorhynchus australis</string>
+    <string name="LagenorhynchusCruciger">Delfín cruzado=Lagenorhynchus cruciger</string>
+    <string name="LagenorhynchusObliquidens">Delfín del Pacífico de lados blancos=Lagenorhynchus obliquidens</string>
+    <string name="LagenorhynchusObscurus">Delfín oscuro o de Fitzroy=Lagenorhynchus obscurus</string>
+    <string name="LepidochelysOlivacea">Tortuga olivácea o golfina=Lepidochelys olivacea</string>
+    <string name="LissodelphisBorealis">Delfín septentrional sin aleta=Lissodelphis borealis</string>
+    <string name="LissodelphisPeronii">Delfín meridional sin aleta o liso del sur=Lissodelphis peronii</string>
+    <string name="LontraFelina">Gato de mar/chungungo/chinguno/huallaque/chinchimén=Lontra felina</string>
+    <string name="MesoplodonBowdoini">Zifio de Andrew=Mesoplodon bowdoini</string>
+    <string name="MesoplodonCarlhubbsi">Zifio de Hubbs=Mesoplodon carlhubbsi</string>
+    <string name="MesoplodonEuropaeus">Zifio de Gervais o europeo=Mesoplodon europaeus</string>
+    <string name="MesoplodonGinkgodens">Zifio de Ginkgo o japonés=Mesoplodon ginkgodens</string>
+    <string name="MesoplodonGrayi">Zifio de Gray o delfín picudo de Gray=Mesoplodon grayi</string>
+    <string name="MesoplodonHectori">Zifio de Hector=Mesoplodon hectori</string>
+    <string name="MesoplodonHotaula">Zifio de pico puntiagudo o de Deraniyagala=Mesoplodon hotaula</string>
+    <string name="MesoplodonLayardii">Zifio de Layard=Mesoplodon layardii</string>
+    <string name="MesoplodonPerrini">Zifio de Perrin=Mesoplodon perrini</string>
+    <string name="MesoplodonPeruvianus">Zifio peruano o menor=Mesoplodon peruvianus</string>
+    <string name="MesoplodonStejnegeri">Zifio de Stejneger o del mar de Bering=Mesoplodon stejnegeri</string>
+    <string name="MesoplodonTraversii">Zifio de Travers=Mesoplodon traversii</string>
+    <string name="MonodonMonoceros">Narval=Monodon monoceros</string>
+    <string name="NatatorDepressus">Tortuga plana=Natator depressus</string>
+    <string name="NeophocaenaPhocaenoides">Marsopa sin aleta o negra=Neophocaena phocaenoides</string>
+    <string name="OrcaellaBrevirostris">Delfín del río Irawadi=Orcaella brevirostris</string>
+    <string name="OrcaellaHeinsohni">Delfín beluga de Heinsohn o delfín de aleta chata australiano=Orcaella heinsohni</string>
+    <string name="PeponocephalaElectra">Delfín de cabeza de melón=Peponocephala electra</string>
+    <string name="PhocoenaDioptrica">Marsopa de anteojos=Phocoena dioptrica</string>
+    <string name="PhocoenaSinus">Vaquita marina/chochito=Phocoena sinus</string>
+    <string name="PhocoenaSpinipinnis">Marsopa negra o espinosa=Phocoena spinipinnis</string>
+    <string name="PhocoenoidesDalli">Marsopa de Dall=Phocoenoides dalli</string>
+    <string name="PinnipediaSp">Foca/morsa y oso/lobo/león marino=Pinnipedia sp</string>
+    <string name="PontoporiaBlainvillei">Franciscana o delfín del Plata=Pontoporia blainvillei</string>
+    <string name="SotaliaGuianensis">Delfín costero=Sotalia guianensis</string>
+    <string name="SousaChinensis">Delfín rosado de Hong Kong=Sousa chinensis</string>
+    <string name="SousaPlumbea">Delfín giboso índico=Sousa plumbea</string>
+    <string name="SousaSahulensis">Delfín jorobado australiano=Sousa sahulensis</string>
+    <string name="SousaTeuszii">Delfín giboso atlántico=Sousa teuszii</string>
+    <string name="StenellaAttenuata">Delfín manchado tropical=Stenella attenuata</string>
+    <string name="StenellaClymene">Delfín clímene=Stenella clymene</string>
+    <string name="StenellaLongirostris">Delfín girador o acróbata de hocico largo=Stenella longirostris</string>
+    <string name="TasmacetusShepherdi">Zifio de Shepherd=Tasmacetus shepherdi</string>
+    <string name="TursiopsAduncus">Delfín del Indo-Pacífico=Tursiops aduncus</string>
+    <string name="UrsusMaritimus">Oso polar=Ursus maritimus</string>
     <string name="aBaleenWhalesFamily">Ballenas barbadas</string>
     <string name="cBeakedWhalesFamily">Zifios</string>
     <string name="dBigDolphinsFamily">Grandes delfines</string>
@@ -151,4 +151,6 @@
     <string name="feeding">Alimentación</string>
     <string name="movement">Movimiento</string>
     <string name="socialization">Socialización</string>
+    <string name="user_list_species">Elija el orden de las especies específicas de su área.</string>
+    <string name="gps_user_duration_text">Seleccione la duración aproximada de su viaje, en horas.</string>
 </resources>

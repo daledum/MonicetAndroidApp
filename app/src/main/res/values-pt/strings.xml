@@ -37,106 +37,106 @@
     <string name="delete_trip_dialog_title">Apagar viagem</string>
     <string name="delete_trip_dialog_message">Tem certeza de que deseja apagar esta viagem?</string>
     <string name="my_no">NÃO</string>
-    <string name="gps_user_duration_text">Por favor, selecione a duração aproximada da sua viagem, em horas.</string>
+    <string name="gps_user_duration_text">Selecione a duração aproximada da sua viagem, em horas.</string>
     <string name="trip_was_started">Uma viagem foi iniciada</string>
     <string name="delete_trip">ABRA</string>
     <string name="open_trip">APAGUE</string>
 
-    <string name="StenellaFrontalis">Golfinho pintado</string>
-    <string name="TursiopsTruncatus">Roaz</string>
-    <string name="StenoBredanensis">Caldeirão/Dente-Rugoso</string>
-    <string name="GlobicephalaMacrorhynchus">Baleia piloto de barbatana curta</string>
-    <string name="DelphinusDelphis">Golfinho comum</string>
-    <string name="StenellaCoeruleoalba">Golfinho riscado</string>
-    <string name="GrampusGriseus">Golfinho de risso</string>
-    <string name="PhyseterMacrocephalus">Cachalote</string>
-    <string name="OrcinusOrca">Orca</string>
-    <string name="PseudorcaCrassidens">Falsa orca</string>
-    <string name="ZiphiusSp">Baleia de bico</string>
-    <string name="ZiphiusCavirostris">Baleia de bico de Cuvier</string>
-    <string name="MesoplodonBidens">Baleia de bico de Sowerby</string>
-    <string name="MegapteraNoveangliae">Baleia de bossa</string>
-    <string name="HyperoodonAmpullatus">Botinhoso</string>
-    <string name="KogiaBreviceps">Cachalote pigmeu</string>
-    <string name="BalaenopteraMusculus">Baleia azul</string>
-    <string name="BalaenopteraPhysalus">Baleia-fin ou comum/Rorqual comum</string>
-    <string name="BalaenopteraBorealis">Baleia sardinheira</string>
-    <string name="BalaenopteraEdeni">Baleia de Bryde</string>
-    <string name="BalaenopteraAcutorostrata">Baleia-anã/baleote/baleia-minke/finbeque</string>
-    <string name="CarettaCaretta">Tartaruga-careta</string>
-    <string name="DermochelysCoriacea">Tartaruga-de-couro</string>
-    <string name="CheloniaMydas">Tartaruga-verde</string>
-    <string name="EretmochelysImbricata">Tartaruga-de-escamas</string>
-    <string name="LepidochelysKempii">Tartaruga-de-Kemp</string>
-    <string name="MesoplodonDensirostris">Baleia de bico de Blainville</string>
-    <string name="MesoplodonMirus">Baleia de bico de True</string>
-    <string name="GlobicephalaMelas">Baleia piloto de barbatana comprida</string>
-    <string name="PhocaenaPhocaena">Toninha-comum</string>
-    <string name="BalaenaMysticetus">Baleia-da-groenlândia</string>
-    <string name="BalaenopteraBonaerensis">Baleia-minke-antártica ou austral</string>
-    <string name="BalaenopteraOmurai">Baleia-de-omura</string>
-    <string name="BerardiusArnuxii">Baleia-bicuda-de-arnoux</string>
-    <string name="BerardiusBairdii">Baleia-bicuda-de-baird</string>
-    <string name="CapereaMarginata">Baleia-franca-pigmeia</string>
-    <string name="CephalorhynchusCommersonii">Golfinho-de-commerson</string>
-    <string name="CephalorhynchusEutropia">Golfinho-chileno</string>
-    <string name="CephalorhynchusHeavisidii">Golfinho-de-heaviside</string>
-    <string name="CephalorhynchusHectori">Golfinho-de-hector</string>
-    <string name="DelphinapterusLeucas">Baleia-branca/Beluga</string>
-    <string name="EnhydraLutris">Lontra-marinha</string>
-    <string name="EschrichtiusRobustus">Baleia-cinzenta</string>
-    <string name="EubalaenaAustralis">Baleia-franca-austral</string>
-    <string name="EubalaenaGlacialis">Baleia-franca-do-atlântico-norte</string>
-    <string name="EubalaenaJaponica">Baleia-franca-do-pacífico</string>
-    <string name="FeresaAttenuata">Orca-pigméia</string>
-    <string name="HyperoodonPlanifrons">Baleia-nariz-de-garrafa-do-sul/Botinhoso-do-sul</string>
-    <string name="IndopacetusPacificus">Baleia-bicuda-de-longman</string>
-    <string name="KogiaSima">Cachalote-anão</string>
-    <string name="LagenodelphisHosei">Golfinho-de-fraser</string>
-    <string name="LagenorhynchusAcutus">Golfinho-de-laterais-brancas-do-atlântico</string>
-    <string name="LagenorhynchusAustralis">Golfinho-do-sul/golfinho-de-peale</string>
-    <string name="LagenorhynchusCruciger">Golfinho-cruzado/golfinho-ampulheta</string>
-    <string name="LagenorhynchusObliquidens">Golfinho-de-laterais-brancas-do-pacífico</string>
-    <string name="LagenorhynchusObscurus">Golfinho-do-crepúsculo/golfinho-cinzento</string>
-    <string name="LepidochelysOlivacea">Tartaruga-oliva ou olivacea ou pequena</string>
-    <string name="LissodelphisBorealis">Golfinho-liso-do-norte</string>
-    <string name="LissodelphisPeronii">Golfinho-liso-do-sul</string>
-    <string name="LontraFelina">Lontra-do-mar, gato-do-mar ou chugungo</string>
-    <string name="MesoplodonBowdoini">Baleia-bicuda-de-bowdoin ou andrews</string>
-    <string name="MesoplodonCarlhubbsi">Baleia-bicuda-de-hubbs</string>
-    <string name="MesoplodonEuropaeus">Baleia-bicuda-de-gervais</string>
-    <string name="MesoplodonGinkgodens">Baleia-bicuda-de-ginkgo</string>
-    <string name="MesoplodonGrayi">Baleia-bicuda-de-gray</string>
-    <string name="MesoplodonHectori">Baleia-bicuda-de-hector</string>
-    <string name="MesoplodonHotaula">Baleia-bicuda-de-deraniyagala</string>
-    <string name="MesoplodonLayardii">Baleia-bicuda-de-layard</string>
-    <string name="MesoplodonPerrini">Baleia-bicuda-de-perrin</string>
-    <string name="MesoplodonPeruvianus">Baleia-bicuda-pigméia</string>
-    <string name="MesoplodonStejnegeri">Baleia-bicuda-de-stejneger</string>
-    <string name="MesoplodonTraversii">Baleia-bicuda-de-bahamonde</string>
-    <string name="MonodonMonoceros">Narval</string>
-    <string name="NatatorDepressus">Tartaruga-marinha-australiana</string>
-    <string name="NeophocaenaPhocaenoides">Boto-do-índico</string>
-    <string name="OrcaellaBrevirostris">Golfinho-do-irrawaddy</string>
-    <string name="OrcaellaHeinsohni">Golfinho-australiano ou de Heinsohn</string>
-    <string name="PeponocephalaElectra">Baleia-cabeça-de-melão</string>
-    <string name="PhocoenaDioptrica">Golfinho-de-óculos/Boto-de-luneta</string>
-    <string name="PhocoenaSinus">Vaquita</string>
-    <string name="PhocoenaSpinipinnis">Boto-de-burmeister</string>
-    <string name="PhocoenoidesDalli">Boto-de-dall/marsopa ou marsopa-de-porto-dall</string>
-    <string name="PinnipediaSp">Morsa/Foca/Urso-do-mar/Lobos-marinhos/Leão-marinho/Elefante-marinho</string>
-    <string name="PontoporiaBlainvillei">Golfinho-do-rio-da-prata/boto-amarelo ou achimbo/franciscana/ toninha</string>
-    <string name="SotaliaGuianensis">Boto-cinza</string>
-    <string name="SousaChinensis">Golfinho-corcunda-indopacífico</string>
-    <string name="SousaPlumbea">Golfinho-corcunda do Índico</string>
-    <string name="SousaSahulensis">Golfinho-corcunda-australiano</string>
-    <string name="SousaTeuszii">Golfinho-corcunda-do-atlântico</string>
-    <string name="StenellaAttenuata">Golfinho-pintado-pantropical</string>
-    <string name="StenellaClymene">Golfinho-clímene</string>
-    <string name="StenellaLongirostris">Golfinho-rotador ou fiandeiro-de-bico-comprido</string>
-    <string name="TasmacetusShepherdi">Baleia-bicuda-de-shepherd</string>
-    <string name="TursiopsAduncus">Roaz-do-índico</string>
-    <string name="UrsusMaritimus">Urso-polar</string>
+    <string name="StenellaFrontalis">Golfinho pintado=Stenella frontalis</string>
+    <string name="TursiopsTruncatus">Roaz=Tursiops truncatus</string>
+    <string name="StenoBredanensis">Caldeirão/Dente-Rugoso=Steno bredanensis</string>
+    <string name="GlobicephalaMacrorhynchus">Baleia piloto de barbatana curta=Globicephala macrorhynchus</string>
+    <string name="DelphinusDelphis">Golfinho comum=Delphinus delphis</string>
+    <string name="StenellaCoeruleoalba">Golfinho riscado=Stenella coeruleoalba</string>
+    <string name="GrampusGriseus">Golfinho de risso=Grampus griseus</string>
+    <string name="PhyseterMacrocephalus">Cachalote=Physeter macrocephalus</string>
+    <string name="OrcinusOrca">Orca=Orcinus orca</string>
+    <string name="PseudorcaCrassidens">Falsa orca=Pseudorca crassidens</string>
+    <string name="ZiphiusSp">Baleia de bico=Ziphius sp</string>
+    <string name="ZiphiusCavirostris">Baleia de bico de Cuvier=Ziphius cavirostris</string>
+    <string name="MesoplodonBidens">Baleia de bico de Sowerby=Mesoplodon bidens</string>
+    <string name="MegapteraNoveangliae">Baleia de bossa=Megaptera noveangliae</string>
+    <string name="HyperoodonAmpullatus">Botinhoso=Hyperoodon ampullatus</string>
+    <string name="KogiaBreviceps">Cachalote pigmeu=Kogia breviceps</string>
+    <string name="BalaenopteraMusculus">Baleia azul=Balaenoptera musculus</string>
+    <string name="BalaenopteraPhysalus">Baleia-fin ou comum/Rorqual comum=Balaenoptera physalus</string>
+    <string name="BalaenopteraBorealis">Baleia sardinheira=Balaenoptera borealis</string>
+    <string name="BalaenopteraEdeni">Baleia de Bryde=Balaenoptera edeni</string>
+    <string name="BalaenopteraAcutorostrata">Baleia-anã/baleote/baleia-minke/finbeque=Balaenoptera acutorostrata</string>
+    <string name="CarettaCaretta">Tartaruga-careta=Caretta caretta</string>
+    <string name="DermochelysCoriacea">Tartaruga-de-couro=Dermochelys coriacea</string>
+    <string name="CheloniaMydas">Tartaruga-verde=Chelonia mydas</string>
+    <string name="EretmochelysImbricata">Tartaruga-de-escamas=Eretmochelys imbricata</string>
+    <string name="LepidochelysKempii">Tartaruga-de-Kemp=Lepidochelys kempii</string>
+    <string name="MesoplodonDensirostris">Baleia de bico de Blainville=Mesoplodon densirostris</string>
+    <string name="MesoplodonMirus">Baleia de bico de True=Mesoplodon mirus</string>
+    <string name="GlobicephalaMelas">Baleia piloto de barbatana comprida=Globicephala melas</string>
+    <string name="PhocaenaPhocaena">Toninha-comum=Phocaena phocaena</string>
+    <string name="BalaenaMysticetus">Baleia-da-groenlândia=Balaena mysticetus</string>
+    <string name="BalaenopteraBonaerensis">Baleia-minke-antártica ou austral=Balaenoptera bonaerensis</string>
+    <string name="BalaenopteraOmurai">Baleia-de-omura=Balaenoptera omurai</string>
+    <string name="BerardiusArnuxii">Baleia-bicuda-de-arnoux=Berardius arnuxii</string>
+    <string name="BerardiusBairdii">Baleia-bicuda-de-baird=Berardius bairdii</string>
+    <string name="CapereaMarginata">Baleia-franca-pigmeia=Caperea marginata</string>
+    <string name="CephalorhynchusCommersonii">Golfinho-de-commerson=Cephalorhynchus commersonii</string>
+    <string name="CephalorhynchusEutropia">Golfinho-chileno=Cephalorhynchus eutropia</string>
+    <string name="CephalorhynchusHeavisidii">Golfinho-de-heaviside=Cephalorhynchus heavisidii</string>
+    <string name="CephalorhynchusHectori">Golfinho-de-hector=Cephalorhynchus hectori</string>
+    <string name="DelphinapterusLeucas">Baleia-branca/Beluga=Delphinapterus leucas</string>
+    <string name="EnhydraLutris">Lontra-marinha=Enhydra lutris</string>
+    <string name="EschrichtiusRobustus">Baleia-cinzenta=Eschrichtius robustus</string>
+    <string name="EubalaenaAustralis">Baleia-franca-austral=Eubalaena australis</string>
+    <string name="EubalaenaGlacialis">Baleia-franca-do-atlântico-norte=Eubalaena glacialis</string>
+    <string name="EubalaenaJaponica">Baleia-franca-do-pacífico=Eubalaena japonica</string>
+    <string name="FeresaAttenuata">Orca-pigméia=Feresa attenuata</string>
+    <string name="HyperoodonPlanifrons">Baleia-nariz-de-garrafa-do-sul/Botinhoso-do-sul=Hyperoodon planifrons</string>
+    <string name="IndopacetusPacificus">Baleia-bicuda-de-longman=Indopacetus pacificus</string>
+    <string name="KogiaSima">Cachalote-anão=Kogia sima</string>
+    <string name="LagenodelphisHosei">Golfinho-de-fraser=Lagenodelphis hosei</string>
+    <string name="LagenorhynchusAcutus">Golfinho-de-laterais-brancas-do-atlântico=Lagenorhynchus acutus</string>
+    <string name="LagenorhynchusAustralis">Golfinho-do-sul/golfinho-de-peale=Lagenorhynchus australis</string>
+    <string name="LagenorhynchusCruciger">Golfinho-cruzado/golfinho-ampulheta=Lagenorhynchus cruciger</string>
+    <string name="LagenorhynchusObliquidens">Golfinho-de-laterais-brancas-do-pacífico=Lagenorhynchus obliquidens</string>
+    <string name="LagenorhynchusObscurus">Golfinho-do-crepúsculo/golfinho-cinzento=Lagenorhynchus obscurus</string>
+    <string name="LepidochelysOlivacea">Tartaruga-oliva ou olivacea ou pequena=Lepidochelys olivacea</string>
+    <string name="LissodelphisBorealis">Golfinho-liso-do-norte=Lissodelphis borealis</string>
+    <string name="LissodelphisPeronii">Golfinho-liso-do-sul=Lissodelphis peronii</string>
+    <string name="LontraFelina">Lontra-do-mar, gato-do-mar ou chugungo=Lontra felina</string>
+    <string name="MesoplodonBowdoini">Baleia-bicuda-de-bowdoin ou andrews=Mesoplodon bowdoini</string>
+    <string name="MesoplodonCarlhubbsi">Baleia-bicuda-de-hubbs=Mesoplodon carlhubbsi</string>
+    <string name="MesoplodonEuropaeus">Baleia-bicuda-de-gervais=Mesoplodon europaeus</string>
+    <string name="MesoplodonGinkgodens">Baleia-bicuda-de-ginkgo=Mesoplodon ginkgodens</string>
+    <string name="MesoplodonGrayi">Baleia-bicuda-de-gray=Mesoplodon grayi</string>
+    <string name="MesoplodonHectori">Baleia-bicuda-de-hector=Mesoplodon hectori</string>
+    <string name="MesoplodonHotaula">Baleia-bicuda-de-deraniyagala=Mesoplodon hotaula</string>
+    <string name="MesoplodonLayardii">Baleia-bicuda-de-layard=Mesoplodon layardii</string>
+    <string name="MesoplodonPerrini">Baleia-bicuda-de-perrin=Mesoplodon perrini</string>
+    <string name="MesoplodonPeruvianus">Baleia-bicuda-pigméia=Mesoplodon peruvianus</string>
+    <string name="MesoplodonStejnegeri">Baleia-bicuda-de-stejneger=Mesoplodon stejnegeri</string>
+    <string name="MesoplodonTraversii">Baleia-bicuda-de-bahamonde=Mesoplodon traversii</string>
+    <string name="MonodonMonoceros">Narval=Monodon monoceros</string>
+    <string name="NatatorDepressus">Tartaruga-marinha-australiana=Natator depressus</string>
+    <string name="NeophocaenaPhocaenoides">Boto-do-índico=Neophocaena phocaenoides</string>
+    <string name="OrcaellaBrevirostris">Golfinho-do-irrawaddy=Orcaella brevirostris</string>
+    <string name="OrcaellaHeinsohni">Golfinho-australiano ou de Heinsohn=Orcaella heinsohni</string>
+    <string name="PeponocephalaElectra">Baleia-cabeça-de-melão=Peponocephala electra</string>
+    <string name="PhocoenaDioptrica">Golfinho-de-óculos/Boto-de-luneta=Phocoena dioptrica</string>
+    <string name="PhocoenaSinus">Vaquita=Phocoena sinus</string>
+    <string name="PhocoenaSpinipinnis">Boto-de-burmeister=Phocoena spinipinnis</string>
+    <string name="PhocoenoidesDalli">Boto-de-dall/marsopa ou marsopa-de-porto-dall=Phocoenoides dalli</string>
+    <string name="PinnipediaSp">Morsa/Foca/Urso-do-mar/Lobos-marinhos/Leão-marinho/Elefante-marinho=Pinnipedia sp</string>
+    <string name="PontoporiaBlainvillei">Golfinho-do-rio-da-prata/boto-amarelo ou achimbo/franciscana/toninha=Pontoporia blainvillei</string>
+    <string name="SotaliaGuianensis">Boto-cinza=Sotalia guianensis</string>
+    <string name="SousaChinensis">Golfinho-corcunda-indopacífico=Sousa chinensis</string>
+    <string name="SousaPlumbea">Golfinho-corcunda do Índico=Sousa plumbea</string>
+    <string name="SousaSahulensis">Golfinho-corcunda-australiano=Sousa sahulensis</string>
+    <string name="SousaTeuszii">Golfinho-corcunda-do-atlântico=Sousa teuszii</string>
+    <string name="StenellaAttenuata">Golfinho-pintado-pantropical=Stenella attenuata</string>
+    <string name="StenellaClymene">Golfinho-clímene=Stenella clymene</string>
+    <string name="StenellaLongirostris">Golfinho-rotador ou fiandeiro-de-bico-comprido=Stenella longirostris</string>
+    <string name="TasmacetusShepherdi">Baleia-bicuda-de-shepherd=Tasmacetus shepherdi</string>
+    <string name="TursiopsAduncus">Roaz-do-índico=Tursiops aduncus</string>
+    <string name="UrsusMaritimus">Urso-polar=Ursus maritimus</string>
     <string name="aBaleenWhalesFamily">Baleias/rorquais</string>
     <string name="cBeakedWhalesFamily">Baleias de bico</string>
     <string name="dBigDolphinsFamily">Grandes golfinhos</string>
@@ -190,5 +190,6 @@
     <string name="feeding">Alimentação</string>
     <string name="movement">Deslocação</string>
     <string name="socialization">Socialização</string>
+    <string name="user_list_species">Escolha a ordem das espécies específicas para sua área.</string>
 
 </resources>

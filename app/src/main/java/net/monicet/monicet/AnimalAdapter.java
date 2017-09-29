@@ -43,6 +43,10 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {//implements Filterable
         TextView specie = (TextView)convertView.findViewById(R.id.specie_text_view);
         specie.setText(String.valueOf(currentAnimal.getSpecie().getName()));
 
+        // set the specie name in Latin
+        TextView specieLatin = (TextView)convertView.findViewById(R.id.specie_latin_text_view);
+        specieLatin.setText(String.valueOf(currentAnimal.getSpecie().getLatinName()));
+
         // set the photo button for that specie and implement logic when clicked
 //        ImageButton photo = (ImageButton)convertView.findViewById(R.id.photo_imageButton);
 //        photo.setOnClickListener(new View.OnClickListener() {
@@ -78,27 +82,5 @@ public class AnimalAdapter extends ArrayAdapter<Animal> {//implements Filterable
 
         return convertView;
     }
-
-//    @NonNull
-//    @Override
-//    public Filter getFilter() {
-//        return super.getFilter();
-//    }
-//
-//    private class AnimalFilter extends Filter {
-//
-//        @Override
-//        protected FilterResults performFiltering(CharSequence constraint) {
-//
-//            FilterResults filterResults = new FilterResults();
-//
-//            return null;
-//        }
-//
-//        @Override
-//        protected void publishResults(CharSequence constraint, FilterResults results) {
-//
-//        }
-//    }
 
 }

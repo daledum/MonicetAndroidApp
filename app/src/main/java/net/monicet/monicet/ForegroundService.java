@@ -270,7 +270,7 @@ public class ForegroundService extends Service {
                     //TODO: read first part (up to ",") of first line of file
                     String userName = null;
                     try {
-                        BufferedReader in = new BufferedReader(new FileReader("foo.in"));
+                        BufferedReader in = new BufferedReader(new FileReader(extensionlessFgrRouteFile));
 
                         try {
                             String lineContainingUserName = in.readLine();
