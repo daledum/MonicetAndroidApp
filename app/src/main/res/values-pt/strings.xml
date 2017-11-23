@@ -191,5 +191,6 @@
     <string name="movement">Deslocação</string>
     <string name="socialization">Socialização</string>
     <string name="user_list_species">Escolha a ordem das espécies específicas para sua área.</string>
+    <string name="all_in_one">Todos em um</string>
 
 </resources>

@@ -160,7 +160,7 @@ public class SightingAdapter extends ArrayAdapter<Sighting> {
                     mainActivity.openSighting(
                             //too expensive to getMyActivity ?//below was//getContext().getText(R.string.app_name) + " - " + getContext().getText(R.string.edit_sighting)//get rid
                             getContext().getString(R.string.edit_sighting),
-                            currentSighting.getAnimal().getSpecie().getFamily(),
+                            null,//null means I don't want a specific family, show all ...was: currentSighting.getAnimal().getSpecie().getFamily(),
                             currentSighting
                     );
                 }

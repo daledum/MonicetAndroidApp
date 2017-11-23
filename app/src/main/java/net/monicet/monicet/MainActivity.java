@@ -76,7 +76,7 @@ import java.util.concurrent.TimeoutException;
 import static android.R.string.no;
 import static android.accounts.AccountManager.newChooseAccountIntent;
 import static java.lang.Math.abs;
-import static net.monicet.monicet.Utils.PERMANENT_FILES_DIR;
+import static net.monicet.monicet.Utils.CUSTOM_SPECIE_ORDER_FILENAME;
 import static net.monicet.monicet.Utils.stopForegroundService;
 
 public class MainActivity extends AppCompatActivity implements
@@ -94,9 +94,10 @@ public class MainActivity extends AppCompatActivity implements
     final ArrayList<Animal> allSeedAnimals = new ArrayList<Animal>();
     final ArrayList<String> animalFamiliesTranslated = new ArrayList<String>();
 
-    final String[] userListSpeciesTitles = new String[1];//get specific language, file should have also latin names and rank
-    // use default and default-azores if no file present
-    // try to download it in the beginning
+    // using this 'class' variable in order to remember it for the start press
+    // and to avoid writing to Trip object in the spinner listener (if I were to write it I would have
+    // to force the creation of the trip to happen pre initViews)
+    final String[] speciesOrderNames = new String[1];//get specific language, file should have also latin names and rank
 
     final ArrayAdapter[] arrayAdapters = new ArrayAdapter[3];// TODO: specie feature add another array adaptor for the family names
     // Declare and initialize the receiver dynamically // TODO: maybe this should be done in a singleton, application level
@@ -624,7 +625,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // create seed animals from resources,containing specie names, photos and description
         // (to feed the custom ListView ArrayAdapter)
-        buildSeedAnimalsFromResources();
+        buildSeedAnimalsFromResources2();//TODO: change to 'without 2', when you refactor the 'without 2' method
 
         // create animal adapter (which uses seed animals) +
         // create the custom Sightings ArrayAdapter and populate it will null
@@ -693,6 +694,13 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void openSighting(String label, String family, Sighting sighting) {
 
+        // TODO: issues here?
+        //when I am in sightings adapter and I click on sighting - it takes me to animal
+        // adapter - but it shows me the family of the selected animal (in that sighting) - the
+        // family containing the animals from the user's list (if I chose a specie from an
+        // 'other's family - that specie won't even appear there
+        // Solution - when opening a sighting - all species should appear (including others)
+
         // string used by search specie logic when refreshing the animal adapter with the appropriate animals
         openedFamilies[0] = family;
 
@@ -712,7 +720,7 @@ public class MainActivity extends AppCompatActivity implements
         setTitle(label);
 
         // TODO: issue - animal array adapter doesn't focus on the clicked specie (array adapter remembers last position)
-        // how to focus array adapter on a specific item
+        // how to focus array adapter on a specific item - pre-populate search with name of that specie
         // I can start with the first specie if I clear and setdataall seedanimals (start with null)
 
         // first, clean the seed animals - maybe use INITIAL_VALUE
@@ -741,11 +749,24 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
-        // let the animal adapter know that the seedAnimals changed
-        arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
-        //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
-        arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(family, null));
-        arrayAdapters[0].notifyDataSetChanged();
+        if (openedFamilies[0] == null && sighting != null) { // openedFamilies[0] gets initialized to family and is used by search text watcher
+            // meaning that I've just clicked on an existing sighting (I want to see all species in one big family)
+            // then - in order for the specie in that sighting to be in focus, pre-populate the search with the name of that specie
+            // by deleting the search text by hand - you have access too all the species
+            // get the text in the box - so the user realizes what's happening
+            // This is what the search text watcher does: (openedFamilies[0] used in getOpenedFam() is set to null above)
+//            arrayAdapters[0].clear();
+//            arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(openedFamilies[0], searchBox.getText().toString()));
+//            arrayAdapters[0].notifyDataSetChanged();
+            searchBox.setText(sighting.getAnimal().getSpecie().getLatinName());
+        } else {
+            // meaning that I've just clicked on a family (after having pressed the ADD button) - new sighting
+            // let the animal adapter know that the seedAnimals changed
+            arrayAdapters[0].clear();//DOCS: removes all elements from the list (so, don't feed it allSeedAnimals, please)
+            //no choice, this is 'global' - I cannot instantiate my bespoke adapters as globals, before oninit
+            arrayAdapters[0].addAll(getOpenedFamilySeedAnimals(family, null));
+            arrayAdapters[0].notifyDataSetChanged();
+        }
 
         // make sighting list view invisible
         findViewById(R.id.list_view_sightings).setVisibility(View.INVISIBLE);
@@ -1649,6 +1670,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
                 //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+                //findViewById(R.id.user_list_species_spinner).setEnabled(true);//get rid
 
             }
         }
@@ -1806,25 +1828,187 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    protected void userListSpeciesLogic() {
-        //TODO: get the adapter data for the spinner
-        // go to the local file...if it does not exist - I should give it the "all species" and "azores" options
-        // so, I look into the file - it has the species, etc, but also the name of the user lists
+    protected ArrayList<String> getOrderListFromFile(File file) {
+
+        // from file, feed list to string array to be used in array adapter, if file downloaded successfully
+        if (file != null) {
+            try {
+                BufferedReader in = new BufferedReader(new FileReader(file));
+
+                try {
+
+                    ArrayList<String> order = new ArrayList<>();
+
+                    // discard the first line
+                    String line = in.readLine();
+
+                    while ((line = in.readLine()) != null) {
+                        int indexOfComma = line.indexOf(",");
+                        if (indexOfComma != -1) {
+                            // add the names of the orders here
+                            order.add(line.substring(0, indexOfComma).trim());
+                        }
+                    }
+
+                    // if the order list contains any items,
+                    if (order.size() > 0) {
+
+                        boolean addAllInOneEnd = true;
+                        String lastUsedOrderName = Utils.readOrderNameFromSharedPrefs(MainActivity.this);
+                        // we make sure that shared prefs have a last used order and that it's in the file's list of orders
+                        if (lastUsedOrderName != null) {
+
+                            if (lastUsedOrderName.equals(getString(R.string.all_in_one))) {
+                                addAllInOneEnd = false;
+                            }
+
+                            if (order.contains(lastUsedOrderName)) {
+                                order.remove(lastUsedOrderName);
+                            }
+
+                            // make the order name used last time (in previous trip - post START button press)
+                            // be the first option
+                            order.add(0, lastUsedOrderName);
+                        }
+
+                        if (addAllInOneEnd) {
+                            // add the default "all in one" option at the end
+                            order.add(getString(R.string.all_in_one));
+                        }
+
+                        // and return the list
+                        return order;
+                    }
+
+                } catch(IOException e) {
+                    e.printStackTrace();
+                    //TODO: get rid of toast - test only
+                    Toast.makeText(
+                            MainActivity.this,
+                            "IOException",
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+
+                try {
+                    in.close();
+                } catch(IOException ex) {
+                    ex.printStackTrace();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                //TODO: get rid - test only
+                Toast.makeText(
+                        MainActivity.this,
+                        "File not found exception",
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        } else {//TODO: this runs and needs to be taken out
+            Toast.makeText(
+                    MainActivity.this,
+                    "File not found",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+
+        return null;
+    }
+
+    protected void populateAndShowList(ArrayList<String> order) {
+
+        // the array adapter for the spinner
+
+        if (order == null) {
+            // just use the default, all animals in one family order
+            // could just as well be:
+            order = new ArrayList<>(Arrays.asList(new String[]{getString(R.string.all_in_one)}));
+        }
 
         // the user list species spinner
         Spinner spinner = (Spinner)findViewById(R.id.user_list_species_spinner);
-        // the array adapter for the spinner
+
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-                this,
+                MainActivity.this,
                 android.R.layout.simple_spinner_item,
-                new String[]{"test123", "456", "7", "1", "2", "4", "123", "456", "7", "1", "2", "4"}
+                order
         );
+
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
+        spinner.setOnItemSelectedListener(MainActivity.this);
 
-        spinner.setOnItemSelectedListener(this);
+        //TODO: ?? this has to come after init views - NB userListSpeciesLogic should be called here only - remove it from initviews
+        findViewById(R.id.user_list_species_spinner).
+                setVisibility(View.VISIBLE);
+    }
+
+    protected void speciesOrderLogic() {
+
+        //if was start button pressed and is connected - TODO: also DRY with startbuttonlogic file work
+        if (!wasStartButtonPressed()) {
+            if (Utils.isConnected(this)) {
+                // TODO: also, make sure that the file was not downloaded very recently - 1 sec (or,
+                // to better put it, the sendtripfiles hasn't just started downloading the file. Do the same in that method)
+
+                // Try to download the order file
+                // Make sure you're not doing it (see if done super recently via shared prefs) at the
+                // same time with the sendtripfiles method (change time in shared prefs at the beginning
+                // of the sendtrip and download order file methods - should be a shared method).
+                // Only after result go on with everything else?...
+                // We do not want both method to try to download and write the same file at the same time
+                long lastDownloadTime = Utils.readTimeMillisFromSharedPrefs(MainActivity.this);
+                // If I get 0, this means that the file was never downloaded or that the OS deleted the value from Shared Prefs...
+                // If I get more than a second between now and the moment another method call (sendFiles) downloaded the file...
+                // In either case I want to download the file
+                if (lastDownloadTime == 0 ||
+                        System.currentTimeMillis() - lastDownloadTime > Utils.ONE_SECOND_IN_MILLIS) {
+
+                    // write the current time to shared prefs, so that if another method fires,
+                    // it knows when another method call started to try to download the file (so that it doesn't try, too)
+                    Utils.writeTimeMillisToSharedPrefs(MainActivity.this, System.currentTimeMillis());
+
+                    //NB need a thread here (network not on UI thread)
+                    // in this case I am connected to the Internet (but a connection does not exist)
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // in this case I am connected to the Internet (but a connection does not exist,
+                            // downloadFile deals with this)
+                            //returns String Array containing orders or null
+                            ArrayList<String> order = getOrderListFromFile(
+                                    Utils.downloadFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
+
+                            if (order == null) { // meaning something went wrong with the downloaded file
+                                // try with the local file (it will return null if the local file
+                                // failed too - populateAndShow will deal with this)
+                                order = getOrderListFromFile(
+                                        Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
+                            }
+
+                            final ArrayList<String> finalOrder = order;
+
+                            // populate spinner with array of orders and make view visible
+                            runOnUiThread(new Runnable() {
+                                              @Override
+                                              public void run() {
+                                                  populateAndShowList(finalOrder);
+                                              }
+                                          }
+                            );
+
+                        }
+                    }).start();
+                }
+            } else {
+                // not connected, so try to use the local file (populateAndShow will default to "all in one" string)
+                populateAndShowList(getOrderListFromFile(
+                        Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME)));
+            }
+        }// nothing in this else - if start button was pressed - the list of orders doesn't need to be shown or populated
 
     }
+
     protected void gpsUserIntervalLogic() {
 
         List<Long> intervalValues = new ArrayList<Long>(GpsMode.values().length);
@@ -1914,6 +2098,8 @@ public class MainActivity extends AppCompatActivity implements
                     @Override
                     public void run() {
                         findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);
+                        // activate the spinner list, length of trip and frequency of gps sampling
+                        setEnabledUserChoicesViews(true);
                     }
                 });
 
@@ -2370,12 +2556,82 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    protected void buildSeedAnimalsFromResources2() {
+        // TODO: new feature - all in one family
+
+        //TODO: latin names, then order name then rank, two rows (first column says specie name, name of order/rank)
+        //TODO: use the whole name - see if latin is inside - also assign latin to latinName and before = to normal specie name
+
+        final ArrayList<String> animalFamiliesUntranslated = new ArrayList<String>();
+
+        // Using reflection, get all the family names (they contain the word family)
+        // from the names of the xml resource arrays
+        for (Field field: R.array.class.getFields()) {
+            if (field.getName().toLowerCase().contains("family")) {
+                animalFamiliesUntranslated.add(field.getName());
+            }
+        }
+
+        // Sort them alphabetically (observe the first letter of each family name)
+        Collections.sort(animalFamiliesUntranslated);
+
+        // Get the id of the array (eg baleen whales - it's the name of the resource, untranslated)
+        for (String familyNameUntranslated: animalFamiliesUntranslated) {
+
+            int idOfFamilyName = getResources().getIdentifier(familyNameUntranslated, "string", getPackageName());
+            String familyNameTranslated = getResources().getString(idOfFamilyName);
+
+            int idOfSpeciesStringArray = getResources().getIdentifier(familyNameUntranslated, "array", getPackageName());
+            // get the String array containing all (eg baleen whale) species (they will be translated)
+            String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
+
+            // here (if the 3 arrays - this, photos and desc. - have the same size, at least check) add each animal to the list, one by one
+            int sizeOfArrays = speciesPerFamilyTranslated.length;
+
+            // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
+            // TODO: implement getting the photo ids and description data later
+//        String[] photos2 = new String[14];
+//        String[] descriptions2 = new String[14]; // all descriptions can be in one single text file
+//        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
+//        Arrays.fill(descriptions2, "description");
+
+//            if (sizeOfArrays != photos2.length || sizeOfArrays != descriptions2.length) {
+//                Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+//            }
+            //extra stuff ends here
+
+            for (int i = 0; i < sizeOfArrays; i++ ) {
+
+                Specie specie = new Specie(
+                        speciesPerFamilyTranslated[i].
+                                substring(0, speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER)),
+                        speciesPerFamilyTranslated[i].
+                                substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1),
+                        familyNameTranslated,
+                        Utils.INITIAL_RANK,
+                        "photo",//photos2[i],
+                        "description"//descriptions2[i]
+                );
+
+                allSeedAnimals.add(new Animal(specie));
+            }
+
+        }
+
+        // I want to add the translated family name to an arraylist to feed the family names array adaptor
+        // animalFamilies translated array list is to be fed to the [2] third array adaptor
+        // add 'Others'/'Species not on your list' option to the list - our only/default option at
+        // this moment (all species in this family - 'All in one')
+        animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list));
+    }
+
     public void buildSeedAnimalsFromResources() {
 
-        // Stub data coming from the server //TODO: replace this with the file content (get update from server)
+        //TODO: I need all my animals coming from XML (Latin) in one signle family (all the same rank)
+
+        // Stub data coming from the server //TODO: replace this with the file content (get update from server) - use the all in one family logic, reorder after start if necessary
         // I need an array of latin specie names - the order represents their
         // rank (if spermwhalus is first, then its rank is 0+1 etc)
-        //TODO: translate to latin
         List<String> customSpecieList = new ArrayList<>(Arrays.asList(new String[] {
                 "Physeter macrocephalus",//was "Sperm whale",
                 "Delphinus delphis",
@@ -2590,6 +2846,14 @@ public class MainActivity extends AppCompatActivity implements
         arrayAdapters[2] = new FamilyAdapter(MainActivity.this, animalFamiliesTranslated);
     }
 
+    protected void setEnabledUserChoicesViews(boolean enabled) {
+        // disable the 3 views so that the users cannot choose any option pre-minimum gps fixing
+        // enable them after the minimum gps fixing
+        findViewById(R.id.user_list_species_spinner).setEnabled(enabled);
+        findViewById(R.id.gps_user_duration_number_picker).setEnabled(enabled);
+        findViewById(R.id.gps_user_interval_number_picker).setEnabled(enabled);
+    }
+
     public void initViews() {
         // set label to MONICET - START TRIP
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -2598,7 +2862,9 @@ public class MainActivity extends AppCompatActivity implements
         setTitle(getText(R.string.start_trip));
         getSupportActionBar().setIcon(R.mipmap.ic_launcher_whale_tail_blue);
 
-        userListSpeciesLogic();
+        setEnabledUserChoicesViews(false);
+
+        speciesOrderLogic();
 
         gpsUserIntervalLogic();
 
@@ -2729,7 +2995,19 @@ public class MainActivity extends AppCompatActivity implements
 //                    ).show();
                     //test ends here
 
-                    File file = Utils.getFile(MainActivity.this, Utils.CUSTOM_SPECIE_ORDER_FILENAME);
+                    // write to trip (so, we know what order was used when we read the json)
+                    trips[0].setSpeciesOrder(speciesOrderNames[0]);
+                    // write to Shared Prefs (to use as the first spinner option for the next trip)
+                    Utils.writeOrderNameToSharedPrefs(MainActivity.this, speciesOrderNames[0]);
+
+                    // if order chose is all in one - all in one (0 everywhere) - no rearraning
+                    // else:
+                    // get order names from local file
+                    // not possible - use all in one - 0 everywhere
+                    // possible, but the order chose is not among the ones found in the file - all in one (0 everywhere)
+                    // possible and the order is there - rearrange animals
+
+                    File file = Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME);
                     if (file != null) {
                         try {
                             BufferedReader in = new BufferedReader(new FileReader(file));
@@ -2774,7 +3052,7 @@ public class MainActivity extends AppCompatActivity implements
                                 Toast.LENGTH_LONG
                         ).show();
                     }
-                    //test up to here
+                    //test up to here - DRY code
 
                     // b) - time
                     trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());
@@ -3090,12 +3368,9 @@ public class MainActivity extends AppCompatActivity implements
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         // An item was selected. You can retrieve the selected item using
         // parent.getItemAtPosition(pos)
-        //TODO: new feature - set global String here to be used inside start button logic
+        // set global String here to be used inside start button logic
         //TODO: NB this fires in the beginning with the default value (reset value)
-        userListSpeciesTitles[0] = parent.getItemAtPosition(position).toString();
-//        Toast.makeText(MainActivity.this,
-//                userListSpeciesTitles[0],
-//                Toast.LENGTH_SHORT).show();
+        speciesOrderNames[0] = parent.getItemAtPosition(position).toString();
     }
 
     @Override

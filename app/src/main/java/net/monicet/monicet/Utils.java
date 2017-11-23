@@ -23,6 +23,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
+
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.L;
 
 /**
  * Created by ubuntu on 07-02-2017.
@@ -64,6 +67,8 @@ public final class Utils {
     public static final String ACCOUNT_NAME = "accountName";
     public static final String UNKNOWN_USER = "unknown@unknown.unknown";
     public static final String LATIN_NAME_DELIMITER = "=";
+    public static final String ORDER_NAME = "orderName";
+    public static final String DOWNLOAD_TIME = "downloadTime";
 
     public static final String DESTINATION_URL = "http://infohive.org.uk/monicet/send/";
     public static final String SERVER_URL = "http://infohive.org.uk/monicet/";
@@ -89,6 +94,9 @@ public final class Utils {
     public static final String INTENT_CONNECTION_ACTION = "android.net.conn.CONNECTIVITY_CHANGE";
     public static final String START_ACTION = ".START";
     public static final String STOP_ACTION = ".STOP";
+
+    //TODO: new order list feature, get rid if not using
+    public static final Semaphore LOCK = new Semaphore(0);
 
     // back-ups, if directory is null (for usage in SendAndDeleteFiles())
     public static final String EXTERNAL_DIRECTORY =
@@ -222,6 +230,22 @@ public final class Utils {
 
         // firstly, check that there is an Internet connection
         if (isConnected(context)) {
+
+            boolean toDownload = false;
+            // We do not want more threads to try to download and write the same file at the same time
+            long lastDownloadTime = Utils.readTimeMillisFromSharedPrefs(context);
+            // If I get 0, this means that the file was never downloaded or that the OS deleted the value from Shared Prefs...
+            // If I get more than a second between now and the moment another method call (sendFiles) downloaded the file...
+            // In either case I want to download the file
+            if (lastDownloadTime == 0 ||
+                    System.currentTimeMillis() - lastDownloadTime > Utils.ONE_SECOND_IN_MILLIS) {
+
+                // write the current time to shared prefs, so that if another method fires,
+                // it knows when another method call started to try to download the file (so that it doesn't try, too)
+                Utils.writeTimeMillisToSharedPrefs(context, System.currentTimeMillis());
+                toDownload = true;
+            }
+
             // secondly, check if the directory exists
             if (dir.exists()) {
                 // thirdly, if it has any of our files
@@ -345,8 +369,28 @@ public final class Utils {
                 }
             }
 
-            // in this case I am connected to the Internet (but a connection does not exist)
-            downloadFile(context, CUSTOM_SPECIE_ORDER_FILENAME);// returns the file or null
+            // positioned writing start time at beginning of this method because thus will take longer then speciesOrderLogic method
+            // ?otherwise we would have a race between two runner of the same speed
+
+//            // We do not want more threads to try to download and write the same file at the same time
+//            long lastDownloadTime = Utils.readTimeMillisFromSharedPrefs(context);
+//            // If I get 0, this means that the file was never downloaded or that the OS deleted the value from Shared Prefs...
+//            // If I get more than a second between now and the moment another method call (sendFiles) downloaded the file...
+//            // In either case I want to download the file
+//            if (lastDownloadTime == 0 ||
+//                    System.currentTimeMillis() - lastDownloadTime > Utils.ONE_SECOND_IN_MILLIS) {
+//
+//                // if successful, write the current time to shared prefs, so that if another method fires,
+//                // it knows when another method call started to try to download the file (so that it doesn't try, too)
+//                Utils.writeTimeMillisToSharedPrefs(context, System.currentTimeMillis());
+//                // in this case I am connected to the Internet (but a connection does not exist)
+//                downloadFile(context, CUSTOM_SPECIE_ORDER_FILENAME);// returns the file or null
+//            }
+
+            if (toDownload) {
+                // in this case I am connected to the Internet (but a connection does not exist)
+                downloadFile(context, CUSTOM_SPECIE_ORDER_FILENAME);// returns the file or null
+            }
         }
 
         // method is successful if it has sent and therefore deleted all the files
@@ -604,6 +648,34 @@ public final class Utils {
         // default null is returned if prefs don't exist (no app run yet etc)
         // or if user did not give us their account yet or if app cleared the account name
         return sharedPref.getString(ACCOUNT_NAME, null);
+    }
+
+    public static void writeOrderNameToSharedPrefs(Context context, String orderName) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(ORDER_NAME, orderName);
+        editor.apply();
+    }
+
+    public static String readOrderNameFromSharedPrefs(Context context) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        // default null is returned if prefs don't exist (no app run yet etc)
+        // or if app/system cleared the order name
+        return sharedPref.getString(ORDER_NAME, null);
+    }
+
+    public static void writeTimeMillisToSharedPrefs(Context context, long timeMillis) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putLong(DOWNLOAD_TIME, timeMillis);
+        editor.apply();
+    }
+
+    public static long readTimeMillisFromSharedPrefs(Context context) {
+        SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME, 0);
+        // default 0 is returned if prefs don't exist (no app run yet etc)
+        // or if app/system cleared the account name or if no file download yet
+        return sharedPref.getLong(DOWNLOAD_TIME, 0);
     }
 
     // this requires read contacts permission

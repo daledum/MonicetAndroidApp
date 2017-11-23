@@ -23,6 +23,7 @@ public class Trip implements Serializable {
     private String guide;
     private String company;
     private String boat;
+    private String speciesOrder;
 
     public class MyFile {
         private String fileTitle;
@@ -58,6 +59,7 @@ public class Trip implements Serializable {
         guide = "";
         company = "";
         boat = "";
+        speciesOrder = "";
 
         tripFile = new MyFile();
         routeFile = new MyFile();
@@ -107,4 +109,8 @@ public class Trip implements Serializable {
     public String getBoat() { return boat; }
     public void setBoat(String vBoat) { boat = vBoat; }
 
+    public String getSpeciesOrder() { return speciesOrder; }
+    public void setSpeciesOrder(String vSpeciesOrder) {
+        speciesOrder = vSpeciesOrder;
+    }
 }

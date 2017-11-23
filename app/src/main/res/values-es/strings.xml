@@ -96,7 +96,7 @@
     <string name="TasmacetusShepherdi">Zifio de Shepherd=Tasmacetus shepherdi</string>
     <string name="TursiopsAduncus">Delfín del Indo-Pacífico=Tursiops aduncus</string>
     <string name="UrsusMaritimus">Oso polar=Ursus maritimus</string>
-    <string name="aBaleenWhalesFamily">Ballenas barbadas</string>
+    <string name="aBaleenWhalesFamily">Ballenas de barbas</string>
     <string name="cBeakedWhalesFamily">Zifios</string>
     <string name="dBigDolphinsFamily">Grandes delfines</string>
     <string name="fBlackDolphinsFamily">Delfines negros</string>
@@ -153,4 +153,5 @@
     <string name="socialization">Socialización</string>
     <string name="user_list_species">Elija el orden de las especies específicas de su área.</string>
     <string name="gps_user_duration_text">Seleccione la duración aproximada de su viaje, en horas.</string>
+    <string name="all_in_one">Todos en uno</string>
 </resources>
