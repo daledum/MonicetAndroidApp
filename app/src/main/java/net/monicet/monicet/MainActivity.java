@@ -1666,11 +1666,11 @@ public class MainActivity extends AppCompatActivity implements
 
                 // here start a thread which gets into fast, fixing mode (short interval),
                 // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-                findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
-                findViewById(R.id.user_list_species_spinner).setEnabled(true);//get rid
+                //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+                //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+                //findViewById(R.id.user_list_species_spinner).setEnabled(true);//get rid
 
             }
         }
