@@ -41,6 +41,8 @@ public class Specie implements Serializable {
 
     public int getRank() { return mRank; }
 
+    public void setRank(int vRank) { mRank = vRank; }
+
     public String getPhoto() {
         return mPhoto;
     }

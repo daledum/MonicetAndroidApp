@@ -1666,11 +1666,11 @@ public class MainActivity extends AppCompatActivity implements
 
                 // here start a thread which gets into fast, fixing mode (short interval),
                 // waits for X number of onLocationChanged calls and after that, Y number of minutes
-                fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
+                //fixGpsSignal(5, 2);//TODO: NB now urgent Reinstate this test only commented
 
-                //wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
-                //findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
-                //findViewById(R.id.user_list_species_spinner).setEnabled(true);//get rid
+                wasMinimumAmountOfGpsFixingDone = true; // TODO: get rid - only when not testing gps
+                findViewById(R.id.wait_for_gps_fix_textview).setVisibility(View.INVISIBLE);// get rid
+                findViewById(R.id.user_list_species_spinner).setEnabled(true);//get rid
 
             }
         }
@@ -1837,7 +1837,7 @@ public class MainActivity extends AppCompatActivity implements
 
                 try {
 
-                    ArrayList<String> order = new ArrayList<>();
+                    ArrayList<String> orders = new ArrayList<>();
 
                     // discard the first line
                     String line = in.readLine();
@@ -1846,12 +1846,12 @@ public class MainActivity extends AppCompatActivity implements
                         int indexOfComma = line.indexOf(",");
                         if (indexOfComma != -1) {
                             // add the names of the orders here
-                            order.add(line.substring(0, indexOfComma).trim());
+                            orders.add(line.substring(0, indexOfComma).trim());
                         }
                     }
 
                     // if the order list contains any items,
-                    if (order.size() > 0) {
+                    if (orders.size() > 0) {
 
                         boolean addAllInOneEnd = true;
                         String lastUsedOrderName = Utils.readOrderNameFromSharedPrefs(MainActivity.this);
@@ -1862,32 +1862,26 @@ public class MainActivity extends AppCompatActivity implements
                                 addAllInOneEnd = false;
                             }
 
-                            if (order.contains(lastUsedOrderName)) {
-                                order.remove(lastUsedOrderName);
+                            if (orders.contains(lastUsedOrderName)) {
+                                orders.remove(lastUsedOrderName);
                             }
 
                             // make the order name used last time (in previous trip - post START button press)
                             // be the first option
-                            order.add(0, lastUsedOrderName);
+                            orders.add(0, lastUsedOrderName);
                         }
 
                         if (addAllInOneEnd) {
                             // add the default "all in one" option at the end
-                            order.add(getString(R.string.all_in_one));
+                            orders.add(getString(R.string.all_in_one));
                         }
 
                         // and return the list
-                        return order;
+                        return orders;
                     }
 
                 } catch(IOException e) {
                     e.printStackTrace();
-                    //TODO: get rid of toast - test only
-                    Toast.makeText(
-                            MainActivity.this,
-                            "IOException",
-                            Toast.LENGTH_LONG
-                    ).show();
                 }
 
                 try {
@@ -1897,23 +1891,101 @@ public class MainActivity extends AppCompatActivity implements
                 }
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-                //TODO: get rid - test only
-                Toast.makeText(
-                        MainActivity.this,
-                        "File not found exception",
-                        Toast.LENGTH_LONG
-                ).show();
             }
-        } else {//TODO: this runs and needs to be taken out
-            Toast.makeText(
-                    MainActivity.this,
-                    "File not found",
-                    Toast.LENGTH_LONG
-            ).show();
         }
 
         return null;
     }
+
+    protected int[] getRanks(File file, String orderName) {
+
+        if (file != null) {
+            try {
+                BufferedReader in = new BufferedReader(new FileReader(file));
+
+                try {
+                    // discard the first line
+                    String line = in.readLine();
+
+                    while ((line = in.readLine()) != null) {
+                        int indexOfComma = line.indexOf(",");
+                        if (indexOfComma != -1) {
+                            // if the name of the order in the file on that line is the same as the argument order name
+                            if (line.substring(0, indexOfComma).trim().toLowerCase().
+                                    equals(orderName.trim().toLowerCase())) {
+
+                                // ignore the first word and return array of String with the ranks
+                                String[] stringRanks = (line.substring(indexOfComma + 1)).split(",");
+                                int size = stringRanks.length;
+                                if (size > 0) {
+                                    int[] ranks = new int[size];
+
+                                    for (int i = 0; i < size; i++) {
+                                        // trim the leading and trailing spaces and convert to int
+                                        ranks[i] = Integer.parseInt(stringRanks[i].trim());
+                                    }
+
+                                    return ranks;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                } catch(IOException e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    in.close();
+                } catch(IOException ex) {
+                    ex.printStackTrace();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return null;
+    }
+
+    protected ArrayList<String> getLowerCaseLatinSpecieNamesFromFile(File file) {
+
+        if (file != null) {
+            try {
+                BufferedReader in = new BufferedReader(new FileReader(file));
+
+                try {
+                    String line = in.readLine();
+
+                    int indexOfComma = line.indexOf(",");
+                    if (indexOfComma != -1) {
+                        // ignore the first word and return array of String with the specie names in Latin
+                        String[] names = (line.substring(indexOfComma + 1)).split(",");
+                        if (names.length > 0) {
+                            ArrayList<String> specieNamesLatinLowerCase = new ArrayList<>(names.length);
+                            for (String name: names) {
+                                specieNamesLatinLowerCase.add(name.trim().toLowerCase());
+                            }
+                            return specieNamesLatinLowerCase;
+                        }
+                    }
+                } catch(IOException e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    in.close();
+                } catch(IOException ex) {
+                    ex.printStackTrace();
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return null;
+    }
+
 
     protected void populateAndShowList(ArrayList<String> order) {
 
@@ -1976,17 +2048,17 @@ public class MainActivity extends AppCompatActivity implements
                             // in this case I am connected to the Internet (but a connection does not exist,
                             // downloadFile deals with this)
                             //returns String Array containing orders or null
-                            ArrayList<String> order = getOrderListFromFile(
+                            ArrayList<String> orders = getOrderListFromFile(
                                     Utils.downloadFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
 
-                            if (order == null) { // meaning something went wrong with the downloaded file
+                            if (orders == null) { // meaning something went wrong with the downloaded file
                                 // try with the local file (it will return null if the local file
                                 // failed too - populateAndShow will deal with this)
-                                order = getOrderListFromFile(
+                                orders = getOrderListFromFile(
                                         Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
                             }
 
-                            final ArrayList<String> finalOrder = order;
+                            final ArrayList<String> finalOrder = orders;
 
                             // populate spinner with array of orders and make view visible
                             runOnUiThread(new Runnable() {
@@ -2572,8 +2644,8 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
-        // Sort them alphabetically (observe the first letter of each family name)
-        Collections.sort(animalFamiliesUntranslated);
+        // Sort them alphabetically (observe the first letter of each family name)// get rid
+        //Collections.sort(animalFamiliesUntranslated);//TODO: no need to sort here - get rid
 
         // Get the id of the array (eg baleen whales - it's the name of the resource, untranslated)
         for (String familyNameUntranslated: animalFamiliesUntranslated) {
@@ -2625,48 +2697,7 @@ public class MainActivity extends AppCompatActivity implements
         animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list));
     }
 
-    public void buildSeedAnimalsFromResources() {
-
-        //TODO: I need all my animals coming from XML (Latin) in one signle family (all the same rank)
-
-        // Stub data coming from the server //TODO: replace this with the file content (get update from server) - use the all in one family logic, reorder after start if necessary
-        // I need an array of latin specie names - the order represents their
-        // rank (if spermwhalus is first, then its rank is 0+1 etc)
-        List<String> customSpecieList = new ArrayList<>(Arrays.asList(new String[] {
-                "Physeter macrocephalus",//was "Sperm whale",
-                "Delphinus delphis",
-                "Tursiops truncatus",
-                "Stenella frontalis",
-                "Balaenoptera physalus",
-                "Grampus griseus",
-                "Globicephala macrorhynchus",
-                "Stenella coeruleoalba",
-                "Balaenoptera borealis",
-                "Caretta caretta",
-                "Balaenoptera musculus",
-                "Pseudorca crassidens",
-                "Megaptera noveangliae",
-                "Ziphius sp",
-                "Mesoplodon bidens",
-                "Balaenoptera acutorostrata",
-                "Orcinus orca",
-                "Hyperoodon ampullatus",
-                "Balaenoptera edeni",
-                "Dermochelys coriacea",
-                "Phocaena phocaena",
-                "Ziphius cavirostris",
-                "Mesoplodon densirostris",
-                "Mesoplodon mirus",
-                "Chelonia mydas",
-                "Globicephala melas",
-                "Steno bredanensis",
-                "Kogia breviceps",
-                "Eretmochelys imbricata",
-                "Lepidochelys kempii"
-        }));
-
-        //TODO: latin names, then order name then rank, two rows (first column says specie name, name of order/rank)
-        //TODO: use the whole name - see if latin is inside - also assign latin to latinName and before = to normal specie name
+    protected void populateFamilies(Set<String> families, boolean addOthers) {
 
         final ArrayList<String> animalFamiliesUntranslated = new ArrayList<String>();
 
@@ -2678,161 +2709,249 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
 
+        // we are here (this method is called if there is at least one specie with a non-zero rank),
+        // therefore at least non-'Others' family
+        animalFamiliesTranslated.clear();
+
         // Sort them alphabetically (observe the first letter of each family name)
+        // They are sorted - therefore their translated version will be added below in the right order
         Collections.sort(animalFamiliesUntranslated);
-
-        // Create a set (to be populated after going through the custom list of species) for storing the custom families
-        Set<String> customFamiliesSet = new HashSet<String>();
-
-        // This is to see if 'Others' element was added (to be used in families array adapter)
-        boolean containsOthers = false; // this is to be initialized once for all families
 
         // Get the id of the array (eg baleen whales - it's the name of the resource, untranslated)
         for (String familyNameUntranslated: animalFamiliesUntranslated) {
 
             int idOfFamilyName = getResources().getIdentifier(familyNameUntranslated, "string", getPackageName());
             String familyNameTranslated = getResources().getString(idOfFamilyName);
-            // I want to add the translated family name to an arraylist to feed the family names array adaptor
-            // animalFamiliesUntranslated is already ordered and the insertion order is respected, therefore the translated one will be the same
-            animalFamiliesTranslated.add(familyNameTranslated);
 
-            int idOfSpeciesStringArray = getResources().getIdentifier(familyNameUntranslated, "array", getPackageName());
-            // get the String array containing all (eg baleen whale) species (they will be translated)
-            String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
-
-            // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
-            int sizeOfArrays = speciesPerFamilyTranslated.length;
-
-            // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
-            // TODO: implement getting the photo ids and description data later
-//        String[] photos2 = new String[14];
-//        String[] descriptions2 = new String[14]; // all descriptions can be in one single text file
-//        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
-//        Arrays.fill(descriptions2, "description");
-
-//            if (sizeOfArrays != photos2.length || sizeOfArrays != descriptions2.length) {
-//                Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
-//            }
-            //extra stuff ends here
-
-            for (int i = 0; i < sizeOfArrays; i++ ) {
-
-                // What I know: the custom list, containing the specie names in latin
-                // What I want: see if the current specie (I need its latin name - see point 1 above) is inside the custom list...
-                // ... if yes, copy its rank to the species rank and add the translated version (if
-                // it's possible to translate the family names above) to a set (initially empty)
-                //..... if not, make its rank 999 and add an 'others' to the set - find a way to do this only once
-                int rank = Utils.INITIAL_RANK;//TODO: remember to reset this after every specie
-
-                //TODO: here, I want to check if the latin name from my custom list contains the 'trimmed down' specie name
-                //TODO: server specie name in android's language has to perfectly match with this (watch lower and upper cases)
-                if (customSpecieList.contains(speciesPerFamilyTranslated[i].
-                        substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1))) {
-                    // copy its rank to the species rank
-                    rank = customSpecieList.indexOf(speciesPerFamilyTranslated[i]) + 1; // ranks start from 1//TODO: be careful with indices when working with csv files
-
-                    // add translated family name to a set //TODO: remember to compare it with translated all family names list
-                    customFamiliesSet.add(familyNameTranslated);
-
-                } else {
-                    if (!containsOthers) {
-                        //should add 'Others' to the animal family translated list at the end
-                        containsOthers = true;
-                    }
-                }
-
-                Specie specie = new Specie(
-                        speciesPerFamilyTranslated[i].
-                                substring(0, speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER)),
-                        speciesPerFamilyTranslated[i].
-                                substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1),
-                        familyNameTranslated,
-                        rank,
-                        "photo",//photos2[i],
-                        "description"//descriptions2[i]
-                );
-
-                allSeedAnimals.add(new Animal(specie));
-            }
-
-        }
-
-        // TODO: Prepare the arraylist to be fed to the family names array adaptor
-        // you first have all the family names (translated and in the right order):animalFamiliesTranslated
-        // then you have a set containing the custom family names. The user sends you a list of
-        // species (ranked according to number of sightings). You 'extract' the families of those
-        // species (let's say just Baleen whales, in this test case): customFamiliesSet
-        // You just keep the elements that are in both collections (you don't touch others, if
-        // if animalFamiliesTranslated contains it
-
-        // Don't make assumptions about the set or the species you received from the user (order of families etc).
-        // Rely on your sorted animalFamiliesTranslated list
-        // Initially containing all indices, from 0 to size - 1 to 0 (when removing items
-        // via indices, you must remove from the tail towards the head, otherwise, indices change 'live')
-
-        List<Integer> indicesToRemove = new ArrayList<>();
-        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
-            indicesToRemove.add(i);
-        }
-
-        // The indices of animalFamiliesTranslated are stored from largest to smallest, so,
-        // iterate through animalFamiliesTranslated from last to first
-        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
-            if (customFamiliesSet.contains(animalFamiliesTranslated.get(i))) {
-                // if the custom list has this family, I don't want it removed,
-                // so take this index out of the indicesToRemove set (remember the index is an object inside this list)
-                indicesToRemove.remove(i);
+            // if the family of the animals whose specie has a non-zero rank
+            if (families.contains(familyNameTranslated.trim().toLowerCase())) {
+                // add the family to our array adapter feeding list
+                animalFamiliesTranslated.add(familyNameTranslated);
             }
         }
 
-        // now remove all the elements with those indices
-        for (Integer index: indicesToRemove) {
-            animalFamiliesTranslated.remove((int)index);
+        // add the 'other species not on your list' family
+        if (addOthers) {
+            animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list));
         }
 
-        // add 'Species not on your list' option to the list
-        if (containsOthers) { animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list)); }
+        // refresh family adapter here - is not required
+        // let the family adapter know that the families changed
+        //arrayAdapters[2].clear();//TODO: NB clearing the adapter clears the arraylist associated to it
+        //arrayAdapters[2].addAll(animalFamiliesTranslated);
+        //arrayAdapters[2].notifyDataSetChanged();
 
-        // TODO: animalFamilies translated array list is to be fed to the [2] third array adaptor
-//        I want the animals to be sorted (use comparator for the arraylist) according to rank. Sort the big animal arraylist.
-//                In my animal adapter (which receives the sorted big array of animals),
-// I first send it the translated name of the family (therefore the animal should have the translated name of the family in it),
-// and it filters (if family name matches and rank is not zero), showing the right animals from that specie (sorted by rank).
-//                Maybe I should have an utility method that takes the sorted big animal arraylist
-// and returns another arraylist with just the same family and non-zero rank animals.
-        Collections.sort(allSeedAnimals, new Comparator<Animal>() {
-            @Override
-            public int compare(Animal o1, Animal o2) {
-                //Returns a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
-                return o1.getSpecie().getRank() - o2.getSpecie().getRank();
-            }
-        });
-
-        // assign latin names from xml - does not work - error getString via id Resource not found
-//        for (Field field: R.string.class.getDeclaredFields()) {
-//
-//            int idOfSpecie = getResources().getIdentifier(field.getName(), "string", getPackageName());
-//            String specieTranslated = getResources().getString(idOfSpecie);
-//
-//            // if specieTranslated equals specie name of a certain animal, then, specie latin for that animal
-//            // should be field.getName() with a space in the middle eg Specium calastratum
-//            for (Animal animal : allSeedAnimals) {
-//                if (animal.getSpecie().getName().equals(specieTranslated)) {
-//                    animal.getSpecie().setLatinName(Utils.getSplitName(field.getName()));
-//                }
-//            }
-//        }
-//
-//        // Test
-//        for (int i = 0; i < 3; i++) {
-//            Toast.makeText(
-//                    MainActivity.this,
-//                    allSeedAnimals.get(i).getSpecie().getLatinName(),
-//                    Toast.LENGTH_SHORT
-//            ).show();
-//        }
-        //test ends here
     }
+
+    // get rid
+//    public void buildSeedAnimalsFromResources() {//TODO: eventually get rid - or change name to whatever start button will use
+//
+//        //TODO: I need all my animals coming from XML (Latin) in one signle family (all the same rank)
+//
+//        // Stub data coming from the server //TODO: replace this with the file content (get update from server) - use the all in one family logic, reorder after start if necessary
+//        // I need an array of latin specie names - the order represents their
+//        // rank (if spermwhalus is first, then its rank is 0+1 etc)
+//        List<String> customSpecieList = new ArrayList<>(Arrays.asList(new String[] {
+//                "Physeter macrocephalus",//was "Sperm whale",
+//                "Delphinus delphis",
+//                "Tursiops truncatus",
+//                "Stenella frontalis",
+//                "Balaenoptera physalus",
+//                "Grampus griseus",
+//                "Globicephala macrorhynchus",
+//                "Stenella coeruleoalba",
+//                "Balaenoptera borealis",
+//                "Caretta caretta",
+//                "Balaenoptera musculus",
+//                "Pseudorca crassidens",
+//                "Megaptera noveangliae",
+//                "Ziphius sp",
+//                "Mesoplodon bidens",
+//                "Balaenoptera acutorostrata",
+//                "Orcinus orca",
+//                "Hyperoodon ampullatus",
+//                "Balaenoptera edeni",
+//                "Dermochelys coriacea",
+//                "Phocaena phocaena",
+//                "Ziphius cavirostris",
+//                "Mesoplodon densirostris",
+//                "Mesoplodon mirus",
+//                "Chelonia mydas",
+//                "Globicephala melas",
+//                "Steno bredanensis",
+//                "Kogia breviceps",
+//                "Eretmochelys imbricata",
+//                "Lepidochelys kempii"
+//        }));
+//
+//        //TODO: latin names, then order name then rank, two rows (first column says specie name, name of order/rank)
+//        //TODO: use the whole name - see if latin is inside - also assign latin to latinName and before = to normal specie name
+//
+//        final ArrayList<String> animalFamiliesUntranslated = new ArrayList<String>();
+//
+//        // Using reflection, get all the family names (they contain the word family)
+//        // from the names of the xml resource arrays
+//        for (Field field: R.array.class.getFields()) {
+//            if (field.getName().toLowerCase().contains("family")) {
+//                animalFamiliesUntranslated.add(field.getName());
+//            }
+//        }
+//
+//        // Sort them alphabetically (observe the first letter of each family name)
+//        Collections.sort(animalFamiliesUntranslated);
+//
+//        // Create a set (to be populated after going through the custom list of species) for storing the custom families
+//        Set<String> customFamiliesSet = new HashSet<String>();
+//
+//        // This is to see if 'Others' element was added (to be used in families array adapter)
+//        boolean containsOthers = false; // this is to be initialized once for all families
+//
+//        // Get the id of the array (eg baleen whales - it's the name of the resource, untranslated)
+//        for (String familyNameUntranslated: animalFamiliesUntranslated) {
+//
+//            int idOfFamilyName = getResources().getIdentifier(familyNameUntranslated, "string", getPackageName());
+//            String familyNameTranslated = getResources().getString(idOfFamilyName);
+//            // I want to add the translated family name to an arraylist to feed the family names array adaptor
+//            // animalFamiliesUntranslated is already ordered and the insertion order is respected, therefore the translated one will be the same
+//            animalFamiliesTranslated.add(familyNameTranslated);
+//
+//            int idOfSpeciesStringArray = getResources().getIdentifier(familyNameUntranslated, "array", getPackageName());
+//            // get the String array containing all (eg baleen whale) species (they will be translated)
+//            String[] speciesPerFamilyTranslated = getResources().getStringArray(idOfSpeciesStringArray);
+//
+//            // here (if the 3 arrays have the same size, at least check) add each animal to the list, one by one
+//            int sizeOfArrays = speciesPerFamilyTranslated.length;
+//
+//            // extra stuff - to be adjusted (it needs to add up all families - not just 14 of them)
+//            // TODO: implement getting the photo ids and description data later
+////        String[] photos2 = new String[14];
+////        String[] descriptions2 = new String[14]; // all descriptions can be in one single text file
+////        Arrays.fill(photos2, "photo"); // remember to give the photos names linked to the specie
+////        Arrays.fill(descriptions2, "description");
+//
+////            if (sizeOfArrays != photos2.length || sizeOfArrays != descriptions2.length) {
+////                Log.d("MainActivity", "the sizes of the specie_names, photos and descriptions arrays are not the same");
+////            }
+//            //extra stuff ends here
+//
+//            for (int i = 0; i < sizeOfArrays; i++ ) {
+//
+//                // What I know: the custom list, containing the specie names in latin
+//                // What I want: see if the current specie (I need its latin name - see point 1 above) is inside the custom list...
+//                // ... if yes, copy its rank to the species rank and add the translated version (if
+//                // it's possible to translate the family names above) to a set (initially empty)
+//                //..... if not, make its rank 999 and add an 'others' to the set - find a way to do this only once
+//                int rank = Utils.INITIAL_RANK;//TODO: remember to reset this after every specie
+//
+//                //TODO: here, I want to check if the latin name from my custom list contains the 'trimmed down' specie name
+//                //TODO: server specie name in android's language has to perfectly match with this (watch lower and upper cases)
+//                if (customSpecieList.contains(speciesPerFamilyTranslated[i].
+//                        substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1))) {
+//                    // copy its rank to the species rank
+//                    rank = customSpecieList.indexOf(speciesPerFamilyTranslated[i]) + 1; // ranks start from 1//TODO: be careful with indices when working with csv files
+//
+//                    // add translated family name to a set //TODO: remember to compare it with translated all family names list
+//                    customFamiliesSet.add(familyNameTranslated);
+//
+//                } else {
+//                    if (!containsOthers) {
+//                        //should add 'Others' to the animal family translated list at the end
+//                        containsOthers = true;
+//                    }
+//                }
+//
+//                Specie specie = new Specie(
+//                        speciesPerFamilyTranslated[i].
+//                                substring(0, speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER)),
+//                        speciesPerFamilyTranslated[i].
+//                                substring(speciesPerFamilyTranslated[i].lastIndexOf(Utils.LATIN_NAME_DELIMITER) + 1),
+//                        familyNameTranslated,
+//                        rank,
+//                        "photo",//photos2[i],
+//                        "description"//descriptions2[i]
+//                );
+//
+//                allSeedAnimals.add(new Animal(specie));
+//            }
+//
+//        }
+//
+//        // TODO: Prepare the arraylist to be fed to the family names array adaptor
+//        // you first have all the family names (translated and in the right order):animalFamiliesTranslated
+//        // then you have a set containing the custom family names. The user sends you a list of
+//        // species (ranked according to number of sightings). You 'extract' the families of those
+//        // species (let's say just Baleen whales, in this test case): customFamiliesSet
+//        // You just keep the elements that are in both collections (you don't touch others, if
+//        // if animalFamiliesTranslated contains it
+//
+//        // Don't make assumptions about the set or the species you received from the user (order of families etc).
+//        // Rely on your sorted animalFamiliesTranslated list
+//        // Initially containing all indices, from size - 1 to 0 (when removing items
+//        // via indices, you must remove from the tail towards the head, otherwise, indices change 'live')
+//
+//        List<Integer> indicesToRemove = new ArrayList<>();
+//        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
+//            indicesToRemove.add(i);
+//        }
+//
+//        // The indices of animalFamiliesTranslated are stored from largest to smallest, so,
+//        // iterate through animalFamiliesTranslated from last to first
+//        for (int i = animalFamiliesTranslated.size() - 1; i >= 0; i--) {
+//            if (customFamiliesSet.contains(animalFamiliesTranslated.get(i))) {
+//                // if the custom list has this family, I don't want it removed,
+//                // so take this index out of the indicesToRemove set (remember the index is an object inside this list)
+//                indicesToRemove.remove(i);
+//            }
+//        }
+//
+//        // now remove all the elements with those indices
+//        for (Integer index: indicesToRemove) {
+//            animalFamiliesTranslated.remove((int)index);
+//        }
+//
+//        // add 'Species not on your list' option to the list
+//        if (containsOthers) { animalFamiliesTranslated.add(getString(R.string.species_not_on_your_list)); }
+//
+//        // TODO: animalFamilies translated array list is to be fed to the [2] third array adaptor
+////        I want the animals to be sorted (use comparator for the arraylist) according to rank. Sort the big animal arraylist.
+////                In my animal adapter (which receives the sorted big array of animals),
+//// I first send it the translated name of the family (therefore the animal should have the translated name of the family in it),
+//// and it filters (if family name matches and rank is not zero), showing the right animals from that specie (sorted by rank).
+////                Maybe I should have an utility method that takes the sorted big animal arraylist
+//// and returns another arraylist with just the same family and non-zero rank animals.
+//        Collections.sort(allSeedAnimals, new Comparator<Animal>() {
+//            @Override
+//            public int compare(Animal o1, Animal o2) {
+//                //Returns a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
+//                return o1.getSpecie().getRank() - o2.getSpecie().getRank();
+//            }
+//        });
+//
+//        // assign latin names from xml - does not work - error getString via id Resource not found
+////        for (Field field: R.string.class.getDeclaredFields()) {
+////
+////            int idOfSpecie = getResources().getIdentifier(field.getName(), "string", getPackageName());
+////            String specieTranslated = getResources().getString(idOfSpecie);
+////
+////            // if specieTranslated equals specie name of a certain animal, then, specie latin for that animal
+////            // should be field.getName() with a space in the middle eg Specium calastratum
+////            for (Animal animal : allSeedAnimals) {
+////                if (animal.getSpecie().getName().equals(specieTranslated)) {
+////                    animal.getSpecie().setLatinName(Utils.getSplitName(field.getName()));
+////                }
+////            }
+////        }
+////
+////        // Test
+////        for (int i = 0; i < 3; i++) {
+////            Toast.makeText(
+////                    MainActivity.this,
+////                    allSeedAnimals.get(i).getSpecie().getLatinName(),
+////                    Toast.LENGTH_SHORT
+////            ).show();
+////        }
+//        //test ends here
+//    }
 
     public void makeAndSetArrayAdapters() {
         arrayAdapters[0] = new AnimalAdapter(this, getOpenedFamilySeedAnimals(null, null));
@@ -2980,79 +3099,110 @@ public class MainActivity extends AppCompatActivity implements
                     // just use a global that will be set by whatever was set by the user (default?)
                     // this list will tell the animal adapter what to use - this should change the
                     // array adapter and the seedAnimals - look at buildseedanimals from resources
-                    //test
-                    //test starts here//TODO: remove this from send button logic
-//                    new Thread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            Utils.downloadFile(MainActivity.this,Utils.CUSTOM_SPECIE_ORDER_FILENAME); //TODO: use result?
-//                        }
-//                    }).start();
-//                    Toast.makeText(
-//                            MainActivity.this,
-//                            "result is " + trips[0].getCompany(),
-//                            Toast.LENGTH_LONG
-//                    ).show();
-                    //test ends here
 
                     // write to trip (so, we know what order was used when we read the json)
                     trips[0].setSpeciesOrder(speciesOrderNames[0]);
                     // write to Shared Prefs (to use as the first spinner option for the next trip)
                     Utils.writeOrderNameToSharedPrefs(MainActivity.this, speciesOrderNames[0]);
 
-                    // if order chose is all in one - all in one (0 everywhere) - no rearraning
+                    // if order chosen is all in one - all in one (0 everywhere) - no rearranging
                     // else:
                     // get order names from local file
                     // not possible - use all in one - 0 everywhere
-                    // possible, but the order chose is not among the ones found in the file - all in one (0 everywhere)
+                    // possible, but the order chosen is not among the ones found in the file - all in one (0 everywhere)
                     // possible and the order is there - rearrange animals
 
-                    File file = Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME);
-                    if (file != null) {
-                        try {
-                            BufferedReader in = new BufferedReader(new FileReader(file));
+                    //else read line that corresponds to the order and rearrange animals according to the new order
+                    // Steps:
+                    // we read the first line (except the first word) - we get a string array (containing the specie Latin names)
+                    // No: get the array with ranks for that order - it's faster. 1, 3, 0, 4, 0 etc
+                    // then get specie names only for the non-zero ranks (and add the specie name and rank to a map) and remove zeros from rank array
+                    // then iterate through each specie name, get the animal with that specie and assign it its rank (or iterate animals)
 
-                            try {
-                                String line = in.readLine();
+                    // we read the next line..until we find the line starting with the order name that we want
+                    // on that line (go past the first word):
+                    // we get the int array containing the specie ranks (be careful with 0 - make it INITIAL_RANK or ignore it). We close the file.
+                    // both arrays should have the same size
+                    // we go through each element of the int array and if it's not 0, we look at the element from the
+                    // Latin species array with the same indices and find the seed animal that has that Latin specie and give
+                    // the int rank to that seed animal
 
-                                int indexOfComma = line.indexOf(",");
-                                if (indexOfComma != -1) {
-                                    Toast.makeText(
-                                            MainActivity.this,
-                                            "first word is:" + line.substring(0, indexOfComma).trim(),
-                                            Toast.LENGTH_LONG
-                                    ).show();
+                    if (!speciesOrderNames[0].equals(getString(R.string.all_in_one))) {
+                        // get order names from local file
+                        ArrayList<String> orders = getOrderListFromFile(
+                                Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
+
+                        if (orders != null && orders.contains(speciesOrderNames[0])) {
+                            // meaning we managed to get the list of orders and it contains the order chosen by the user
+
+                            ArrayList<String> specieNamesLatinLowerCase = getLowerCaseLatinSpecieNamesFromFile(
+                                    Utils.getFile(MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME));
+
+                            int[] ranks = getRanks(Utils.getFile(
+                                    MainActivity.this, CUSTOM_SPECIE_ORDER_FILENAME), speciesOrderNames[0]);
+                            if (specieNamesLatinLowerCase != null && ranks != null) {
+
+                                if (specieNamesLatinLowerCase.size() == ranks.length) {
+                                    // if I got back the same number of specie names and ranks
+                                    // TODO: make sure there are no empty cells in the CSV (server/website)
+
+                                    int howManyRankedSpeciesOnFileList = 0;
+
+                                    for (int i = 0; i < ranks.length; i++) {
+                                        if (ranks[i] != Utils.NOT_ON_THE_FILE_LIST_RANK) {// meaning 0
+                                            howManyRankedSpeciesOnFileList++;
+                                        }
+                                    }
+
+                                    if (howManyRankedSpeciesOnFileList != 0) {
+                                        // meaning that the list has at least one specie with a non-zero rank
+
+                                        // set of families to feed to family adapter
+                                        Set<String> families = new HashSet<>();
+
+                                        for (Animal animal: allSeedAnimals) {
+                                            // if that animal's specie is inside the specie names we
+                                            // got from the file (everything has to be lower case)
+                                            String specie = animal.getSpecie().getLatinName().trim().toLowerCase();
+
+                                            if (specieNamesLatinLowerCase.contains(specie)) {
+
+                                                // assign that rank to that animal (if it's not 0)
+                                                int index = specieNamesLatinLowerCase.indexOf(specie);
+                                                if (ranks[index] != Utils.NOT_ON_THE_FILE_LIST_RANK) {
+                                                    animal.getSpecie().setRank(ranks[index]);
+                                                    families.add(animal.getSpecie().
+                                                            getFamily().trim().toLowerCase());
+                                                }
+                                            }
+                                        }
+
+                                        // in case at least one specie has a zero rank (if not all species are on the list),
+                                        // add the 'other species not on my list' family
+                                        populateFamilies(
+                                                families,
+                                                howManyRankedSpeciesOnFileList < specieNamesLatinLowerCase.size()
+                                        );
+
+                                        // re-arrange here (NB showSightings towards the end of this method)
+                                        //then we must ?re-arrange (we have the new ranks) the animals and create/populate/order? the families, too
+                                        // look at what the initial buildseedanimalsfromres() was doing in the second part
+                                        //TODO:refresh animal adapter
+                                        // sort the animals according to rank
+                                        Collections.sort(allSeedAnimals, new Comparator<Animal>() {
+                                            @Override
+                                            public int compare(Animal o1, Animal o2) {
+                                                //Returns a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
+                                                return o1.getSpecie().getRank() - o2.getSpecie().getRank();
+                                            }
+                                        });
+                                        //up to here the reorder of animals
+                                    }
+
                                 }
-                            } catch(IOException e) {
-                                e.printStackTrace();
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        "IOException",
-                                        Toast.LENGTH_LONG
-                                ).show();
                             }
-
-                            try {
-                                in.close();
-                            } catch(IOException ex) {
-                                ex.printStackTrace();
-                            }
-                        } catch (FileNotFoundException e) {
-                            e.printStackTrace();
-                            Toast.makeText(
-                                    MainActivity.this,
-                                    "File not found exception",
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
-                    } else {//TODO: this runs
-                        Toast.makeText(
-                                MainActivity.this,
-                                "File not found",
-                                Toast.LENGTH_LONG
-                        ).show();
-                    }
-                    //test up to here - DRY code
+                        }// else: meaning that we could not extract an order list or that the order chosen by the user is not in the extracted list - no need to rearrange
+                    } //else: no rearranging required in the case that the order chosen was 'all in one' - buildSeedAnimals uses this
 
                     // b) - time
                     trips[0].getStartTimeAndPlace().setTimeInMillis(System.currentTimeMillis());

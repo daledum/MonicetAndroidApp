@@ -51,8 +51,9 @@ public final class Utils {
     // code smell - hack due to changes done in onclick listener not sticking around (tried using views from main act,
     // running on ui thread...
     public static final int INITIAL_VALUE = 0; // was -1
-    public static final int MAX_VALUE = 199;
+    public static final int MAX_VALUE = 1999;
     public static final int INITIAL_RANK = 999;
+    public static final int NOT_ON_THE_FILE_LIST_RANK = 0;
     public static final int ASSOCIATED_INDIV_INITIAL_VALUE = 1;
 
     public static final String PREFS_NAME = "MonicetPrefsFile";
